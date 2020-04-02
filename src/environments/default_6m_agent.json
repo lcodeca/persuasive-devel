@@ -1,0 +1,17 @@
+{
+    "origin": "-6040",
+    "destination": "2370",
+    "start": 0,
+    "expected-arrival-time": [32400, 2.0, 4.0],
+        "modes": {
+            "passenger": 1.0,
+            "public": 1.0,
+            "walk": 1.0,
+            "bicycle": 1.0,
+            "ptw": 1.0,
+            "on-demand": 1.0
+        },
+    "seed": 42,
+    "init": [0, 0],
+    "ext-stats": false
+}
