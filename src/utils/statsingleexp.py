@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Process the RLLIB logs/result.json """
+""" Process a SINGLE RLLIB logs/result.json """
 
 import argparse
 import collections
@@ -16,42 +16,29 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-LOGGER = logging.getLogger(__name__)
+class StatSingleExp(object):
+    """ Process a SINGLE RLLIB logs/result.json file as a time series. """
 
-def _argument_parser():
-    """ Argument parser for the stats parser. """
-    parser = argparse.ArgumentParser(
-        description='RLLIB & SUMO Statistics parser.')
-    parser.add_argument(
-        '--input', required=True, type=str, help='Input JSON file.')
-    parser.add_argument(
-        '--prefix', default='stats', help='Output prefix for the processed data.')
-    parser.add_argument(
-        '--profiler', dest='profiler', action='store_true', help='Enable cProfile.')
-    parser.set_defaults(profiler=False)
-    return parser.parse_args()
+    def __init__(self, filename, prefix):
+        self.input = filename
+        self.prefix = prefix
 
-def make_patch_spines_invisible(ax):
-    ax.set_frame_on(True)
-    ax.patch.set_visible(False)
-    for sp in ax.spines.values():
-        sp.set_visible(False)
-
-class Statistics(object):
-    """ Loads the result.json file as a time series. """
-
-    def __init__(self, config):
-        self.config = config
+    @staticmethod
+    def make_patch_spines_invisible(ax):
+        ax.set_frame_on(True)
+        ax.patch.set_visible(False)
+        for sp in ax.spines.values():
+            sp.set_visible(False)
     
     def reward_over_timesteps_total(self):
-        LOGGER.info('Loading %s..', self.config.input)
+        logging.info('Loading %s..', self.input)
         x_coords = []
         y_coords = []
         median_y = []
         min_y = []
         max_y = []
         std_y = []
-        with open(self.config.input, 'r') as jsonfile:
+        with open(self.input, 'r') as jsonfile:
             for row in jsonfile: # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
                 x_coords.append(complete['timesteps_total'])
@@ -73,16 +60,16 @@ class Statistics(object):
             title='Reward over time')
         ax.legend(loc=1, ncol=4, shadow=True)
         ax.grid()
-        fig.savefig('{}.reward_over_learning.svg'.format(self.config.prefix),
+        fig.savefig('{}.reward_over_learning.svg'.format(self.prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
         # plt.show()   
         matplotlib.pyplot.close('all')
 
     def elapsed_episode_time_over_timesteps_total(self):
-        LOGGER.info('Loading %s..', self.config.input)
+        logging.info('Loading %s..', self.input)
         x_coords = []
         y_coords = []
-        with open(self.config.input, 'r') as jsonfile:
+        with open(self.input, 'r') as jsonfile:
             for row in jsonfile: # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
                 x_coords.append(complete['timesteps_total'])
@@ -93,13 +80,13 @@ class Statistics(object):
         ax.set(xlabel='Learning step', ylabel='Time [s]',
             title='Average Episode Duration')
         ax.grid()
-        fig.savefig('{}.episode_duration_over_learning.svg'.format(self.config.prefix),
+        fig.savefig('{}.episode_duration_over_learning.svg'.format(self.prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
         # plt.show()   
         matplotlib.pyplot.close('all')
 
     def average_actions_over_episodes_total(self):
-        LOGGER.info('Loading %s..', self.config.input)
+        logging.info('Loading %s..', self.input)
         x_coords = []
         mean_y = []
         median_y = []
@@ -107,7 +94,7 @@ class Statistics(object):
         max_y = []
         std_y = []
         episodes = 0
-        with open(self.config.input, 'r') as jsonfile:
+        with open(self.input, 'r') as jsonfile:
             for row in jsonfile: # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
                 episodes += complete['episodes_this_iter']
@@ -130,15 +117,15 @@ class Statistics(object):
             title='Actions per episode')
         ax.legend(loc=1, ncol=4, shadow=True)
         ax.grid()
-        fig.savefig('{}.actions_over_episodes.svg'.format(self.config.prefix),
+        fig.savefig('{}.actions_over_episodes.svg'.format(self.prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
         # plt.show()   
         matplotlib.pyplot.close('all')
 
     def sequence_by_agent(self):
-        LOGGER.info('Loading %s..', self.config.input)
+        logging.info('Loading %s..', self.input)
         agents = {}
-        with open(self.config.input, 'r') as jsonfile:
+        with open(self.input, 'r') as jsonfile:
             for row in jsonfile: # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
                 for agent, policy in complete['policies'].items():
@@ -173,7 +160,7 @@ class Statistics(object):
             # Having been created by twinx, par2 has its frame off, so the line of its
             # detached spine is invisible.  First, activate the frame but make the patch
             # and spines invisible.
-            make_patch_spines_invisible(par2)
+            self.make_patch_spines_invisible(par2)
             # Second, show the right spine.
             par2.spines['right'].set_visible(True)
 
@@ -205,16 +192,16 @@ class Statistics(object):
             lines = [p1, p2, p3]
             host.legend(lines, [l.get_label() for l in lines], loc=0, shadow=True)
 
-            fig.savefig('{}.{}.svg'.format(self.config.prefix, agent), 
+            fig.savefig('{}.{}.svg'.format(self.prefix, agent), 
                         dpi=300, transparent=False, bbox_inches='tight')
             # plt.show()
             matplotlib.pyplot.close('all')     
             # sys.exit()
     
     def estimations_by_agent(self):
-        LOGGER.info('Loading %s..', self.config.input)
+        logging.info('Loading %s..', self.input)
         agents = {}
-        with open(self.config.input, 'r') as jsonfile:
+        with open(self.input, 'r') as jsonfile:
             for row in jsonfile: # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
                 for agent, policy in complete['policies'].items():
@@ -269,15 +256,15 @@ class Statistics(object):
             axs[4].set_ylabel('Real TT [s]')
             axs[4].set_xlabel('Episode [#]')
 
-            fig.savefig('{}.{}.svg'.format(self.config.prefix, agent), 
+            fig.savefig('{}.{}.svg'.format(self.prefix, agent), 
                         dpi=300, transparent=False, bbox_inches='tight')
             # plt.show()
             matplotlib.pyplot.close('all')     
             # sys.exit()
 
     def additionals_by_agent(self):
-        LOGGER.info('Loading %s..', self.config.input)
-        with open(self.config.input, 'r') as jsonfile:
+        logging.info('Loading %s..', self.input)
+        with open(self.input, 'r') as jsonfile:
             episodes = collections.defaultdict(list)
             for row in jsonfile: # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
@@ -296,41 +283,7 @@ class Statistics(object):
                                 ax.grid()
                                 fig.savefig(
                                     '{}.{}.{}.ett_over_episode_{}.svg'.format(
-                                        self.config.prefix, agent, mode, len(episodes[agent])),
+                                        self.prefix, agent, mode, len(episodes[agent])),
                                     dpi=300, transparent=False, bbox_inches='tight')
                                 # plt.show()   
                                 matplotlib.pyplot.close('all')
-
-####################################################################################################
-
-def _main():
-    """ Process the RLLIB logs/result.json """
-
-    config = _argument_parser()
-
-    ## ========================              PROFILER              ======================== ##
-    if config.profiler:
-        profiler = cProfile.Profile()
-        profiler.enable()
-    ## ========================              PROFILER              ======================== ##
-
-    statistics = Statistics(config)
-    statistics.reward_over_timesteps_total()
-    statistics.elapsed_episode_time_over_timesteps_total()
-    statistics.average_actions_over_episodes_total()
-    # statistics.sequence_by_agent()
-    statistics.estimations_by_agent()
-    statistics.additionals_by_agent()
-    LOGGER.info('Done')
-
-    ## ========================              PROFILER              ======================== ##
-    if config.profiler:
-        profiler.disable()
-        results = io.StringIO()
-        pstats.Stats(profiler, stream=results).sort_stats('cumulative').print_stats(50)
-        LOGGER.info('Profiler: \n%s', pformat(results.getvalue()))
-    ## ========================              PROFILER              ======================== ##
-
-
-if __name__ == '__main__':
-    _main()
