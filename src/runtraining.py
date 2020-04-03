@@ -191,7 +191,7 @@ def _main():
         'agent_init': agent_init,
         'scenario_config': scenario_config,
     }
-    marl_env = marlenvironment.SUMOTestMultiAgentEnv(env_config)
+    marl_env = marlenvironment.PersuasiveMultiAgentEnv(env_config)
 
     # Gen config
     policies = {}

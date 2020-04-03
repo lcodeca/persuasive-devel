@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" TEST MARL Environment based on RLLIB and SUMO """
+""" Persuasive MARL Environment based on RLLIB and SUMO """
 
 import collections
 import logging
@@ -35,7 +35,7 @@ LOGGER.setLevel(logging.DEBUG)
 def env_creator(config):
     """ Environment creator used in the environment registration. """
     LOGGER.debug('[env_creator] Environment creation: SUMOTestMultiAgentEnv')
-    return SUMOTestMultiAgentEnv(config)
+    return PersuasiveMultiAgentEnv(config)
 
 #@ray.remote(num_cpus=10, num_gpus=1)
 class SUMOSimulationWrapper(SUMOUtils):
@@ -210,16 +210,16 @@ class SUMOModeAgent(object):
 
 ####################################################################################################
 
-class SUMOTestMultiAgentEnv(MultiAgentEnv):
+class PersuasiveMultiAgentEnv(MultiAgentEnv):
     """
-    A RLLIB environment for testing MARL environments with SUMO simulations.
+    Persuasive MARL environment for RLLIB SUMO Utils.
 
     https://github.com/ray-project/ray/blob/master/rllib/tests/test_multi_agent_env.py
     """
 
     def __init__(self, config):
         """ Initialize the environment. """
-        super(SUMOTestMultiAgentEnv, self).__init__()
+        super().__init__()
 
         self._config = config
         self.metrics_dir = config['metrics_dir']
