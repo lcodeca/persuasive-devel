@@ -155,6 +155,7 @@ class QLearningTrainer(Trainer):
         LOGGER.debug('QLearningTrainer:_train()')
 
         gtt_by_episode = list()
+        sumo_steps_per_episode = list()
         rewards_by_episode = list()
         elapesed_time_by_episode = list()
         policies_aggregated_by_episode = collections.defaultdict(dict)
@@ -213,6 +214,7 @@ class QLearningTrainer(Trainer):
                     states = self.env.reset()
 
                     steps = 0
+
                     cumul_rewards_by_agent = collections.defaultdict(int)
                     dones = {'__all__': False,}
 
@@ -285,6 +287,7 @@ class QLearningTrainer(Trainer):
                 LOGGER.debug('Learning steps this iteration: %d', steps)
                 learning_steps += steps
                 gtt_by_episode.append(self.env.simulation.get_global_travel_time())
+                sumo_steps_per_episode.append(self.env.simulation.get_sumo_steps())
                 rewards_by_episode.append(cumul_rewards_by_agent)
                 for agent, policy in self.policies.items():
                     LOGGER.debug('Collecting stats from agent: %s', agent)
@@ -357,7 +360,7 @@ class QLearningTrainer(Trainer):
             'episodes_this_iter': self.config['rollout_fragment_length'],
             'episode_elapsed_time_mean': np.mean(elapesed_time_by_episode),
             'timesteps_this_iter': learning_steps,
-            'sumo_steps_this_iter': self.env.simulation.get_sumo_steps(),
+            'sumo_steps_this_iter': np.mean(sumo_steps_per_episode),
             'environment_steps_this_iter': self.env.get_environment_steps(),
             'rewards': averaged_rewards_by_agent,
             'policies': policies_aggregated_by_episode, 
