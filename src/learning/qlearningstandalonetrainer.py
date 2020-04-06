@@ -42,12 +42,12 @@ else:
 
 ####################################################################################################
 
-DEBUGGER = True
+DEBUGGER = False
 PROFILER = False
 EXTENDED_STATS = True
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
+LOGGER.setLevel(logging.INFO)
 
 ####################################################################################################
 #                                             CALLBACKS
@@ -224,7 +224,12 @@ class QLearningTrainer(Trainer):
 
                     # until all the agents are not done
                     while not dones['__all__']:
-
+                        if states:
+                            # Possibility due to the decoupling of the sumo environment and the 
+                            # learning environment, it's possible that not all of the agents 
+                            # are done, but no agent is active atm and the sumo environment 
+                            # needs to keep moving forward nonetheless. 
+                            steps += 1
                         if DEBUGGER:
                             LOGGER.debug('State: %s', pformat(states))
                         actions = {}
@@ -266,7 +271,6 @@ class QLearningTrainer(Trainer):
                         states = next_states
                         for agent, state in states.items():
                             latest_state_by_agent[agent] = state
-                        steps += 1
                     # very dirty, but it works :)
                     break 
                 except TraCIException as excpt:
@@ -278,6 +282,7 @@ class QLearningTrainer(Trainer):
              
             # Gathering metrics at the end of the episode
             if max_retry:
+                LOGGER.debug('Learning steps this iteration: %d', steps)
                 learning_steps += steps
                 gtt_by_episode.append(self.env.simulation.get_global_travel_time())
                 rewards_by_episode.append(cumul_rewards_by_agent)
