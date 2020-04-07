@@ -129,6 +129,7 @@ class SUMOModeAgent(object):
         self.waited_steps = 0
         self.arrival, self.waiting_weight, self.late_weight = config.exp_arrival
         self.chosen_mode = None
+        self.chosen_mode_error = None
         self.cost = 0.0
         self.ett = 0.0
 
@@ -194,12 +195,14 @@ class SUMOModeAgent(object):
                 return True
             except TraCIException:
                 self.chosen_mode = None
+                self.chosen_mode_error = 'TraCIException for mode {}'.format(mode)
                 self.cost = 0.0
                 self.ett = 0.0
                 LOGGER.error('Route not usable for %s using mode %s', self.agent_id, mode)
                 return True # wrong decision, paid badly at the end
 
         self.chosen_mode = None
+        self.chosen_mode_error = 'Invalid route using mode {}'.format(mode)
         self.cost = 0.0
         self.ett = 0.0
         LOGGER.error('Route not found for %s using mode %s', self.agent_id, mode)
@@ -209,6 +212,7 @@ class SUMOModeAgent(object):
         """ Resets the agent and return the observation. """
         self.waited_steps = 0
         self.chosen_mode = None
+        self.chosen_mode_error = None
         self.cost = 0.0
         self.ett = 0.0
         return self.agent_id, self.start
@@ -385,7 +389,8 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
     def get_reward(self, agent):
         """ Return the reward for a given agent. """
         if not self.agents[agent].chosen_mode:
-            LOGGER.error('Agent %s selected a mode that was not possible.', agent) 
+            LOGGER.error('Agent %s mode error: "%s"', 
+                         agent, self.agents[agent].chosen_mode_error) 
             return 0 - int(self.simulation.get_penalty_time())
 
         journey_time = self.simulation.get_duration(agent, 
@@ -555,6 +560,8 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         ongoing_simulation = self.simulation.step(until_end=until_end, agents=agents_ids)
         LOGGER.debug('After SUMO')
 
+        current_time = self.simulation.get_current_time()
+
         ## end of the episode
         if not ongoing_simulation:
             LOGGER.debug('Reached the end of the SUMO simulation. Finalizing episode...')
@@ -568,9 +575,10 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         obs, rewards, infos = {}, {}, {}
         agents_to_remove = set()
         for agent in self.active:
-            LOGGER.debug('[%2f] %s --> %d', self.simulation.get_current_time(), agent, self.agents[agent].arrival)
-            if self.simulation.get_current_time() > self.agents[agent].arrival:
+            LOGGER.debug('[%2f] %s --> %d', current_time, agent, self.agents[agent].arrival)
+            if current_time > self.agents[agent].arrival:
                 LOGGER.warn('Agent %s waited for too long.', str(agent))
+                self.agents[agent].chosen_mode_error = 'Waiting too long [{}]'.format(current_time)
                 dones[agent] = True
                 self.dones.add(agent)
                 agents_to_remove.add(agent)
