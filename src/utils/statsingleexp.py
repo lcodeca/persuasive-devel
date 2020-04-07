@@ -16,6 +16,19 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
+
+SMALL_SIZE = 20
+MEDIUM_SIZE = SMALL_SIZE + 4
+BIGGER_SIZE = MEDIUM_SIZE + 4
+
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
 class StatSingleExp(object):
     """ Process a SINGLE RLLIB logs/result.json file as a time series. """
 
@@ -198,6 +211,103 @@ class StatSingleExp(object):
             matplotlib.pyplot.close('all')     
             # sys.exit()
     
+    def info_by_agent(self):
+        logging.info('Loading %s..', self.input)
+        agents = {}
+        with open(self.input, 'r') as jsonfile:
+            for row in jsonfile: # enumerate cannot be used due to the size of the file
+                complete = json.loads(row)
+                for agent, policy in complete['policies'].items():
+                    if agent not in agents:
+                        agents[agent] = {
+                            'episode': [],
+                            'reward': [],
+                            'actions': [],
+                            'mode': [],
+                            ########################
+                            'cost': [],
+                            'discretized-cost': [],
+                            'rtt': [],
+                            'arrival': [],
+                            'departure': [],
+                            'ett': [],
+                            'wait': [],
+                            'timeLoss': [],
+                            ########################
+                            'state': []
+                        }
+                    for sequence in policy['stats']['sequence']:
+                        actions = []
+                        rewards = []
+                        for step in sequence:
+                            _, action, _, reward = step
+                            actions.append(action)
+                            rewards.append(reward)
+                        agents[agent]['episode'].append(len(agents[agent]['episode']) + 1)
+                        agents[agent]['reward'].append(sum(rewards))
+                        agents[agent]['actions'].append(len(actions))
+                        agents[agent]['mode'].append(actions[-1])
+                    for info in policy['stats']['info']:
+                        # {   
+                        #     'arrival': 26640.0,
+                        #     'cost': 230.45043123602926,
+                        #     'departure': 26306.0,
+                        #     'discretized-cost': 1,
+                        #     'ett': 230.45043123603318,
+                        #     'ext': {'passenger': [235.4496104879836, 230.45043123602926]},
+                        #     'from-state': {'ett': [1], 'from': 213, 'time-left': 20, 'to': 331},
+                        #     'mode': 'passenger',
+                        #     'rtt': 334.0,
+                        #     'wait': 5760.0
+                        # }
+                        info = info[0]
+                        agents[agent]['cost'].append(info['cost'])
+                        agents[agent]['discretized-cost'].append(info['discretized-cost'])
+                        agents[agent]['rtt'].append(info['rtt'])
+                        agents[agent]['state'].append(info['from-state']['ett'])
+                        #############
+                        agents[agent]['arrival'].append(info['arrival'])
+                        agents[agent]['departure'].append(info['departure'])
+                        agents[agent]['ett'].append(info['ett'])
+                        agents[agent]['wait'].append(info['wait'])
+                        agents[agent]['timeLoss'].append(info['timeLoss'])
+
+        for agent, stats in agents.items():
+            # https://matplotlib.org/gallery/subplots_axes_and_figures/ganged_plots.html#sphx-glr-gallery-subplots-axes-and-figures-ganged-plots-py
+            fig, axs = plt.subplots(5, 2, sharex=True, figsize=(20, 20), constrained_layout=True)
+            fig.suptitle('{}'.format(agent))
+
+            # Plot each graph
+            axs[0][0].plot(stats['episode'], stats['reward'], 'b-', label='Reward')
+            axs[0][0].set_ylabel('Reward')
+            axs[1][0].plot(stats['episode'], stats['actions'], 'r-', label='Number of actions')
+            axs[1][0].set_ylabel('Actions [#]')
+            axs[2][0].plot(stats['episode'], stats['mode'], 'g-', label='Selected mode')
+            axs[2][0].set_ylabel('Mode')
+            axs[3][0].plot(stats['episode'], stats['ett'], 'k-', label='Estimated Travel Time')
+            axs[3][0].set_ylabel('Est TT [s]')
+            axs[4][0].plot(stats['episode'], stats['rtt'], 'm-', label='Real Travel Time')
+            axs[4][0].set_ylabel('Real TT [s]')
+            axs[4][0].set_xlabel('Episode [#]')
+
+            axs[0][1].plot(stats['episode'], stats['departure'], 'b-', label='Departure')
+            axs[0][1].set_ylabel('Departure [s]')
+            axs[1][1].plot(stats['episode'], stats['arrival'], 'r-', label='Arrival')
+            axs[1][1].set_ylabel('Arrival [s]')
+            axs[2][1].plot(stats['episode'], stats['wait'], 'g-', label='Waiting at destination')
+            axs[2][1].set_ylabel('Wait @ destination [s]')
+            axs[3][1].plot(stats['episode'], stats['cost'], 'k-', label='Estimated cost')
+            axs[3][1].set_ylabel('Est Cost [s]')
+            axs[4][1].plot(stats['episode'], stats['timeLoss'], 'm-', label='Time Lost')
+            axs[4][1].set_ylabel('Time Lost [s]')
+            axs[4][1].set_xlabel('Episode [#]')
+
+            fig.savefig('{}.{}.info.svg'.format(self.prefix, agent), 
+                        dpi=300, transparent=False, bbox_inches='tight')
+            # plt.show()
+            matplotlib.pyplot.close('all')     
+            # sys.exit()
+
     def estimations_by_agent(self):
         logging.info('Loading %s..', self.input)
         agents = {}

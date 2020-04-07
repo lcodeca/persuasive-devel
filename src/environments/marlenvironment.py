@@ -26,9 +26,9 @@ else:
 
 ####################################################################################################
 
-DEBUGGER = True
+DEBUGGER = False
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
+LOGGER.setLevel(logging.INFO)
 
 ####################################################################################################
 
@@ -130,6 +130,7 @@ class SUMOModeAgent(object):
         self.arrival, self.waiting_weight, self.late_weight = config.exp_arrival
         self.chosen_mode = None
         self.cost = 0.0
+        self.ett = 0.0
 
     def step(self, action, handler):
         """
@@ -172,6 +173,7 @@ class SUMOModeAgent(object):
                 veh_counter = 0
                 for stage in route:
                     self.cost += stage.cost
+                    self.ett += stage.travelTime
                     # appendStage(self, personID, stage)
                     if DEBUGGER:
                         LOGGER.debug('%s', pformat(stage))
@@ -193,11 +195,13 @@ class SUMOModeAgent(object):
             except TraCIException:
                 self.chosen_mode = None
                 self.cost = 0.0
+                self.ett = 0.0
                 LOGGER.error('Route not usable for %s using mode %s', self.agent_id, mode)
                 return True # wrong decision, paid badly at the end
 
         self.chosen_mode = None
         self.cost = 0.0
+        self.ett = 0.0
         LOGGER.error('Route not found for %s using mode %s', self.agent_id, mode)
         return True # wrong decision, paid badly at the end
 
@@ -206,6 +210,7 @@ class SUMOModeAgent(object):
         self.waited_steps = 0
         self.chosen_mode = None
         self.cost = 0.0
+        self.ett = 0.0
         return self.agent_id, self.start
 
 ####################################################################################################
@@ -486,9 +491,15 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         for agent in rewards:
             obs[agent] = self.craft_final_state(agent)
             infos[agent] = { 
-                'cost': self.agents[agent].cost, 
+                'arrival': self.simulation.get_arrival(agent, default=0.0),
+                'cost': self.agents[agent].cost,
+                'departure': self.simulation.get_depart(agent, default=0.0),
                 'discretized-cost': self.discrete_time(self.agents[agent].cost),
+                'ett': self.agents[agent].ett, 
+                'mode': self.agents[agent].chosen_mode,
                 'rtt': self.simulation.get_duration(agent, default=0.0),
+                'timeLoss': self.simulation.get_timeloss(agent, default=0.0),
+                'wait': self.agents[agent].arrival - self.simulation.get_arrival(agent, default=0.0)
             }
             if agent in self.ext_stats:
                 infos[agent]['ext'] = self.ext_stats[agent]
