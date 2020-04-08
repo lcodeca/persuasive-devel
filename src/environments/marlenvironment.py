@@ -61,18 +61,18 @@ class SUMOSimulationWrapper(SUMOUtils):
             super()._default_step_action(agents)
         except NotImplementedError:
             pass
-        # now = self.traci_handler.simulation.getTime() # seconds
         if agents:
+            now = self.traci_handler.simulation.getTime() # seconds
+            LOGGER.debug('[%.2f] Agents: %s', now, str(agents))
             people = self.traci_handler.person.getIDList()
-            if DEBUGGER:
-                LOGGER.debug('People: %s', pformat(people))
+            LOGGER.debug('[%.2f] People: %s', now, str(people))
             left = set()
             for agent in agents:
                 if agent not in people:
                     left.add(agent)
             if len(agents) == len(left):
                 # all the agents left the simulation
-                LOGGER.debug('All the AGENTS left the SUMO simulation.')
+                LOGGER.info('All the AGENTS left the SUMO simulation.')
                 self.end_simulation()
         return True
 
@@ -196,15 +196,15 @@ class SUMOModeAgent(object):
             except TraCIException:
                 self.chosen_mode = None
                 self.chosen_mode_error = 'TraCIException for mode {}'.format(mode)
-                self.cost = 0.0
-                self.ett = 0.0
+                self.cost = float('NaN')
+                self.ett = float('NaN')
                 LOGGER.error('Route not usable for %s using mode %s', self.agent_id, mode)
                 return True # wrong decision, paid badly at the end
 
         self.chosen_mode = None
         self.chosen_mode_error = 'Invalid route using mode {}'.format(mode)
-        self.cost = 0.0
-        self.ett = 0.0
+        self.cost = float('NaN')
+        self.ett = float('NaN')
         LOGGER.error('Route not found for %s using mode %s', self.agent_id, mode)
         return True # wrong decision, paid badly at the end
 
@@ -216,6 +216,12 @@ class SUMOModeAgent(object):
         self.cost = 0.0
         self.ett = 0.0
         return self.agent_id, self.start
+    
+    def __str__(self):
+        """ Returns a string with all the internal state. """
+        return('Config: {} \n Waited steps: {} \n Mode {} --> {} \n Cost: {} \n ETT: {} '.format(
+            self._config, self.waited_steps, self.chosen_mode, 
+            self.chosen_mode_error, self.cost, self.ett))
 
 ####################################################################################################
 
@@ -294,6 +300,8 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         self.rndgen = RandomState(seed)
 
     def discrete_time(self, time_s):
+        if np.isnan(time_s):
+            return time_s
         # seconds to minutes, then slots of 2m
         minutes = self._config['scenario_config']['misc']['algo-update-freq'] / 60.0
         return int(round((time_s / 60.0 / minutes), 0))
@@ -389,12 +397,15 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
     def get_reward(self, agent):
         """ Return the reward for a given agent. """
         if not self.agents[agent].chosen_mode:
-            LOGGER.error('Agent %s mode error: "%s"', 
-                         agent, self.agents[agent].chosen_mode_error) 
+            LOGGER.warn('Agent %s mode error: "%s"', agent, self.agents[agent].chosen_mode_error) 
             return 0 - int(self.simulation.get_penalty_time())
 
-        journey_time = self.simulation.get_duration(agent, 
-                                                    default=self.simulation.get_penalty_time())
+        journey_time = self.simulation.get_duration(agent)
+        if np.isnan(journey_time):
+            ## This should never happen. 
+            ## If it does, there is a bug/issue with the SUMO/MARL environment interaction.
+            raise Exception('{} \n {}'.format(
+                self.compute_info_for_agent(agent), str(self.agents[agent])))
         LOGGER.debug(' Agent: %s, journey: %s', agent, str(journey_time))
         arrival = self.simulation.get_arrival(agent, 
                                               default=self.simulation.get_penalty_time())
@@ -486,6 +497,22 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
 
         return initial_obs
 
+    def compute_info_for_agent(self, agent):
+        """ Gather and return a dictionary containing the info associated with the given agent. """        
+        info = { 
+            'arrival': self.simulation.get_arrival(agent),
+            'cost': self.agents[agent].cost,
+            'departure': self.simulation.get_depart(agent),
+            'discretized-cost': self.discrete_time(self.agents[agent].cost),
+            'ett': self.agents[agent].ett, 
+            'mode': self.agents[agent].chosen_mode,
+            'rtt': self.simulation.get_duration(agent),
+            'timeLoss': self.simulation.get_timeloss(agent),
+            'wait': self.agents[agent].arrival - self.simulation.get_arrival(agent)
+        }
+        LOGGER.debug('Info for agent %s: \n%s', agent, pformat(info))
+        return info
+
     def finalize_episode(self, dones):
         """ Gather all the required ifo and aggregate the rewards for the agents. """
         dones['__all__'] = True
@@ -495,17 +522,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         # FINAL STATE observations
         for agent in rewards:
             obs[agent] = self.craft_final_state(agent)
-            infos[agent] = { 
-                'arrival': self.simulation.get_arrival(agent, default=0.0),
-                'cost': self.agents[agent].cost,
-                'departure': self.simulation.get_depart(agent, default=0.0),
-                'discretized-cost': self.discrete_time(self.agents[agent].cost),
-                'ett': self.agents[agent].ett, 
-                'mode': self.agents[agent].chosen_mode,
-                'rtt': self.simulation.get_duration(agent, default=0.0),
-                'timeLoss': self.simulation.get_timeloss(agent, default=0.0),
-                'wait': self.agents[agent].arrival - self.simulation.get_arrival(agent, default=0.0)
-            }
+            infos[agent] = self.compute_info_for_agent(agent)
             if agent in self.ext_stats:
                 infos[agent]['ext'] = self.ext_stats[agent]
         LOGGER.debug('Observations: %s', str(obs))
@@ -579,6 +596,8 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             if current_time > self.agents[agent].arrival:
                 LOGGER.warn('Agent %s waited for too long.', str(agent))
                 self.agents[agent].chosen_mode_error = 'Waiting too long [{}]'.format(current_time)
+                self.agents[agent].ett = float('NaN')
+                self.agents[agent].cost = float('NaN')
                 dones[agent] = True
                 self.dones.add(agent)
                 agents_to_remove.add(agent)
@@ -592,7 +611,8 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         # in case all the reamining agents WAITED TOO LONG
         dones['__all__'] = len(self.dones) == len(self.agents)
         if dones['__all__']:
-            LOGGER.debug('All the agent are DONE. Finalizing episode...')
+            LOGGER.info('All the agent are DONE. Finalizing episode...')
+            self.simulation.step(until_end=True, agents=set(self.agents.keys()))
             return self.finalize_episode(dones)
         
         LOGGER.debug('Observations: %s', str(obs))

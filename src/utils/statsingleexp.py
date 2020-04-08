@@ -234,6 +234,8 @@ class StatSingleExp(object):
                             'wait': [],
                             'timeLoss': [],
                             ########################
+                            'difference': [],
+                            ########################
                             'state': []
                         }
                     for sequence in policy['stats']['sequence']:
@@ -261,16 +263,18 @@ class StatSingleExp(object):
                         #     'wait': 5760.0
                         # }
                         info = info[0]
-                        agents[agent]['cost'].append(info['cost'])
+                        agents[agent]['cost'].append(info['cost']/60.0)
                         agents[agent]['discretized-cost'].append(info['discretized-cost'])
-                        agents[agent]['rtt'].append(info['rtt'])
+                        agents[agent]['rtt'].append(info['rtt']/60.0)
                         agents[agent]['state'].append(info['from-state']['ett'])
                         #############
-                        agents[agent]['arrival'].append(info['arrival'])
-                        agents[agent]['departure'].append(info['departure'])
-                        agents[agent]['ett'].append(info['ett'])
-                        agents[agent]['wait'].append(info['wait'])
+                        agents[agent]['arrival'].append(info['arrival']/3600.0)
+                        agents[agent]['departure'].append(info['departure']/3600.0)
+                        agents[agent]['ett'].append(info['ett']/60.0)
+                        agents[agent]['wait'].append(info['wait']/60.0)
                         agents[agent]['timeLoss'].append(info['timeLoss'])
+                        #############
+                        agents[agent]['difference'].append((info['ett'] - info['rtt'])/60.0)
 
         for agent, stats in agents.items():
             # https://matplotlib.org/gallery/subplots_axes_and_figures/ganged_plots.html#sphx-glr-gallery-subplots-axes-and-figures-ganged-plots-py
@@ -278,32 +282,47 @@ class StatSingleExp(object):
             fig.suptitle('{}'.format(agent))
 
             # Plot each graph
-            axs[0][0].plot(stats['episode'], stats['reward'], 'b-', label='Reward')
+            axs[0][0].plot(stats['episode'], stats['reward'], label='Reward',
+                           color='blue', marker='o', linestyle='solid', linewidth=2, markersize=8)
             axs[0][0].set_ylabel('Reward')
-            axs[1][0].plot(stats['episode'], stats['actions'], 'r-', label='Number of actions')
+            axs[1][0].plot(stats['episode'], stats['actions'], label='Number of actions',
+                           color='red', marker='o', linestyle='solid', linewidth=2, markersize=8)
             axs[1][0].set_ylabel('Actions [#]')
-            axs[2][0].plot(stats['episode'], stats['mode'], 'g-', label='Selected mode')
+            axs[2][0].plot(stats['episode'], stats['mode'], label='Selected mode',
+                           color='green', marker='o', linestyle='solid', linewidth=2, markersize=8)
             axs[2][0].set_ylabel('Mode')
-            axs[3][0].plot(stats['episode'], stats['ett'], 'k-', label='Estimated Travel Time')
-            axs[3][0].set_ylabel('Est TT [s]')
-            axs[4][0].plot(stats['episode'], stats['rtt'], 'm-', label='Real Travel Time')
-            axs[4][0].set_ylabel('Real TT [s]')
+            axs[3][0].plot(stats['episode'], stats['ett'], label='Estimated Travel Time',
+                           color='black', marker='o', linestyle='solid', linewidth=2, markersize=8)
+            axs[3][0].set_ylabel('Est TT [m]')
+            axs[4][0].plot(stats['episode'], stats['rtt'], label='Real Travel Time',
+                           color='magenta', marker='o', linestyle='solid', linewidth=2, markersize=8)
+            axs[4][0].set_ylabel('Real TT [m]')
             axs[4][0].set_xlabel('Episode [#]')
 
-            axs[0][1].plot(stats['episode'], stats['departure'], 'b-', label='Departure')
-            axs[0][1].set_ylabel('Departure [s]')
-            axs[1][1].plot(stats['episode'], stats['arrival'], 'r-', label='Arrival')
-            axs[1][1].set_ylabel('Arrival [s]')
-            axs[2][1].plot(stats['episode'], stats['wait'], 'g-', label='Waiting at destination')
-            axs[2][1].set_ylabel('Wait @ destination [s]')
-            axs[3][1].plot(stats['episode'], stats['cost'], 'k-', label='Estimated cost')
-            axs[3][1].set_ylabel('Est Cost [s]')
-            axs[4][1].plot(stats['episode'], stats['timeLoss'], 'm-', label='Time Lost')
-            axs[4][1].set_ylabel('Time Lost [s]')
+            axs[0][1].plot(stats['episode'], stats['departure'], 'b-', label='Departure',
+                           color='blue', marker='o', linestyle='solid', linewidth=2, markersize=8)
+            axs[0][1].axhline(y=9.0, color='red', linestyle='dashed')
+            axs[0][1].set_ylabel('Departure [h]')
+            axs[1][1].plot(stats['episode'], stats['arrival'], 'r-', label='Arrival',
+                           color='red', marker='o', linestyle='solid', linewidth=2, markersize=8)
+            axs[1][1].axhline(y=9.0, color='red', linestyle='dashed')
+            axs[1][1].set_ylabel('Arrival [h]')
+            axs[2][1].plot(stats['episode'], stats['wait'], 'g-', label='Waiting at destination',
+                           color='green', marker='o', linestyle='solid', linewidth=2, markersize=8)
+            axs[2][1].axhline(y=0.0, color='red', linestyle='dashed')
+            axs[2][1].set_ylabel('Wait @ destination [m]')
+            axs[3][1].plot(stats['episode'], stats['cost'], 'k-', label='Estimated cost',
+                           color='black', marker='o', linestyle='solid', linewidth=2, markersize=8)
+            axs[3][1].set_ylabel('Est Cost [m]')
+            axs[4][1].plot(stats['episode'], stats['difference'], 'm-', label='ETT / RTT Difference',
+                           color='magenta', marker='o', linestyle='solid', linewidth=2, markersize=8)
+            axs[4][1].axhline(y=0.0, color='red', linestyle='dashed')
+            axs[4][1].set_ylabel('ETT / RTT Difference [m]')
             axs[4][1].set_xlabel('Episode [#]')
 
-            fig.savefig('{}.{}.info.svg'.format(self.prefix, agent), 
-                        dpi=300, transparent=False, bbox_inches='tight')
+            fname = '{}.{}.info.svg'.format(self.prefix, agent)
+            print('Saving {}'.format(fname))
+            fig.savefig(fname, dpi=300, transparent=False, bbox_inches='tight')
             # plt.show()
             matplotlib.pyplot.close('all')     
             # sys.exit()
