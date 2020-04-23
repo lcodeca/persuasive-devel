@@ -23,13 +23,14 @@ from ray.rllib.agents.ppo import ppo
 from ray.rllib.agents.trainer import COMMON_CONFIG
 
 from ray.tune.logger import UnifiedLogger, JsonLogger, CSVLogger
-from utils.logger import DBLogger
+# from utils.logger import DBLogger
 
 from configs import egreedyqlearning_conf, ppo_conf
 
 from environments import marlenvironment
 
 import learning.qlearningstandalonetrainer as QLStandAlone
+import learning.qlearningeligibilitytraces as QLETStandAlone 
 
 ####################################################################################################
 
@@ -38,7 +39,7 @@ def argument_parser():
     parser = argparse.ArgumentParser(
         description='Reinforcement learning applied to traffic assignment.')
     parser.add_argument(
-        '--algo', default='QLSA', choices=['PPO', 'QLSA'],
+        '--algo', default='QLET', choices=['PPO', 'QLSA', 'QLET'],
         help='The RL optimization algorithm to use.')
     parser.add_argument(
         '--config', required=True, type=str,
@@ -56,11 +57,14 @@ def argument_parser():
         '--gamma', default=0.9, type=float,
         help="Discount rate, default value is 0.9")
     parser.add_argument(
-        '--alpha', default=0.9, type=float,
-        help="Learning rate, default value is 0.9")
+        '--alpha', default=0.1, type=float,
+        help="Learning rate, default value is 0.1")
     parser.add_argument(
         '--epsilon', default=0.01, type=float,
         help="Epsilon, default value is 0.01")
+    parser.add_argument(
+        '--decay', default=0.9, type=float,
+        help="Decay, default value is 0.9")
     parser.add_argument(
         '--profiler', dest='profiler', action='store_true',
         help='Enables cProfile.')
@@ -174,6 +178,19 @@ def _main():
             # Epsilon Greedy default
             'epsilon': ARGS.epsilon,
         }
+    elif ARGS.algo == 'QLET':
+        policy_class = QLETStandAlone.EGreedyQLearningEligibilityTracesPolicy
+        policy_conf = egreedyqlearning_conf.egreedy_qlearning_conf(
+            ARGS.checkout_steps, debug_dir) # COMMON_CONFIG.copy()
+        policy_params = {
+            # Q-Learning defaults
+            'alpha': ARGS.alpha,
+            'gamma': ARGS.gamma,
+            # Eligibility traces defaults
+            'decay': ARGS.decay,
+            # Epsilon Greedy default
+            'epsilon': ARGS.epsilon,
+        }
     else:
         raise Exception('Unknown algorithm %s' % ARGS.algo)
 
@@ -181,7 +198,7 @@ def _main():
     scenario_config = load_json_file(ARGS.config)
 
     # Initialize the simulation.
-    ray.tune.registry.register_env('test_env', marlenvironment.env_creator)
+    ray.tune.registry.register_env('marl_env', marlenvironment.env_creator)
     ray.init(memory=52428800, object_store_memory=78643200) ## minimum values
 
     # Associate the agents with something
@@ -225,21 +242,16 @@ def _main():
 
     trainer = None
     if ARGS.algo == 'PPO':
-        trainer = ppo.PPOTrainer(env='test_env', # 'test_env' if registered
+        trainer = ppo.PPOTrainer(env='marl_env',
                                  config=policy_conf,
                                  logger_creator=logger_creator)
     elif ARGS.algo == 'QLSA':
-        policy_conf['callbacks'] = {
-            'on_episode_start': QLStandAlone.on_episode_start,
-            'on_episode_step': QLStandAlone.on_episode_step,
-            'on_episode_end': QLStandAlone.on_episode_end,
-            'on_sample_end': QLStandAlone.on_sample_end,
-            'on_train_result': QLStandAlone.on_train_result,
-            'on_postprocess_traj': QLStandAlone.on_postprocess_traj,
-            }
-        trainer = QLStandAlone.QLearningTrainer(env='test_env', # 'test_env' if registered
+        trainer = QLStandAlone.QLearningTrainer(env='marl_env',
                                                 config=policy_conf,
                                                 logger_creator=logger_creator)
+    elif ARGS.algo == 'QLET':
+        trainer = QLETStandAlone.QLearningEligibilityTracesTrainer(
+            env='marl_env', config=policy_conf, logger_creator=logger_creator)
     else:
         raise Exception('Unknown algorithm %s' % ARGS.algo)
 
@@ -262,7 +274,7 @@ def _main():
         final_result = result
 
     print_selected_results(final_result, SELECTION)
-    print_policy_by_agent(final_result['policies'])
+    # print_policy_by_agent(final_result['policies'])
 
 if __name__ == '__main__':
 
