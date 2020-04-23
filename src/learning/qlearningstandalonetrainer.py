@@ -50,57 +50,6 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 
 ####################################################################################################
-#                                             CALLBACKS
-####################################################################################################
-
-def on_episode_start(info):
-    episode = info['episode']
-    LOGGER.debug('[on_episode_start] Episode %d started.', episode.episode_id)
-
-def on_episode_step(info):
-    episode = info['episode']
-    LOGGER.debug('[on_episode_step] Episode %d.', episode.episode_id)
-
-def on_episode_end(info):
-    """ Function triggered at the end of each episode.
-        - saving the metrics
-    """
-    LOGGER.debug('[on_episode_end] Gathering and saving custom metrics.')
-    episode = info['episode']
-    environment = info['env'].get_unwrapped()[0]
-    metrics_dir, custom_metrics = environment.get_metrics()
-    custom_metrics['episode_len'] = episode.length
-    episode.custom_metrics = custom_metrics
-    if DEBUGGER:
-        LOGGER.debug('[on_episode_end] Metrics:')
-        LOGGER.debug('%s', pformat(custom_metrics))
-    ### Save to file
-    next_checkpoint = 'checkpoint{}'.format(len(os.listdir(environment.checkpoint_dir))+1)
-    next_episode = 1
-    total_episodes = 1
-    for item in os.listdir(metrics_dir):
-        if next_checkpoint in item:
-            next_episode += 1
-        total_episodes += 1
-    file_str = '{}-episode{}-total{}.json'.format(next_checkpoint, next_episode, total_episodes)
-    file_title = os.path.join(metrics_dir, file_str)
-    with open(file_title, 'w') as file:
-        file.write(json.dumps(custom_metrics))
-
-def on_sample_end(info):
-    LOGGER.debug('[on_sample_end] Returned sample batch of size %d.', info['samples'].count)
-
-def on_train_result(info):
-    LOGGER.debug('[on_train_result] trainer.train() result: %s', str(info['trainer']))
-    # LOGGER.debug('[Trainer:on_train_result] trainer.train() result: %s -> %d episodes',
-    #              str(info['trainer']), info['result']['episodes_this_iter'])
-    # you can mutate the result dict to add new fields to return
-
-def on_postprocess_traj(info):
-    batch = info['post_batch']
-    LOGGER.debug('[on_postprocess_traj] Postprocessed %d steps.', batch.count)
-
-####################################################################################################
 #                                             TRAINER
 ####################################################################################################
 
@@ -210,6 +159,9 @@ class QLearningTrainer(Trainer):
             steps = 0
             while max_retry: 
                 try:    
+                    # callback
+                    self.on_episode_start()
+
                     # start from the beginning
                     states = self.env.reset()
 
@@ -226,6 +178,9 @@ class QLearningTrainer(Trainer):
 
                     # until all the agents are not done
                     while not dones['__all__']:
+                        # callback
+                        self.on_episode_step
+
                         if states:
                             # Possibility due to the decoupling of the sumo environment and the 
                             # learning environment, it's possible that not all of the agents 
@@ -298,6 +253,9 @@ class QLearningTrainer(Trainer):
             delta = datetime.now() - before
             LOGGER.info('=======================> %s <=======================', str(delta))
             elapesed_time_by_episode.append(delta.total_seconds())
+            # callback
+            self.on_episode_end
+                        
 
         # Metrics gathering, averaged by number of episodes.
         aggregated_rewards_per_episode = list()
@@ -394,28 +352,27 @@ class QLearningTrainer(Trainer):
             result (dict): Training result returned by _train().
         """
         # See: https://github.com/ray-project/ray/blob/master/python/ray/tune/logger.py#L177
+        
+        # callback
+        self.on_train_result(result)
+        
         self._result_logger.on_result(result)
 
-    # def _stop(self):
-    #     """ Subclasses should override this for any cleanup on stop.
+    ################################################################################################
+    #                                         CALLBACKS
+    ################################################################################################
 
-    #     If any Ray actors are launched in the Trainable (i.e., with a RLlib
-    #     trainer), be sure to kill the Ray actor process here.
-    #     You can kill a Ray actor by calling `actor.__ray_terminate__.remote()`
-    #     on the actor.
-    #     """
+    def on_episode_start(self):
+        pass
 
-    # def _export_model(self, export_formats, export_dir):
-    #     """ Subclasses should override this to export model.
+    def on_episode_step(self):
+        pass
 
-    #     Args:
-    #         export_formats (list): List of formats that should be exported.
-    #         export_dir (str): Directory to place exported models.
+    def on_episode_end(self):
+        pass
 
-    #     Return:
-    #         A dict that maps ExportFormats to successfully exported models.
-    #     """
-    #     return {}
+    def on_train_result(self, result):
+        pass
 
 ####################################################################################################
 #                                             POLICY
@@ -556,21 +513,6 @@ class EGreedyQLearningPolicy(Policy):
         self.alpha = internal_state['alpha']
         self.gamma = internal_state['gamma']
         self.epsilon = internal_state['epsilon']
-
-    # def learn_on_batch(self, samples):
-    #     """ Fused compute gradients and apply gradients call.
-
-    #     Either this or the combination of compute/apply grads must be
-    #     implemented by subclasses.
-
-    #     Returns:
-    #         grad_info: dictionary of extra metadata from compute_gradients().
-
-    #     Examples:
-    #         >>> batch = ev.sample()
-    #         >>> ev.learn_on_batch(samples)
-    #     """
-    #     raise NotImplementedError
 
     def compute_actions(self,
                             obs_batch,

@@ -115,8 +115,8 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
         LOGGER.debug('============ %s ============', str(max_val))
         return max_val
 
-    def argmax(self, key):
-        """ [always defined] Returns the max among all the q-values associated with the actions. """
+    def maxactions(self, key):
+        """ [always defined] Returns the set of action associated with the maximum value """
         LOGGER.debug('Key %s', pformat(key))
         if not isinstance(key, collections.OrderedDict):
             raise KeyError('The state/key must be collections.OrderedDict.', key)
@@ -138,7 +138,12 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
                 max_keys = [key]
             LOGGER.debug(' After --> max_val: %s - max_keys: %s', str(max_val), pformat(max_keys))
         LOGGER.debug('ARGMAX: max_val: %s - max_keys: %s', str(max_val), pformat(max_keys))
-        return self._rndgen.choice(max_keys)
+        return set(max_keys)
+
+    def argmax(self, key):
+        """ [always defined] Returns the max among all the q-values associated with the actions. """
+        max_keys = self.maxactions(key)
+        return self._rndgen.choice(list(max_keys))
 
     def __str__(self):
         return pformat(self._data)
