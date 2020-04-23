@@ -92,12 +92,12 @@ class EGreedyQLearningEligibilityTracesPolicy(EGreedyQLearningPolicy):
         EGreedyQLearningPolicy.__init__(self, observation_space, action_space, config)
         # Additional Parameters
         self.decay = deepcopy(config['decay'])
-        self.eligibility_trace = QTable(self.set_of_actions, default=0)
+        self.eligibility_trace = QTable(self.set_of_actions, default=0.0)
 
     def reset_eligibility_trace(self):
         """ Forcefully reset the eligibility trace """
         del self.eligibility_trace
-        self.eligibility_trace = QTable(self.set_of_actions, default=0)
+        self.eligibility_trace = QTable(self.set_of_actions, default=0.0)
 
     def learn(self, sample):
         """ 
@@ -154,6 +154,9 @@ class EGreedyQLearningEligibilityTracesPolicy(EGreedyQLearningPolicy):
                 else:
                     # reset the trace because the action chosen was random
                     self.eligibility_trace[state][action] = 0
+
+        if DEBUGGER:
+            LOGGER.debug('Q-Learning: eligibility traces \n%s', str(self.eligibility_trace))
 
         # STATS
         self.stats['rewards'].append(sample['reward'])
