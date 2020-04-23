@@ -11,7 +11,7 @@ def egreedy_qlearning_conf(tr_steps=1, debug_folder=None):
         # ---- Debugging ----
         # Whether to write episode stats and videos to the agent log dir
         'monitor': True,
-        'log_level': 'DEBUG',
+        'log_level': 'INFO',
         'ignore_worker_failures': True,
 
         # ---- Environment ----

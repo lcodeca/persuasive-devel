@@ -23,6 +23,7 @@ from ray.rllib.agents.ppo import ppo
 from ray.rllib.agents.trainer import COMMON_CONFIG
 
 from ray.tune.logger import UnifiedLogger, JsonLogger, CSVLogger
+from utils.logger import DBLogger
 
 from configs import egreedyqlearning_conf, ppo_conf
 
@@ -68,7 +69,7 @@ def argument_parser():
 
 ARGS = argument_parser()
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
+LOGGER.setLevel(logging.INFO)
 
 ####################################################################################################
 
@@ -220,6 +221,7 @@ def _main():
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
         return UnifiedLogger(config, log_dir, None)
+        # return UnifiedLogger(config, log_dir, loggers=(JsonLogger, CSVLogger, DBLogger))
 
     trainer = None
     if ARGS.algo == 'PPO':
