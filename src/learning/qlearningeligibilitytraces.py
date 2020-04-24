@@ -116,13 +116,13 @@ class EGreedyQLearningEligibilityTracesPolicy(EGreedyQLearningPolicy):
                     }
         """
         if DEBUGGER:
-            LOGGER.critical('Learning sample \n%s', pformat(sample))
-            LOGGER.critical('Old State \n%s', pformat(self.qtable[sample['old_state']]))
-            LOGGER.critical('Next State \n%s', pformat(self.qtable[sample['next_state']]))
+            LOGGER.debug('Learning sample \n%s', pformat(sample))
+            LOGGER.debug('Old State \n%s', pformat(self.qtable[sample['old_state']]))
+            LOGGER.debug('Next State \n%s', pformat(self.qtable[sample['next_state']]))
 
         # in case the action chosen was a greedy one
         best_actions = self.qtable.maxactions(sample['old_state'])
-        LOGGER.critical('Q-Learning: best actions = %s, action taken = %d', 
+        LOGGER.debug('Q-Learning: best actions = %s, action taken = %d', 
                      str(best_actions), sample['action'])
         if sample['action'] not in best_actions:
             LOGGER.critical('Q-Learning: the eligibility trace will be reset.')  
@@ -132,45 +132,47 @@ class EGreedyQLearningEligibilityTracesPolicy(EGreedyQLearningPolicy):
         error = (sample['reward'] + 
             (self.gamma * self.qtable[sample['next_state']][sample['action']]) - 
             self.qtable[sample['old_state']][best_action])  
-        LOGGER.critical('Q-Learning: error = %.2f + %.2f * %.2f - %.2f', 
+        LOGGER.debug('Q-Learning: error = %.2f + %.2f * %.2f - %.2f', 
             sample['reward'], self.gamma, self.qtable[sample['next_state']][sample['action']],
             self.qtable[sample['old_state']][best_action])
-        LOGGER.critical('Q-Learning: error = %.2f', error)
+        LOGGER.debug('Q-Learning: error = %.2f', error)
 
         # increment the eligibility trace
         self.eligibility_trace[sample['old_state']][sample['action']] += 1.0
 
         for key, values in self.eligibility_trace.get_items():
-            LOGGER.critical('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-            LOGGER.critical('Serialized key %s', key)
+            LOGGER.debug('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+            LOGGER.debug('Serialized key %s', key)
             state = self.eligibility_trace.get_state_from_serialized_key(key)
-            LOGGER.critical('State %s', pformat(state))
-            LOGGER.critical('Values %s', pformat(values))
+            LOGGER.debug('State %s', pformat(state))
+            LOGGER.debug('Values %s', pformat(values))
             for action in values:
-                LOGGER.critical('===========================> Action %d <===========================', 
+                LOGGER.debug('===========================> Action %d <===========================', 
                              action)
                 # adjust q-values
                 old_qvalue = self.qtable[state][action]
                 new_qvalue = old_qvalue + self.alpha * error * self.eligibility_trace[state][action]
-                LOGGER.critical('q-value = %.2f + %.2f * %.2f * %.2f',
+                LOGGER.debug('q-value = %.2f + %.2f * %.2f * %.2f',
                              old_qvalue, self.alpha, error, self.eligibility_trace[state][action])
-                LOGGER.critical('q-values: old = %f, new = %f', old_qvalue, new_qvalue)
+                LOGGER.debug('q-values: old = %f, new = %f', old_qvalue, new_qvalue)
                 self.qtable[state][action] = new_qvalue
                 # update eligibility traces
                 if sample['action'] in best_actions:
                     # update the trace
-                    LOGGER.critical('old e-trace %f', self.eligibility_trace[state][action])
+                    LOGGER.debug('old e-trace %f', self.eligibility_trace[state][action])
                     self.eligibility_trace[state][action] *= self.gamma * self.decay
-                    LOGGER.critical('new e-trace %f', self.eligibility_trace[state][action])
+                    LOGGER.debug('new e-trace %f', self.eligibility_trace[state][action])
                 else:
                     # reset the trace because the action chosen was random
-                    LOGGER.critical('Q-Learning: resetting trace.')
+                    LOGGER.debug('Q-Learning: resetting trace.')
                     self.eligibility_trace[state][action] = 0.0
-                LOGGER.critical('==================================================================')
-            LOGGER.critical('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+                LOGGER.debug('==================================================================')
+            LOGGER.debug('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
             
         if DEBUGGER:
+            LOGGER.critical('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
             LOGGER.critical('Q-Learning: eligibility traces \n%s', str(self.eligibility_trace))
+            LOGGER.critical('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
         # STATS
         self.stats['rewards'].append(sample['reward'])
