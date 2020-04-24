@@ -27,7 +27,7 @@ from ray.tune.logger import UnifiedLogger, JsonLogger, CSVLogger
 
 from configs import egreedyqlearning_conf, ppo_conf
 
-from environments import marlenvironment
+from environments import marlenvironment, marlenvironmentagentscoop
 
 import learning.qlearningstandalonetrainer as QLStandAlone
 import learning.qlearningeligibilitytraces as QLETStandAlone 
@@ -41,6 +41,9 @@ def argument_parser():
     parser.add_argument(
         '--algo', default='QLET', choices=['PPO', 'QLSA', 'QLET'],
         help='The RL optimization algorithm to use.')
+    parser.add_argument(
+        '--env', default='MARLCoop', choices=['MARL', 'MARLCoop'],
+        help='The MARL environment to use.')
     parser.add_argument(
         '--config', required=True, type=str,
         help='Training configuration.')
@@ -198,7 +201,6 @@ def _main():
     scenario_config = load_json_file(ARGS.config)
 
     # Initialize the simulation.
-    ray.tune.registry.register_env('marl_env', marlenvironment.env_creator)
     ray.init(memory=52428800, object_store_memory=78643200) ## minimum values
 
     # Associate the agents with something
@@ -209,7 +211,15 @@ def _main():
         'agent_init': agent_init,
         'scenario_config': scenario_config,
     }
-    marl_env = marlenvironment.PersuasiveMultiAgentEnv(env_config)
+    marl_env = None
+    if ARGS.env == 'MARL':
+        ray.tune.registry.register_env('marl_env', marlenvironment.env_creator)
+        marl_env = marlenvironment.PersuasiveMultiAgentEnv(env_config)
+    elif ARGS.env == 'MARLCoop':
+        ray.tune.registry.register_env('marl_env', marlenvironmentagentscoop.env_creator)
+        marl_env = marlenvironmentagentscoop.AgentsCoopMultiAgentEnv(env_config)
+    else:
+        raise Exception('Unknown environment %s' % ARGS.env)
 
     # Gen config
     policies = {}
