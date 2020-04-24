@@ -48,6 +48,7 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
         self._default_value = default
         self._default_actions = set(actions)
         self._seed = seed
+        self._key_to_state = dict()
         if seed:
             self._rndgen = RandomState(seed)
         else:
@@ -70,7 +71,30 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
         only other hashable types (including any lists, tuples, sets, and dictionaries).
         See: https://stackoverflow.com/a/8714242
         """
-        return pformat(state.items())
+        key = pformat(state.items())
+        self._key_to_state[key] = state
+        return key
+
+    def get_state_from_serialized_key(self, key, default=None):
+        """ 
+        Return the original state (collections.OrderedDict) associated with a serialized key 4
+        or the default value (None) otherwise.
+        """
+        if key in self._key_to_state:
+            return self._key_to_state[key]
+        return default
+
+    def _get_actual_key(self, key):
+        """ 
+        The key should be a collections.OrderedDict or it should be already stored in the dataset. 
+        """
+        if not isinstance(key, collections.OrderedDict):
+            if key in self._key_to_state:
+                return key # it has been already serialized
+            raise KeyError(
+                'The state/key must be collections.OrderedDict or it must already be stored.', 
+                key)
+        return self._state_to_key(key) # serialize key
 
     def __getitem__(self, key):
         """
@@ -78,9 +102,7 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
         time, it is generated, inserted, and returned on-the-fly.
         """
         LOGGER.debug('Key %s', pformat(key))
-        if not isinstance(key, collections.OrderedDict):
-            raise KeyError('The state/key must be collections.OrderedDict.', key)
-        actual_key = self._state_to_key(key) # serialize key
+        actual_key = self._get_actual_key(key)
         if actual_key not in self._data: # generate if necessary
             self._data[actual_key] = self._generate_default_state()
         return self._data[actual_key]
@@ -88,19 +110,15 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
     def __setitem__(self, key, value):
         LOGGER.debug('Key %s', pformat(key))
         LOGGER.debug('Value %s', pformat(value))
-        if not isinstance(key, collections.OrderedDict):
-            raise KeyError('The state/key must be collections.OrderedDict.', key)
+        actual_key = self._get_actual_key(key)
         if self._default_actions != set(value.keys()):
             raise KeyError('The only actions allowed in the "value" are:', self._default_actions)
-        actual_key = self._state_to_key(key) # serialize key
         self._data[actual_key] = value
 
     def max(self, key):
         """ [always defined] Returns the max among all the q-values associated with the actions. """
         LOGGER.debug('Key %s', pformat(key))
-        if not isinstance(key, collections.OrderedDict):
-            raise KeyError('The state/key must be collections.OrderedDict.', key)
-        actual_key = self._state_to_key(key) # serialize key
+        actual_key = self._get_actual_key(key)
         if actual_key not in self._data: # generate if necessary
             LOGGER.debug('State created on the fly.')
             self._data[actual_key] = self._generate_default_state()
@@ -118,9 +136,7 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
     def maxactions(self, key):
         """ [always defined] Returns the set of action associated with the maximum value """
         LOGGER.debug('Key %s', pformat(key))
-        if not isinstance(key, collections.OrderedDict):
-            raise KeyError('The state/key must be collections.OrderedDict.', key)
-        actual_key = self._state_to_key(key) # serialize key
+        actual_key = self._get_actual_key(key)
         if actual_key not in self._data: # generate if necessary
             self._data[actual_key] = self._generate_default_state()
         max_val = None
@@ -157,3 +173,6 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
             for action, value in item.items():
                 flattened_data.append((state, action, value))
         return flattened_data
+    
+    def get_items(self):
+        return self._data.items()

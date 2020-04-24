@@ -138,6 +138,29 @@ class QTableTest(unittest.TestCase):
         qtable[state][0] = 1.0
         qtable[state][1] = 1.0
         self.assertTrue(qtable.argmax(state) in [0, 1])
+    
+    def test_dill(self):
+        """ Test the dillability of the class. """
+        import dill
+        qtable = QTable(self.actions)
+
+        state1 = collections.OrderedDict()
+        state1['from'] = 1
+        state1['to'] = 2
+        state1['rank'] = [0, 1, 2]
+
+        state2 = collections.OrderedDict()
+        state2['from'] = 1
+        state2['to'] = 2
+        state2['rank'] = [0, 2, 1]
+
+        # create the states
+        _ = qtable[state1]
+        _ = qtable[state2]
+
+        wanted = str(qtable)
+        test = str(dill.loads(dill.dumps(qtable)))
+        self.assertEqual(wanted, test)
 
 if __name__ == '__main__':
     unittest.main()
