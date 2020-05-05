@@ -22,8 +22,8 @@ from ray import tune
 from ray.rllib.agents.ppo import ppo
 from ray.rllib.agents.trainer import COMMON_CONFIG
 
-from ray.tune.logger import UnifiedLogger, JsonLogger
-# from utils.logger import DBLogger
+from ray.tune.logger import UnifiedLogger
+from utils.logger import DBLogger
 
 from configs import egreedyqlearning_conf, ppo_conf
 
@@ -247,8 +247,7 @@ def _main():
         log_dir = os.path.join(os.path.normpath(ARGS.dir), 'logs')
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
-        # return UnifiedLogger(config, log_dir, None) # Default loggers
-        return UnifiedLogger(config, log_dir, loggers=[JsonLogger]) # DBLogger
+        return UnifiedLogger(config, log_dir, loggers=[DBLogger]) # None) >> Default loggers
 
     trainer = None
     if ARGS.algo == 'PPO':
