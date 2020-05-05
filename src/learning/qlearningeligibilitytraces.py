@@ -35,9 +35,8 @@ else:
 
 ####################################################################################################
 
-DEBUGGER = True
+DEBUGGER = False
 PROFILER = False
-EXTENDED_STATS = True
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -125,7 +124,7 @@ class EGreedyQLearningEligibilityTracesPolicy(EGreedyQLearningPolicy):
         LOGGER.debug('Q-Learning: best actions = %s, action taken = %d', 
                      str(best_actions), sample['action'])
         if sample['action'] not in best_actions:
-            LOGGER.critical('Q-Learning: the eligibility trace will be reset.')  
+            LOGGER.debug('Q-Learning: the eligibility trace will be reset.')  
         best_action = list(best_actions)[0]  
 
         # compute the error 
@@ -170,9 +169,9 @@ class EGreedyQLearningEligibilityTracesPolicy(EGreedyQLearningPolicy):
             LOGGER.debug('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
             
         if DEBUGGER:
-            LOGGER.critical('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-            LOGGER.critical('Q-Learning: eligibility traces \n%s', str(self.eligibility_trace))
-            LOGGER.critical('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+            LOGGER.debug('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+            LOGGER.debug('Q-Learning: eligibility traces \n%s', str(self.eligibility_trace))
+            LOGGER.debug('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
         # STATS
         self.stats['rewards'].append(sample['reward'])
