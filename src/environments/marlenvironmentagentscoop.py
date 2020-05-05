@@ -84,8 +84,7 @@ class AgentsCoopMultiAgentEnv(PersuasiveMultiAgentEnv):
         ## multiplied by 100 to have a percentage
         ## divided by the level of usage we intend to cover
         ret = round(active / len(self.agents) * 100 / 10)
-        LOGGER.critical('Usage: %d / %d * 100 / 10 = %d (rounded).', 
-                        active, len(self.agents), ret)
+        LOGGER.debug('Usage: %d / %d * 100 / 10 = %d (rounded).', active, len(self.agents), ret)
         return ret
 
     def get_observation(self, agent):
@@ -124,9 +123,9 @@ class AgentsCoopMultiAgentEnv(PersuasiveMultiAgentEnv):
                 self.agents[agent].destination,
                 self.agents[agent].action_to_mode[action],
                 now, agent)
-        LOGGER.critical('========================================================')
-        LOGGER.critical('Snapshot: \n%s', str(self.episode_snapshot))
-        LOGGER.critical('========================================================')
+        LOGGER.debug('========================================================')
+        LOGGER.debug('Snapshot: \n%s', str(self.episode_snapshot))
+        LOGGER.debug('========================================================')
         return super().step(action_dict)
 
     def craft_final_state(self, agent):
