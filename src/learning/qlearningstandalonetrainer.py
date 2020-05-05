@@ -44,7 +44,6 @@ else:
 
 DEBUGGER = False
 PROFILER = False
-EXTENDED_STATS = True
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
@@ -269,41 +268,40 @@ class QLearningTrainer(Trainer):
         for agent, values in averaged_rewards_by_agent.items():
                 averaged_rewards_by_agent[agent] = np.mean(values)
 
-        if EXTENDED_STATS:
-            for agent, policy in policies_aggregated_by_episode.items():
-                if DEBUGGER:
-                    LOGGER.debug('[%s] BEFORE \n%s', agent, pformat(policy, compact=True))
-                
-                policy['qtable'] = collections.defaultdict(dict) 
-                policy['max-qvalue'] = dict() 
-                policy['best-action'] = dict()
-                for item in dill.loads(policy['state']['qtable']).get_flattened_dict():
-                    _state, _action, _value = item
-                    policy['qtable'][_state][str(_action)] = _value
-                    if _state in policy['max-qvalue']:
-                        policy['max-qvalue'][_state] = max(
-                            policy['max-qvalue'][_state], _value)
-                        policy['best-action'][_state] = max(
-                            policy['best-action'][_state], (_value, _action))
-                    else:
-                        policy['max-qvalue'][_state] = _value
-                        policy['best-action'][_state] = (_value, _action)
-                for _state, value in policy['best-action'].items():
-                    _, _action = value
-                    policy['best-action'][_state] = _action
+        for agent, policy in policies_aggregated_by_episode.items():
+            if DEBUGGER:
+                LOGGER.debug('[%s] BEFORE \n%s', agent, pformat(policy, compact=True))
+            
+            policy['qtable'] = collections.defaultdict(dict) 
+            policy['max-qvalue'] = dict() 
+            policy['best-action'] = dict()
+            for item in dill.loads(policy['state']['qtable']).get_flattened_dict():
+                _state, _action, _value = item
+                policy['qtable'][_state][str(_action)] = _value
+                if _state in policy['max-qvalue']:
+                    policy['max-qvalue'][_state] = max(
+                        policy['max-qvalue'][_state], _value)
+                    policy['best-action'][_state] = max(
+                        policy['best-action'][_state], (_value, _action))
+                else:
+                    policy['max-qvalue'][_state] = _value
+                    policy['best-action'][_state] = (_value, _action)
+            for _state, value in policy['best-action'].items():
+                _, _action = value
+                policy['best-action'][_state] = _action
 
-                policy['state-action-counter'] = collections.defaultdict(dict) 
-                for item in policy['state']['qtable_state_action_counter'].get_flattened_dict():
-                    _state, _action, _value = item
-                    policy['state-action-counter'][_state][str(_action)] = _value
+            policy['state-action-counter'] = collections.defaultdict(dict) 
+            for item in policy['state']['qtable_state_action_counter'].get_flattened_dict():
+                _state, _action, _value = item
+                policy['state-action-counter'][_state][str(_action)] = _value
 
-                policy['state-action-reward-mean'] = collections.defaultdict(dict) 
-                for item in policy['state']['qtable_state_action_reward'].get_flattened_dict():
-                    _state, _action, _value = item
-                    policy['state-action-reward-mean'][_state][str(_action)] = np.mean(_value)
+            policy['state-action-reward-mean'] = collections.defaultdict(dict) 
+            for item in policy['state']['qtable_state_action_reward'].get_flattened_dict():
+                _state, _action, _value = item
+                policy['state-action-reward-mean'][_state][str(_action)] = np.mean(_value)
 
-                if DEBUGGER:
-                    LOGGER.debug('[%s] AFTER \n%s', agent, pformat(policy, compact=True))
+            if DEBUGGER:
+                LOGGER.debug('[%s] AFTER \n%s', agent, pformat(policy, compact=True))
 
         ## ========================              PROFILER              ======================== ##
         if PROFILER:
