@@ -212,8 +212,8 @@ class AggregatedOverview(object):
 
     def generate_plot(self):
         fig, axs = plt.subplots(
-            3, sharex=True, figsize=(15, 20), constrained_layout=True, 
-            gridspec_kw={'height_ratios': [3, 1, 1]})
+            3, sharex=True, figsize=(15, 15), constrained_layout=True, 
+            gridspec_kw={'height_ratios': [4, 1, 1]})
 
         axs[0].errorbar(
             self.aggregated_dataset['learning-step'], 
@@ -261,7 +261,7 @@ class AggregatedOverview(object):
         axs[2].plot(
             self.aggregated_dataset['learning-step'], 
             self.aggregated_dataset['percentage-waited'], 
-            label='% Waiting too long', color='orange', linestyle='dotted')
+            label='% Waiting too long', color='black', linestyle='dotted')
         axs[2].plot(
             self.aggregated_dataset['learning-step'], 
             self.aggregated_dataset['percentage-stable'], 
