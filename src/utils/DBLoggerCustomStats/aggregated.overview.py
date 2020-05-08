@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Process the DBLogger directory structure """
+""" Process the DBLogger directory structure generating an aggregated overview. """
 
 import argparse
 import collections
@@ -58,7 +58,7 @@ def _argument_parser():
     return parser.parse_args()
 
 def _main():
-    """ Process the RLLIB logs/result.json """
+    """ Process the DBLogger directory structure generating an aggregated overview. """
 
     config = _argument_parser()
 
