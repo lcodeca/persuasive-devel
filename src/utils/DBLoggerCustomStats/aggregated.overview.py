@@ -19,6 +19,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
+from dbloggerstats import DBLoggerStats
+
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
@@ -79,19 +81,10 @@ def _main():
         LOGGER.info('Profiler: \n%s', pformat(results.getvalue()))
     ## ========================              PROFILER              ======================== ##
 
-def alphanumeric_sort(iterable):
-    """ 
-    Sorts the given iterable in the way that is expected.
-    See: https://stackoverflow.com/questions/2669059/how-to-sort-alpha-numeric-set-in-python
-    """
-    convert = lambda text: int(text) if text.isdigit() else text
-    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
-    return sorted(iterable, key = alphanum_key)
-
-class AggregatedOverview(object):
+class AggregatedOverview(DBLoggerStats):
 
     def __init__(self, directory, dataset, window, prefix):
-        self.dir = directory
+        super().__init__(directory)
         self.dataset_fname = dataset
         self.stability_window = window
         self.output_prefix = prefix
@@ -133,17 +126,17 @@ class AggregatedOverview(object):
     def aggregate_data(self):
         self._init_datastructure()
         # process the directory tree
-        available_training_runs = alphanumeric_sort(os.listdir(self.dir))
+        available_training_runs = self.alphanumeric_sort(os.listdir(self.dir))
         for training_run in available_training_runs:
             if training_run in self.aggregated_dataset['training-folders']:
                 continue
             print('Processing {}/{}'.format(self.dir, training_run))
-            agents, episodes, _ = self._get_training_components(training_run)
+            agents, episodes, _ = self.get_training_components(training_run)
             
             # compute the reward
             rewards = list()
             for agent in agents:
-                rewards.append(self._get_reward(training_run, agent))
+                rewards.append(self.get_reward(training_run, agent))
             self.aggregated_dataset['reward-min'].append(min(rewards))
             self.aggregated_dataset['reward-max'].append(max(rewards))
             self.aggregated_dataset['reward-mean'].append(np.mean(rewards))
@@ -151,7 +144,7 @@ class AggregatedOverview(object):
             self.aggregated_dataset['reward-std'].append(np.std(rewards))
 
             # retrieve the learning steps
-            step = self._get_timesteps_this_iter(training_run)
+            step = self.get_timesteps_this_iter(training_run)
             if self.aggregated_dataset['learning-step']:
                 step += self.aggregated_dataset['learning-step'][-1]
             self.aggregated_dataset['learning-step'].append(step)
@@ -161,7 +154,7 @@ class AggregatedOverview(object):
                 for agent in agents:
                     if self._agent_waited_too_long(agent):
                         continue
-                    last_action = self._get_last_action(training_run, episode, agent)
+                    last_action = self.get_last_action(training_run, episode, agent)
                     if last_action is 0:
                         self.aggregated_dataset['waited'][agent] = step
                     else:
@@ -185,7 +178,7 @@ class AggregatedOverview(object):
                 stable = False
                 # print(window)
                 for run in window:
-                    current_policy = self._get_best_actions(run, agent)
+                    current_policy = self.get_best_actions(run, agent)
                     if previous_policy is None:
                         previous_policy = current_policy
                         continue
@@ -331,63 +324,12 @@ class AggregatedOverview(object):
 
     ####################################### GENERIC  GETTERS #######################################
 
-    def _get_training_components(self, training):
-        """ Retrieve the content from the training directory. """
-        agents = list()
-        episodes = list()
-        files = list()
-        for thing in os.listdir(os.path.join(self.dir, training)):
-            if 'agent' in thing:
-                agents.append(thing)
-            elif 'episode' in thing:
-                episodes.append(thing)
-            else:
-                files.append(thing)
-        return alphanumeric_sort(agents), alphanumeric_sort(episodes), files
-
-    def _get_reward(self, training, agent):
-        """ Retrieve 'agent_reward' from stats.json """
-        fname = os.path.join(self.dir, training, agent, 'stats.json')
-        vals = {}
-        with open(fname, 'r') as jsonfile:
-            vals = json.load(jsonfile)
-            LOGGER.debug('%s ==> %s', fname, str(vals))
-        return float(vals['agent_reward'])
-
-    def _get_timesteps_this_iter(self, training):
-        """ Retrieve 'timesteps_this_iter' from aggregated-values.json """
-        fname = os.path.join(self.dir, training, 'aggregated-values.json')
-        vals = {}
-        with open(fname, 'r') as jsonfile:
-            vals = json.load(jsonfile)
-            LOGGER.debug('%s ==> %s', fname, str(vals))
-        return int(vals['timesteps_this_iter'])
-    
     def _agent_waited_too_long(self, agent):
         if agent not in self.aggregated_dataset['waited']:
             # covers the initial empty structure
             return False
         return self.aggregated_dataset['waited'][agent] is not None
     
-    def _get_last_action(self, training, episode, agent):
-        """ Retrieve the last action from learning-sequence.json """
-        fname = os.path.join(self.dir, training, episode, agent, 'learning-sequence.json')
-        vals = {}
-        with open(fname, 'r') as jsonfile:
-            vals = json.load(jsonfile)
-            LOGGER.debug('%s ==> %s', fname, str(vals))
-        _, action, _, _ = vals[-1]
-        return action
-
-    def _get_best_actions(self, training, agent):
-        """ Load 'best-action.json' """
-        fname = os.path.join(self.dir, training, agent, 'best-action.json')
-        best_actions = {}
-        with open(fname, 'r') as jsonfile:
-            best_actions = json.load(jsonfile)
-            LOGGER.debug('%s ==> %s', fname, str(best_actions))
-        return best_actions
-
     ################################################################################################
 
 ####################################################################################################
