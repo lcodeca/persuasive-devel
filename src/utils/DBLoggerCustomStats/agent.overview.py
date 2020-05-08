@@ -245,16 +245,6 @@ class AgentOverview(DBLoggerStats):
             # plt.show()
             matplotlib.pyplot.close('all')     
 
-    ####################################### GENERIC  GETTERS #######################################
-
-    def _agent_waited_too_long(self, agent):
-        if agent not in self.aggregated_dataset['waited']:
-            # covers the initial empty structure
-            return False
-        return self.aggregated_dataset['waited'][agent] is not None
-    
-    ################################################################################################
-
 ####################################################################################################
 
 if __name__ == '__main__':
