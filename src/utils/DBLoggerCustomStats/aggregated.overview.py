@@ -228,6 +228,7 @@ class AggregatedOverview(DBLoggerStats):
             label='Median', color='cyan')
         axs[0].set_ylabel('Reward')
         axs[0].set_ylim(-20000, 0)
+        axs[0].grid(True)
         axs[0].legend(loc=1, ncol=4, shadow=True)
 
         axs[1].errorbar(
@@ -249,7 +250,8 @@ class AggregatedOverview(DBLoggerStats):
             self.aggregated_dataset['reward-median'], 
             label='Median', color='cyan')
         axs[1].set_ylabel('Reward')
-        axs[2].set_xlabel('Learning step')
+        axs[1].set_xlabel('Learning step')
+        axs[1].grid(True)
 
         axs[2].plot(
             self.aggregated_dataset['learning-step'], 
@@ -262,6 +264,7 @@ class AggregatedOverview(DBLoggerStats):
         axs[2].set_ylabel('Agents [%]')
         axs[2].set_ylim(-10, 110)
         axs[2].set_xlabel('Learning step')
+        axs[2].grid(True)
         axs[2].legend(loc=1, ncol=2, shadow=True)
 
         fig.savefig('{}.svg'.format(self.output_prefix),
