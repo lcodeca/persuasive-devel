@@ -183,42 +183,60 @@ class AgentOverview(DBLoggerStats):
             axs[0][0].plot(self.aggregated_dataset['episodes'], stats['reward'], label='Reward',
                            color='blue', marker='o', linestyle='solid', linewidth=2, markersize=8)
             axs[0][0].set_ylabel('Reward')
+            axs[0][0].grid(True)
+
             axs[1][0].plot(self.aggregated_dataset['episodes'], stats['actions'], label='Number of actions',
                            color='red', marker='o', linestyle='solid', linewidth=2, markersize=8)
             axs[1][0].set_ylabel('Actions [#]')
+            axs[1][0].grid(True)
+            
             axs[2][0].plot(self.aggregated_dataset['episodes'], stats['mode'], label='Selected mode',
                            color='green', marker='o', linestyle='solid', linewidth=2, markersize=8)
             axs[2][0].set_ylabel('Mode')
+            axs[2][0].grid(True)
+            
             axs[3][0].plot(self.aggregated_dataset['episodes'], stats['ett'], label='Estimated Travel Time',
                            color='black', marker='o', linestyle='solid', linewidth=2, markersize=8)
             axs[3][0].set_ylim(0, ett_rtt_max)
             axs[3][0].set_ylabel('Est TT [m]')
+            axs[3][0].grid(True)
+            
             axs[4][0].plot(self.aggregated_dataset['episodes'], stats['rtt'], label='Real Travel Time',
                            color='magenta', marker='o', linestyle='solid', linewidth=2, markersize=8)
             axs[4][0].set_ylim(0, ett_rtt_max)
             axs[4][0].set_ylabel('Real TT [m]')
             axs[4][0].set_xlabel('Episode [#]')
+            axs[4][0].grid(True)
 
             axs[0][1].plot(self.aggregated_dataset['episodes'], stats['departure'], 'b-', label='Departure',
                            color='blue', marker='o', linestyle='solid', linewidth=2, markersize=8)
             axs[0][1].axhline(y=9.0, color='red', linestyle='dashed')
             axs[0][1].set_ylabel('Departure [h]')
+            axs[0][1].grid(True)
+            
             axs[1][1].plot(self.aggregated_dataset['episodes'], stats['arrival'], 'r-', label='Arrival',
                            color='red', marker='o', linestyle='solid', linewidth=2, markersize=8)
             axs[1][1].axhline(y=9.0, color='red', linestyle='dashed')
             axs[1][1].set_ylabel('Arrival [h]')
+            axs[1][1].grid(True)
+
             axs[2][1].plot(self.aggregated_dataset['episodes'], stats['wait'], 'g-', label='Waiting at destination',
                            color='green', marker='o', linestyle='solid', linewidth=2, markersize=8)
             axs[2][1].axhline(y=0.0, color='red', linestyle='dashed')
             axs[2][1].set_ylabel('Wait @ destination [m]')
+            axs[2][1].grid(True)
+
             axs[3][1].plot(self.aggregated_dataset['episodes'], stats['cost'], 'k-', label='Estimated cost',
                            color='black', marker='o', linestyle='solid', linewidth=2, markersize=8)
             axs[3][1].set_ylabel('Est Cost [m]')
+            axs[3][1].grid(True)
+
             axs[4][1].plot(self.aggregated_dataset['episodes'], stats['difference'], 'm-', label='ETT / RTT Difference',
                            color='magenta', marker='o', linestyle='solid', linewidth=2, markersize=8)
             axs[4][1].axhline(y=0.0, color='red', linestyle='dashed')
             axs[4][1].set_ylabel('ETT / RTT Difference [m]')
             axs[4][1].set_xlabel('Episode [#]')
+            axs[4][1].grid(True)
 
             fig.savefig('{}.{}.svg'.format(self.output_prefix, agent),
                     dpi=300, transparent=False, bbox_inches='tight')
