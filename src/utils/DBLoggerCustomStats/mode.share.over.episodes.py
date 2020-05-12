@@ -194,7 +194,7 @@ class ModeShareEpisodes(DBLoggerStats):
                     dpi=300, transparent=False, bbox_inches='tight')
         fig.savefig('{}.png'.format(self.output_prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
-        plt.show()   
+        # plt.show()   
         matplotlib.pyplot.close('all')
     
     def generate_messy_plot(self):
