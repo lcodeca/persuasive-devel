@@ -18,6 +18,7 @@ from deepdiff import DeepDiff
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm import tqdm
 
 from dbloggerstats import DBLoggerStats
 
@@ -113,13 +114,15 @@ class ETTInsight(DBLoggerStats):
         if self.last:
             available_training_runs = [available_training_runs[-1]]
 
-        for training_run in available_training_runs:
+        print('Processing the training runs...')
+        for training_run in tqdm(available_training_runs):
             available_agents, available_episodes, _ = self.get_training_components(training_run)
             if self.episode:
                 available_episodes = [self.episode]
             if self.agent:
                 available_agents = [self.agent]
-            for episode in available_episodes:
+            print('Processing episodes...')
+            for episode in tqdm(available_episodes):
                 for agent in available_agents:
                     info = self.get_info(training_run, episode, agent)
                     if 'ext' not in info:

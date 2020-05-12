@@ -18,6 +18,7 @@ from deepdiff import DeepDiff
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm import tqdm
 
 from dbloggerstats import DBLoggerStats
 
@@ -113,7 +114,8 @@ class AgentOverview(DBLoggerStats):
         self._init_datastructure()
         # process the directory tree
         available_training_runs = self.alphanumeric_sort(os.listdir(self.dir))
-        for training_run in available_training_runs:
+        print('Processing the training runs...')
+        for training_run in tqdm(available_training_runs):
             if training_run in self.aggregated_dataset['training-folders']:
                 continue
             print('Processing {}/{}'.format(self.dir, training_run))
@@ -169,9 +171,8 @@ class AgentOverview(DBLoggerStats):
     ######################################## PLOT GENERATOR ########################################
 
     def generate_plot(self):
-        for agent, stats in self.aggregated_dataset['agents'].items():
-            print('Plotting agent {}...'.format(agent))
-
+        print('Plotting agents..')
+        for agent, stats in tqdm(self.aggregated_dataset['agents'].items()):
             # https://matplotlib.org/gallery/subplots_axes_and_figures/ganged_plots.html#sphx-glr-gallery-subplots-axes-and-figures-ganged-plots-py
             fig, axs = plt.subplots(5, 2, sharex=True, figsize=(20, 20), constrained_layout=True)
             fig.suptitle('{}'.format(agent))
