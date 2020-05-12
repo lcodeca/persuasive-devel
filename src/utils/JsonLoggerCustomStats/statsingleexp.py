@@ -16,7 +16,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 SMALL_SIZE = 20
 MEDIUM_SIZE = SMALL_SIZE + 4
 BIGGER_SIZE = MEDIUM_SIZE + 4
@@ -52,7 +51,10 @@ class StatSingleExp(object):
         max_y = []
         std_y = []
         with open(self.input, 'r') as jsonfile:
+            counter = 0
             for row in jsonfile: # enumerate cannot be used due to the size of the file
+                counter += 1
+                print('Processing checkout #{}'.format(counter))
                 complete = json.loads(row)
                 x_coords.append(complete['timesteps_total'])
                 y_coords.append(complete['episode_reward_mean'])
@@ -75,7 +77,12 @@ class StatSingleExp(object):
         ax.grid()
         fig.savefig('{}.reward_over_learning.svg'.format(self.prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
-        # plt.show()   
+        # plt.show()
+        # ZOOM IT 
+        ax.set_ylim(-20000, 0)
+        # plt.show()
+        fig.savefig('{}.bounded_reward_over_learning.svg'.format(self.prefix),
+                    dpi=300, transparent=False, bbox_inches='tight')
         matplotlib.pyplot.close('all')
 
     def elapsed_episode_time_over_timesteps_total(self):
