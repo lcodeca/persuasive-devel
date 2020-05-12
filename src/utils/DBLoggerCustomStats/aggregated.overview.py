@@ -18,6 +18,7 @@ from deepdiff import DeepDiff
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm import tqdm
 
 from dbloggerstats import DBLoggerStats
 
@@ -127,7 +128,8 @@ class AggregatedOverview(DBLoggerStats):
         self._init_datastructure()
         # process the directory tree
         available_training_runs = self.alphanumeric_sort(os.listdir(self.dir))
-        for training_run in available_training_runs:
+        print('Processing the training runs...')
+        for training_run in tqdm(available_training_runs):
             if training_run in self.aggregated_dataset['training-folders']:
                 continue
             print('Processing {}/{}'.format(self.dir, training_run))
@@ -204,6 +206,7 @@ class AggregatedOverview(DBLoggerStats):
     ######################################## PLOT GENERATOR ########################################
 
     def generate_plot(self):
+        print('Plot generation...')
         fig, axs = plt.subplots(
             3, sharex=True, figsize=(15, 15), constrained_layout=True, 
             gridspec_kw={'height_ratios': [4, 1, 1]})
@@ -267,6 +270,7 @@ class AggregatedOverview(DBLoggerStats):
         axs[2].grid(True)
         axs[2].legend(loc=1, ncol=2, shadow=True)
 
+        print('Saving plots...')
         fig.savefig('{}.svg'.format(self.output_prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
         fig.savefig('{}.png'.format(self.output_prefix),
