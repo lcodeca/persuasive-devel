@@ -87,25 +87,25 @@ class HTMLGallery():
         }
         </style>
     <body>
-        <h1>{{exp_name}}</h1>
+        <h1 style="text-align:center">{{exp_name}}</h1>
 
-        <h2>Aggregated data</h2>
-        <table>
+        <h2 style="text-align:center">Aggregated data</h2>
+        <table style="margin-left:auto;margin-right:auto;">
         <tr>
-            <td width="33%"><figure><a target="_blank" href="{{rewards}}"><img src="{{rewards}}"/></a><figcaption>Average reward</figcaption></figure></td>
-            <td width="33%"><figure><a target="_blank" href="{{agents}}"><img src="{{agents}}"/></a><figcaption>Agents overview</figcaption></figure></td>
-            <td width="33%"><figure><a target="_blank" href="{{modes}}"><img src="{{modes}}"/></a><figcaption>Modes overview</figcaption></figure></td>
+            <td width="33%" style="text-align:center"><figure><a target="_blank" href="{{rewards}}"><img src="{{rewards}}"/></a><figcaption>Average reward</figcaption></figure></td>
+            <td width="33%" style="text-align:center"><figure><a target="_blank" href="{{agents}}"><img src="{{agents}}"/></a><figcaption>Agents overview</figcaption></figure></td>
+            <td width="33%" style="text-align:center"><figure><a target="_blank" href="{{modes}}"><img src="{{modes}}"/></a><figcaption>Modes overview</figcaption></figure></td>
         </tr>
         </table>
 
-        <h2>Agents overview</h2>
-        <table>
+        <h2 style="text-align:center">Agents overview</h2>
+        <table style="margin-left:auto;margin-right:auto;">
         {% for item in items %}
         <tr>
-            <td width="25%"><figure><a target="_blank" href="{{item.img1}}"><img src="{{item.img1}}"/></a><figcaption>{{item.caption1}}</figcaption></figure></td>
-            <td width="25%"><figure><a target="_blank" href="{{item.img2}}"><img src="{{item.img2}}"/></a><figcaption>{{item.caption2}}</figcaption></figure></td>
-            <td width="25%"><figure><a target="_blank" href="{{item.img3}}"><img src="{{item.img3}}"/></a><figcaption>{{item.caption3}}</figcaption></figure></td>
-            <td width="25%"><figure><a target="_blank" href="{{item.img4}}"><img src="{{item.img4}}"/></a><figcaption>{{item.caption4}}</figcaption></figure></td>
+            <td width="25%" style="text-align:center"><figure><a target="_blank" href="{{item.img1}}"><img src="{{item.img1}}"/></a><figcaption>{{item.caption1}}</figcaption></figure></td>
+            <td width="25%" style="text-align:center"><figure><a target="_blank" href="{{item.img2}}"><img src="{{item.img2}}"/></a><figcaption>{{item.caption2}}</figcaption></figure></td>
+            <td width="25%" style="text-align:center"><figure><a target="_blank" href="{{item.img3}}"><img src="{{item.img3}}"/></a><figcaption>{{item.caption3}}</figcaption></figure></td>
+            <td width="25%" style="text-align:center"><figure><a target="_blank" href="{{item.img4}}"><img src="{{item.img4}}"/></a><figcaption>{{item.caption4}}</figcaption></figure></td>
         </tr>
         {% endfor %}
         </table>
