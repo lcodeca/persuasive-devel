@@ -103,5 +103,14 @@ class DBLoggerStats():
             best_actions = json.load(jsonfile)
             LOGGER.debug('%s ==> %s', fname, str(best_actions))
         return best_actions
+    
+    def get_state_action_counter(self, training, agent):
+        """ Load 'state-action-counter.json' """
+        fname = os.path.join(self.dir, training, agent, 'state-action-counter.json')
+        state_action_counter = {}
+        with open(fname, 'r') as jsonfile:
+            state_action_counter = json.load(jsonfile)
+            LOGGER.debug('%s ==> %s', fname, str(state_action_counter))
+        return state_action_counter
 
 ####################################################################################################

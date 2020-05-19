@@ -48,9 +48,6 @@ def _argument_parser():
         '--training', default=None, type=str, 
         help='Training run to parse, if not defined, it process them all. (Ignored if --last-run)')
     parser.add_argument(
-        '--episode', default=None, type=str, 
-        help='Episode to parse, if not defined, it process them all. (Ignored if --last-run)')
-    parser.add_argument(
         '--agent', default=None, type=str, 
         help='Agent to parse, if not defined, it process them all. (Ignored if --last-run)')
     parser.add_argument(
@@ -77,8 +74,7 @@ def _main():
     ## ========================              PROFILER              ======================== ##
 
     statistics = ETTInsight(
-        config.dir_tree, config.graph, 
-        config.training, config.episode, config.agent, config.last_run)
+        config.dir_tree, config.graph, config.training, config.agent, config.last_run)
     statistics.generate_plots()
     LOGGER.info('Done')
 
@@ -92,15 +88,14 @@ def _main():
 
 class ETTInsight(DBLoggerStats):
 
-    def __init__(self, directory, prefix, training, episode, agent, last):
+    def __init__(self, directory, prefix, training, agent, last):
         super().__init__(directory)
         self.output_prefix = prefix
         self.training = training
-        self.episode = episode
         self.agent = agent
         self.last = last
         if self.last:
-            self.training, self.episode, self.agent = None, None, None
+            self.training, self.agent = None, None
 
     ######################################## PLOT GENERATOR ########################################
 
@@ -116,34 +111,65 @@ class ETTInsight(DBLoggerStats):
 
         print('Processing the training runs...')
         for training_run in tqdm(available_training_runs):
-            available_agents, available_episodes, _ = self.get_training_components(training_run)
-            if self.episode:
-                available_episodes = [self.episode]
+            available_agents, _, _ = self.get_training_components(training_run)
             if self.agent:
                 available_agents = [self.agent]
-            print('Processing episodes...')
-            for episode in tqdm(available_episodes):
-                for agent in available_agents:
-                    info = self.get_info(training_run, episode, agent)
-                    if 'ext' not in info:
-                        print('No ETT available for {} {} {}'.format(training_run, episode, agent))
-                        continue
-                    for mode, values in info['ext'].items():
-                        x_coords = list(range(len(values)))
-                        fig, ax = plt.subplots(figsize=(15, 10))
-                        ax.plot(x_coords, values, label='ETT')
-                        ax.set(xlabel='Waiting slots', ylabel='Time [s]', 
-                               title='ETT variation for mode "{}" during {}/{}.'.format(
-                                   mode, training_run, episode))
-                        ax.grid()
-                        fig.savefig('{}.{}.{}.{}.{}.svg'.format(
-                                        self.output_prefix, training_run, episode, agent, mode),
-                                    dpi=300, transparent=False, bbox_inches='tight')
-                        fig.savefig('{}.{}.{}.{}.{}.png'.format(
-                                        self.output_prefix, training_run, episode, agent, mode),
-                                    dpi=300, transparent=False, bbox_inches='tight')
-                        # plt.show()   
-                        matplotlib.pyplot.close('all')
+            print('Processing agents...')
+            for agent in tqdm(available_agents):
+                best_action = self.get_best_actions(training_run, agent)
+                state_action_counter = self.get_state_action_counter(training_run, agent)
+                structure = defaultdict(lambda: defaultdict(lambda: list()))
+                for state, action in best_action.items():
+                    time_left_match = re.search('\(\'time-left\', (.+?)\), \(\'ett\'', state)
+                    time_left = None
+                    if time_left_match:
+                        time_left = time_left_match.group(1)
+                    ett_match = re.search('array\((.+?)\)\)]\)', state)
+                    ett = None
+                    if ett_match:
+                        ett = ett_match.group(1)
+                    if time_left is None or ett is None:
+                        print('Problem with state ', state)
+                    else:
+                        counter = 0
+                        try:
+                            counter = state_action_counter[state][str(action)]
+                        except KeyError:
+                            pass
+                        if counter > 0:
+                            structure[int(time_left)][int(action)].append('{} {}'.format(counter, ett))
+
+                x_coord = []
+                y_coord = []
+                labels = []
+                for time_left, values in structure.items():
+                    for action, all_labels in values.items():
+                        aggr = ''
+                        for lbl in all_labels:
+                            aggr += ' {} /'.format(lbl)
+                        aggr = aggr.strip('/')
+                        x_coord.append(time_left)
+                        y_coord.append(action)
+                        labels.append(aggr)
+                
+                ## PLOTTING TIME!
+                fig, ax = plt.subplots(figsize=(30, 10))
+                ax.scatter(x_coord, y_coord, label='Best Action')
+                ax.set_ylim(-0.5, max(y_coord)+0.5)
+                ax.set_yticks(range(0, max(y_coord)+1, 1))
+                for i, txt in enumerate(labels):
+                    ax.annotate(txt, (x_coord[i], y_coord[i]), rotation=90, horizontalalignment='center')
+                ax.set(xlabel='Waiting slots', ylabel='Action [#]', 
+                       title='Best Action "{}" during {}.'.format(agent, training_run))
+                ax.grid()
+                fig.savefig('{}.{}.{}.svg'.format(
+                                self.output_prefix, training_run, agent),
+                            dpi=300, transparent=False, bbox_inches='tight')
+                fig.savefig('{}.{}.{}.png'.format(
+                                self.output_prefix, training_run, agent),
+                            dpi=300, transparent=False, bbox_inches='tight')
+                # plt.show()   
+                matplotlib.pyplot.close('all')
 
 ####################################################################################################
 
