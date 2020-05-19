@@ -193,6 +193,7 @@ class AgentOverview(DBLoggerStats):
             
             axs[2][0].plot(self.aggregated_dataset['episodes'], stats['mode'], label='Selected mode',
                            color='green', marker='o', linestyle='solid', linewidth=2, markersize=8)
+            axs[4][0].set_ylim(0, max(stats['mode']))
             axs[2][0].set_ylabel('Mode')
             axs[2][0].grid(True)
             
