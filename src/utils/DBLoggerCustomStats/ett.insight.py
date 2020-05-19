@@ -139,9 +139,9 @@ class ETTInsight(DBLoggerStats):
                         fig.savefig('{}.{}.{}.{}.{}.svg'.format(
                                         self.output_prefix, training_run, episode, agent, mode),
                                     dpi=300, transparent=False, bbox_inches='tight')
-                        fig.savefig('{}.{}.{}.{}.{}.svg'.format(
-                                        self.output_prefix, training_run, episode, agent, mode),
-                                    dpi=600, transparent=False, bbox_inches='tight')
+                        # fig.savefig('{}.{}.{}.{}.{}.svg'.format(
+                        #                 self.output_prefix, training_run, episode, agent, mode),
+                        #             dpi=600, transparent=False, bbox_inches='tight')
                         # plt.show()   
                         matplotlib.pyplot.close('all')
 

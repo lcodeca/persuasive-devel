@@ -241,8 +241,8 @@ class AgentOverview(DBLoggerStats):
 
             fig.savefig('{}.{}.svg'.format(self.output_prefix, agent),
                     dpi=300, transparent=False, bbox_inches='tight')
-            fig.savefig('{}.{}.png'.format(self.output_prefix, agent),
-                    dpi=300, transparent=False, bbox_inches='tight')
+            # fig.savefig('{}.{}.png'.format(self.output_prefix, agent),
+            #         dpi=300, transparent=False, bbox_inches='tight')
             # plt.show()
             matplotlib.pyplot.close('all')     
 
