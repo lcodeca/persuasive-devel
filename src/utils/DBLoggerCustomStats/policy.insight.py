@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Process the DBLogger directory structure generating ETT plots for specific episodes. """
+""" Process the DBLogger directory structure generating Policiy plots for specific episodes. """
 
 import argparse
 from collections import defaultdict
@@ -63,7 +63,7 @@ def _argument_parser():
     return parser.parse_args()
 
 def _main():
-    """ Process the DBLogger directory structure generating ETT plots for specific episodes. """
+    """ Process the DBLogger directory structure generating Policiy plots for specific episodes. """
 
     config = _argument_parser()
 
@@ -73,7 +73,7 @@ def _main():
         profiler.enable()
     ## ========================              PROFILER              ======================== ##
 
-    statistics = ETTInsight(
+    statistics = PolicyInsight(
         config.dir_tree, config.graph, config.training, config.agent, config.last_run)
     statistics.generate_plots()
     LOGGER.info('Done')
@@ -86,7 +86,7 @@ def _main():
         LOGGER.info('Profiler: \n%s', pformat(results.getvalue()))
     ## ========================              PROFILER              ======================== ##
 
-class ETTInsight(DBLoggerStats):
+class PolicyInsight(DBLoggerStats):
 
     def __init__(self, directory, prefix, training, agent, last):
         super().__init__(directory)
@@ -165,9 +165,9 @@ class ETTInsight(DBLoggerStats):
                 fig.savefig('{}.{}.{}.svg'.format(
                                 self.output_prefix, training_run, agent),
                             dpi=300, transparent=False, bbox_inches='tight')
-                fig.savefig('{}.{}.{}.png'.format(
-                                self.output_prefix, training_run, agent),
-                            dpi=300, transparent=False, bbox_inches='tight')
+                # fig.savefig('{}.{}.{}.png'.format(
+                #                 self.output_prefix, training_run, agent),
+                #             dpi=300, transparent=False, bbox_inches='tight')
                 # plt.show()   
                 matplotlib.pyplot.close('all')
 

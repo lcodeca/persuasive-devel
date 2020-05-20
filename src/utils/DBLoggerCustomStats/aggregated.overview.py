@@ -273,8 +273,8 @@ class AggregatedOverview(DBLoggerStats):
         print('Saving plots...')
         fig.savefig('{}.svg'.format(self.output_prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
-        fig.savefig('{}.png'.format(self.output_prefix),
-                    dpi=300, transparent=False, bbox_inches='tight')
+        # fig.savefig('{}.png'.format(self.output_prefix),
+        #             dpi=300, transparent=False, bbox_inches='tight')
         # plt.show()   
         matplotlib.pyplot.close('all')
 
@@ -324,8 +324,8 @@ class AggregatedOverview(DBLoggerStats):
         host.grid()
         fig.savefig('{}.svg'.format(self.output_prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
-        fig.savefig('{}.png'.format(self.output_prefix),
-                    dpi=300, transparent=False, bbox_inches='tight')
+        # fig.savefig('{}.png'.format(self.output_prefix),
+        #             dpi=300, transparent=False, bbox_inches='tight')
         # plt.show()   
         matplotlib.pyplot.close('all')
 
