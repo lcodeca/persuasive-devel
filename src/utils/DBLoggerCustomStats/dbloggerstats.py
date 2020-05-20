@@ -112,5 +112,14 @@ class DBLoggerStats():
             state_action_counter = json.load(jsonfile)
             LOGGER.debug('%s ==> %s', fname, str(state_action_counter))
         return state_action_counter
+    
+    def get_qtable(self, training, agent):
+        """ Load 'qtable.json' """
+        fname = os.path.join(self.dir, training, agent, 'qtable.json')
+        qtable = {}
+        with open(fname, 'r') as jsonfile:
+            qtable = json.load(jsonfile)
+            LOGGER.debug('%s ==> %s', fname, str(qtable))
+        return qtable
 
 ####################################################################################################
