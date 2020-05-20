@@ -338,8 +338,8 @@ class AggregatedAgentsOutcome(DBLoggerStats):
         print('Saving to file..')
         fig.savefig('{}.svg'.format(self.output_prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
-        fig.savefig('{}.png'.format(self.output_prefix),
-                    dpi=300, transparent=False, bbox_inches='tight')
+        # fig.savefig('{}.png'.format(self.output_prefix),
+        #             dpi=300, transparent=False, bbox_inches='tight')
         # plt.show()   
         matplotlib.pyplot.close('all')   
 

@@ -192,8 +192,8 @@ class ModeShareEpisodes(DBLoggerStats):
         axs[len(self.MODES)-1].set_xlabel('Episodes')
         fig.savefig('{}.svg'.format(self.output_prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
-        fig.savefig('{}.png'.format(self.output_prefix),
-                    dpi=300, transparent=False, bbox_inches='tight')
+        # fig.savefig('{}.png'.format(self.output_prefix),
+        #             dpi=300, transparent=False, bbox_inches='tight')
         # plt.show()   
         matplotlib.pyplot.close('all')
     
@@ -220,8 +220,8 @@ class ModeShareEpisodes(DBLoggerStats):
         main.grid()
         fig.savefig('{}.svg'.format(self.output_prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
-        fig.savefig('{}.png'.format(self.output_prefix),
-                    dpi=300, transparent=False, bbox_inches='tight')
+        # fig.savefig('{}.png'.format(self.output_prefix),
+        #             dpi=300, transparent=False, bbox_inches='tight')
         plt.show()   
         matplotlib.pyplot.close('all')
     
@@ -250,8 +250,8 @@ class ModeShareEpisodes(DBLoggerStats):
         main.grid()
         fig.savefig('{}.svg'.format(self.output_prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
-        fig.savefig('{}.png'.format(self.output_prefix),
-                    dpi=300, transparent=False, bbox_inches='tight')
+        # fig.savefig('{}.png'.format(self.output_prefix),
+        #             dpi=300, transparent=False, bbox_inches='tight')
         plt.show()   
         matplotlib.pyplot.close('all')
 
