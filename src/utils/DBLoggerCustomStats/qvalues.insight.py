@@ -13,7 +13,7 @@ from pprint import pformat, pprint
 import pstats
 import re
 import sys
-
+from math import ceil
 from deepdiff import DeepDiff
 import matplotlib
 import matplotlib.pyplot as plt
@@ -25,6 +25,7 @@ from dbloggerstats import DBLoggerStats
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
+TINY_SIZE = 10
 SMALL_SIZE = 20
 MEDIUM_SIZE = SMALL_SIZE + 4
 BIGGER_SIZE = MEDIUM_SIZE + 4
@@ -120,49 +121,64 @@ class QValuesInsight(DBLoggerStats):
             print('Processing agents...')
             for agent in tqdm(available_agents):
                 qtable = self.get_qtable(training_run, agent)
-                best_action = self.get_best_actions(training_run, agent)
                 state_action_counter = self.get_state_action_counter(training_run, agent)
-                structure = defaultdict(lambda: defaultdict(lambda: list()))
-                for state, action in best_action.items():
-                    if state not in state_action_counter:
-                        # irrelevant
-                        continue
-                    time_left_match = re.search('\(\'time-left\', (.+?)\), \(\'ett\'', state)
-                    if not time_left_match:
-                        continue
-                    time_left = time_left_match.group(1)
-                    ett_match = re.search('array\((.+?)\)\)]\)', state)
-                    if not ett_match:
-                        continue
-                    ett = ett_match.group(1)
-                    counter = state_action_counter[state][str(action)]
-                    if counter > 0:
-                        structure[int(time_left)][int(action)].append('{} ({}) {}'.format(
-                            counter, round(qtable[state][str(action)]), ett))
+                structure = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: list())))
+                for state, counters in state_action_counter.items():
+                    for action, counter in counters.items():
+                        # if counter <= 0:
+                        #     # irrelevant
+                        #     continue
+                        time_left_match = re.search('\(\'time-left\', (.+?)\), \(\'ett\'', state)
+                        if not time_left_match:
+                            # this should never happen but..
+                            continue
+                        time_left = time_left_match.group(1)
+                        ett_match = re.search('array\((.+?)\)\)]\)', state)
+                        if not ett_match:
+                            # this should never happen but..
+                            continue
+                        ett = ett_match.group(1)
+                        structure[int(time_left)][ett][int(action)] = [round(qtable[state][str(action)], 1), counter]
 
-                x_coord = []
-                y_coord = []
-                labels = []
-                for time_left, values in structure.items():
-                    for action, all_labels in values.items():
-                        aggr = ''
-                        for lbl in all_labels:
-                            aggr += ' {} /'.format(lbl)
-                        aggr = aggr.strip('/')
-                        x_coord.append(time_left)
-                        y_coord.append(action)
-                        labels.append(aggr)
+                labels = [] # ordered states, time left - ETTs
+                dict_qvals = defaultdict(list)
+                dict_counters = defaultdict(list)
+                for time_left, values in sorted(structure.items()):
+                    for ett, actions in sorted(values.items()):
+                        labels.append('{}-{}'.format(time_left, ett))
+                        for action, (qval, counter) in actions.items():
+                            dict_qvals[action].append(qval)
+                            dict_counters[action].append(counter)
                 
                 ## PLOTTING TIME!
-                fig, ax = plt.subplots(figsize=(60, 30))
-                ax.scatter(x_coord, y_coord, label='Best Action')
-                ax.set_ylim(-0.5, max(y_coord)+0.5)
-                ax.set_yticks(range(0, max(y_coord)+1, 1))
-                for i, txt in enumerate(labels):
-                    ax.annotate(txt, (x_coord[i], y_coord[i]), rotation=90, horizontalalignment='center')
-                ax.set(xlabel='Waiting slots', ylabel='Action [#]', 
-                       title='Best Action "{}" during {}.'.format(agent, training_run))
-                ax.grid()
+                x = np.arange(len(labels))  # the label locations
+                width = 0.15  # the width of the bars
+
+                fig, ax = plt.subplots(figsize=(70, 30))
+                spacer = len(dict_qvals)
+                for pos, action in enumerate(dict_qvals):
+                    relpos = ceil(pos - spacer / 2) / spacer / 2
+                    # print(action, relpos, pos, spacer)
+                    # print(x + relpos * width / 2)
+                    rect = ax.bar(x + relpos + width / 2, dict_qvals[action], width, label='{}'.format(action))
+                    for p, bar in enumerate(rect):
+                        if dict_counters[action][p] > 0:
+                            lbl = '({}) {}'.format(dict_counters[action][p], dict_qvals[action][p])
+                            ax.annotate(lbl, # dict_counters[action][p],
+                                        xy=(bar.get_x() + bar.get_width() / spacer, bar.get_height()),
+                                        xytext=(0, -10),  # 3 points vertical offset
+                                        textcoords="offset points", size=TINY_SIZE, 
+                                        rotation=90, ha='center', va='top')
+
+                # Add some text for labels, title and custom x-axis tick labels, etc.
+                ax.set_ylabel('Q-Values')
+                ax.set_title('Q-values by state and action')
+                ax.set_xticks(x)
+                ax.set_xticklabels(labels, rotation='vertical')
+                ax.xaxis.tick_top()
+                ax.xaxis.set_label_position('top') 
+                ax.legend()
+                
                 fig.savefig('{}.{}.{}.svg'.format(
                                 self.output_prefix, training_run, agent),
                             dpi=300, transparent=False, bbox_inches='tight')
