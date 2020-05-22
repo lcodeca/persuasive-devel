@@ -104,7 +104,7 @@ class EGreedyQLearningEligibilityTracesPolicy(EGreedyQLearningPolicy):
         
         See: 
             https://en.wikipedia.org/wiki/Q-learning#Algorithm
-            https://miro.medium.com/max/1400/1*NrfbzndokXpK2rcQu8VOLA.png
+            https://stackoverflow.com/questions/40862578/how-to-understand-watkinss-q%CE%BB-learning-algorithm-in-suttonbartos-rl-book
 
         Given a sample = {
                         'old_state': states[agent],
@@ -129,8 +129,8 @@ class EGreedyQLearningEligibilityTracesPolicy(EGreedyQLearningPolicy):
 
         # compute the error 
         error = (sample['reward'] + 
-            (self.gamma * self.qtable[sample['next_state']][sample['action']]) - 
-            self.qtable[sample['old_state']][best_action])  
+            (self.gamma * self.qtable[sample['next_state']][best_action]) - 
+            self.qtable[sample['old_state']][sample['action']])  
         LOGGER.debug('Q-Learning: error = %.2f + %.2f * %.2f - %.2f', 
             sample['reward'], self.gamma, self.qtable[sample['next_state']][sample['action']],
             self.qtable[sample['old_state']][best_action])
