@@ -27,7 +27,7 @@ from utils.logger import DBLogger
 
 from configs import egreedyqlearning_conf, ppo_conf
 
-from environments import marlenvironment, marlenvironmentagentscoop
+from environments import marlenvironment, marlenvironmentagentscoop, marlenvironmentlatereward
 
 import learning.qlearningstandalonetrainer as QLStandAlone
 import learning.qlearningeligibilitytraces as QLETStandAlone 
@@ -42,7 +42,7 @@ def argument_parser():
         '--algo', default='QLET', choices=['PPO', 'QLSA', 'QLET'],
         help='The RL optimization algorithm to use.')
     parser.add_argument(
-        '--env', default='MARLCoop', choices=['MARL', 'MARLCoop'],
+        '--env', default='MARL', choices=['MARL', 'MARLCoop', 'LateMARL'],
         help='The MARL environment to use.')
     parser.add_argument(
         '--config', required=True, type=str,
@@ -218,6 +218,9 @@ def _main():
     elif ARGS.env == 'MARLCoop':
         ray.tune.registry.register_env('marl_env', marlenvironmentagentscoop.env_creator)
         marl_env = marlenvironmentagentscoop.AgentsCoopMultiAgentEnv(env_config)
+    elif ARGS.env == 'LateMARL':
+        ray.tune.registry.register_env('marl_env', marlenvironmentlatereward.env_creator)
+        marl_env = marlenvironmentlatereward.LateRewardMultiAgentEnv(env_config)
     else:
         raise Exception('Unknown environment %s' % ARGS.env)
 
