@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" In itial Agents Cooperation MARL Environment based on PersuasiveMultiAgentEnv """
+""" Initial Agents Cooperation MARL Environment based on PersuasiveMultiAgentEnv """
 
 import logging
 import os
