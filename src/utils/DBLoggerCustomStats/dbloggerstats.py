@@ -75,7 +75,7 @@ class DBLoggerStats():
             LOGGER.debug('%s ==> %s', fname, str(vals))
         _, action, _, _ = vals[-1]
         return action
-    
+
     def get_last_reward(self, training, episode, agent):
         """ Retrieve the last reward from learning-sequence.json """
         fname = os.path.join(self.dir, training, episode, agent, 'learning-sequence.json')
@@ -85,7 +85,7 @@ class DBLoggerStats():
             LOGGER.debug('%s ==> %s', fname, str(vals))
         _, _, _, reward = vals[-1]
         return reward
-    
+
     def get_info(self, training, episode, agent):
         """ Retrieve the info.json """
         fname = os.path.join(self.dir, training, episode, agent, 'info.json')
@@ -103,7 +103,7 @@ class DBLoggerStats():
             best_actions = json.load(jsonfile)
             LOGGER.debug('%s ==> %s', fname, str(best_actions))
         return best_actions
-    
+
     def get_state_action_counter(self, training, agent):
         """ Load 'state-action-counter.json' """
         fname = os.path.join(self.dir, training, agent, 'state-action-counter.json')
@@ -112,7 +112,7 @@ class DBLoggerStats():
             state_action_counter = json.load(jsonfile)
             LOGGER.debug('%s ==> %s', fname, str(state_action_counter))
         return state_action_counter
-    
+
     def get_qtable(self, training, agent):
         """ Load 'qtable.json' """
         fname = os.path.join(self.dir, training, agent, 'qtable.json')

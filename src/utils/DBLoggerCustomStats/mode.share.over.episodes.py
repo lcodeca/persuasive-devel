@@ -1,26 +1,21 @@
 #!/usr/bin/env python3
 
-""" 
-    Process the DBLogger directory structure generating an overview 
-    of the mode share over the episodes. 
+"""
+    Process the DBLogger directory structure generating an overview
+    of the mode share over the episodes.
 """
 
 import argparse
-from collections import defaultdict
 import cProfile
 import io
 import json
 import logging
 import os
-from pprint import pformat, pprint
+from pprint import pformat
 import pstats
-import re
-import sys
 
-from deepdiff import DeepDiff
 import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
 
 from dbloggerstats import DBLoggerStats
 
@@ -44,13 +39,13 @@ def _argument_parser():
     parser = argparse.ArgumentParser(
         description='RLLIB & SUMO Statistics parser.')
     parser.add_argument(
-        '--dir-tree', required=True, type=str, 
+        '--dir-tree', required=True, type=str,
         help='DBLogger directory.')
     parser.add_argument(
-        '--graph', required=True, 
+        '--graph', required=True,
         help='Output prefix for the graph.')
     parser.add_argument(
-        '--data', required=True, 
+        '--data', required=True,
         help='Input/Output file for the processed data.')
     parser.add_argument(
         '--profiler', dest='profiler', action='store_true', help='Enable cProfile.')
@@ -58,8 +53,8 @@ def _argument_parser():
     return parser.parse_args()
 
 def _main():
-    """ 
-        Process the DBLogger directory structure generating an overview 
+    """
+        Process the DBLogger directory structure generating an overview
         of the mode share over the episodes.
     """
 
@@ -85,20 +80,20 @@ def _main():
     ## ========================              PROFILER              ======================== ##
 
 class ModeShareEpisodes(DBLoggerStats):
-    """ 
-        Process the DBLogger directory structure generating an overview 
+    """
+        Process the DBLogger directory structure generating an overview
         of the mode share over the episodes.
     """
-    MODES = { 
-            '0': 'wait too long',
-            '1': 'passenger',
-            '2': 'public',
-            '3': 'walk',
-            '4': 'bicycle',
-            '5': 'ptw',
-            '6': 'on-demand',
+    MODES = {
+        '0': 'wait too long',
+        '1': 'passenger',
+        '2': 'public',
+        '3': 'walk',
+        '4': 'bicycle',
+        '5': 'ptw',
+        '6': 'on-demand',
         }
-    
+
     def __init__(self, directory, dataset, prefix):
         super().__init__(directory)
         self.dataset_fname = dataset
@@ -113,7 +108,7 @@ class ModeShareEpisodes(DBLoggerStats):
         if os.path.exists(self.dataset_fname):
             with open(self.dataset_fname, 'r') as jsonfile:
                 self.aggregated_dataset = json.load(jsonfile)
-        else: 
+        else:
             # mode share over episodes
             self.aggregated_dataset['mode'] = {
                 '0': list(),
@@ -129,9 +124,9 @@ class ModeShareEpisodes(DBLoggerStats):
 
             # aggregation
             self.aggregated_dataset['training-folders'] = list()
-        
+
         LOGGER.debug('Aggregated data structure: \n%s', pformat(self.aggregated_dataset))
-    
+
     def _save_satastructure(self):
         """ Saves the datastructure to file. """
         with open(self.dataset_fname, 'w') as jsonfile:
@@ -146,7 +141,7 @@ class ModeShareEpisodes(DBLoggerStats):
                 continue
             print('Processing {}/{}'.format(self.dir, training_run))
             agents, episodes, _ = self.get_training_components(training_run)
-            
+
             # process the info file
             for episode in episodes:
                 self.aggregated_dataset['episodes'].append(
@@ -172,7 +167,7 @@ class ModeShareEpisodes(DBLoggerStats):
         LOGGER.debug('UPDATED aggregated data structure: \n%s', pformat(self.aggregated_dataset))
 
         # save the new dataset into the dataset file
-        self._save_satastructure() 
+        self._save_satastructure()
 
     ######################################## PLOT GENERATOR ########################################
 
@@ -183,7 +178,7 @@ class ModeShareEpisodes(DBLoggerStats):
 
         for mode in sorted(self.MODES):
             axs[int(mode)].plot(
-                self.aggregated_dataset['episodes'], self.aggregated_dataset['mode'][mode], 
+                self.aggregated_dataset['episodes'], self.aggregated_dataset['mode'][mode],
                 label=self.MODES[mode])
             axs[int(mode)].set_ylabel('Agents [#]')
             axs[int(mode)].set_ylim(0, self.aggregated_dataset['ylim'])
@@ -194,50 +189,50 @@ class ModeShareEpisodes(DBLoggerStats):
                     dpi=300, transparent=False, bbox_inches='tight')
         # fig.savefig('{}.png'.format(self.output_prefix),
         #             dpi=300, transparent=False, bbox_inches='tight')
-        # plt.show()   
+        # plt.show()
         matplotlib.pyplot.close('all')
-    
+
     def generate_messy_plot(self):
         """ Plots the aggregated data. """
-        
+
         fig, main = plt.subplots(figsize=(15, 10))
-        
-        main.plot(self.aggregated_dataset['episodes'], self.aggregated_dataset['mode']['0'], 
+
+        main.plot(self.aggregated_dataset['episodes'], self.aggregated_dataset['mode']['0'],
                   label=self.MODES['0'])
         for mode in sorted(self.aggregated_dataset['mode'].keys()):
             if mode == '0':
                 # already done.
                 continue
-            main.plot(self.aggregated_dataset['episodes'], self.aggregated_dataset['mode'][mode], 
+            main.plot(self.aggregated_dataset['episodes'], self.aggregated_dataset['mode'][mode],
                       label=self.MODES[mode])
 
         main.set_xlabel('Episodes')
         main.set_ylabel('Agents [#]')
 
         main.legend(shadow=True, bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',
-                    ncol=round(len(self.aggregated_dataset['mode'])/2.0), 
+                    ncol=round(len(self.aggregated_dataset['mode'])/2.0),
                     mode="expand", borderaxespad=0.)
         main.grid()
         fig.savefig('{}.svg'.format(self.output_prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
         # fig.savefig('{}.png'.format(self.output_prefix),
         #             dpi=300, transparent=False, bbox_inches='tight')
-        plt.show()   
+        plt.show()
         matplotlib.pyplot.close('all')
-    
+
     def generate_bar_plot(self):
         """ Plots the aggregated data. """
-        
+
         fig, main = plt.subplots(figsize=(15, 10))
-        
-        main.bar(self.aggregated_dataset['episodes'], self.aggregated_dataset['mode']['0'], 
+
+        main.bar(self.aggregated_dataset['episodes'], self.aggregated_dataset['mode']['0'],
                  0.5, label=self.MODES['0'])
         bottom_graph = self.aggregated_dataset['mode']['0']
         for mode in sorted(self.aggregated_dataset['mode'].keys()):
             if mode == '0':
                 # already done.
                 continue
-            main.bar(self.aggregated_dataset['episodes'], self.aggregated_dataset['mode'][mode], 
+            main.bar(self.aggregated_dataset['episodes'], self.aggregated_dataset['mode'][mode],
                      0.5, label=self.MODES[mode], bottom=bottom_graph)
             bottom_graph = self.aggregated_dataset['mode'][mode]
 
@@ -245,14 +240,14 @@ class ModeShareEpisodes(DBLoggerStats):
         main.set_ylabel('Agents [#]')
 
         main.legend(shadow=True, bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',
-                    ncol=round(len(self.aggregated_dataset['mode'])/2.0), 
+                    ncol=round(len(self.aggregated_dataset['mode'])/2.0),
                     mode="expand", borderaxespad=0.)
         main.grid()
         fig.savefig('{}.svg'.format(self.output_prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
         # fig.savefig('{}.png'.format(self.output_prefix),
         #             dpi=300, transparent=False, bbox_inches='tight')
-        plt.show()   
+        plt.show()
         matplotlib.pyplot.close('all')
 
 ####################################################################################################

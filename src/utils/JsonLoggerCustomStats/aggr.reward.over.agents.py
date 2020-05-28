@@ -16,10 +16,9 @@ def _argument_parser():
     parser = argparse.ArgumentParser(
         description='RLLIB & SUMO Statistics parser.')
     parser.add_argument(
-        '--dir', required=True, type=str, 
-        help='Main directory.')
+        '--dir', required=True, type=str, help='Main directory.')
     parser.add_argument(
-        '--pattern', required=True, type=str, 
+        '--pattern', required=True, type=str,
         help='Input substring to look for the JSON file in multiple folders.')
     parser.add_argument(
         '--prefix', default='stats', help='Output prefix for the processed data.')

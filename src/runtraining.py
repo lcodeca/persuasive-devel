@@ -14,13 +14,11 @@ import random
 import sys
 import traceback
 
-from pprint import pformat, pprint
+from pprint import pformat
 
 import ray
-from ray import tune
 
 from ray.rllib.agents.ppo import ppo
-from ray.rllib.agents.trainer import COMMON_CONFIG
 
 from ray.tune.logger import UnifiedLogger
 from utils.logger import DBLogger
@@ -30,7 +28,7 @@ from configs import egreedyqlearning_conf, ppo_conf
 from environments import marlenvironment, marlenvironmentagentscoop, marlenvironmentlatereward
 
 import learning.qlearningstandalonetrainer as QLStandAlone
-import learning.qlearningeligibilitytraces as QLETStandAlone 
+import learning.qlearningeligibilitytraces as QLETStandAlone
 
 ####################################################################################################
 
@@ -120,11 +118,11 @@ def get_last_checkpoint(checkpoint_dir):
 ####################################################################################################
 
 SELECTION = [
-    'episode_reward_mean', 'episodes_this_iter', 'timesteps_this_iter', 
-    'sumo_steps_this_iter', 'environment_steps_this_iter', 'rewards', 
-    'episode_gtt_mean', 'episode_gtt_max', 'episode_gtt_min', 'timesteps_total', 
-    'episodes_total', 'training_iteration', 'experiment_id', 'date', 'timestamp', 
-    'time_this_iter_s', 'time_total_s', 'episode_elapsed_time_mean', 
+    'episode_reward_mean', 'episodes_this_iter', 'timesteps_this_iter',
+    'sumo_steps_this_iter', 'environment_steps_this_iter', 'rewards',
+    'episode_gtt_mean', 'episode_gtt_max', 'episode_gtt_min', 'timesteps_total',
+    'episodes_total', 'training_iteration', 'experiment_id', 'date', 'timestamp',
+    'time_this_iter_s', 'time_total_s', 'episode_elapsed_time_mean',
 ]
 
 def print_selected_results(dictionary, keys):
@@ -227,7 +225,7 @@ def _main():
     # Gen config
     policies = {}
     for agent in marl_env.get_agents():
-        agent_policy_params = deepcopy(policy_params) 
+        agent_policy_params = deepcopy(policy_params)
         from_val, to_val = agent_init[agent]['init']
         agent_policy_params['init'] = lambda: random.randint(from_val, to_val)
         agent_policy_params['actions'] = marl_env.get_set_of_actions(agent)
@@ -299,7 +297,7 @@ if __name__ == '__main__':
     try:
         _main()
 
-    except: # traci.exceptions.TraCIException:
+    except Exception: # traci.exceptions.TraCIException:
         EXC_TYPE, EXC_VALUE, EXC_TRACEBACK = sys.exc_info()
         traceback.print_exception(EXC_TYPE, EXC_VALUE, EXC_TRACEBACK, file=sys.stdout)
 

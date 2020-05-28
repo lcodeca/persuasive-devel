@@ -10,12 +10,9 @@ from collections import defaultdict
 from copy import deepcopy
 from pprint import pformat
 
-import gym
 import numpy as np
-from numpy.random import RandomState
 
-from ray.rllib.env import MultiAgentEnv
-from rllibsumoutils.sumoutils import SUMOUtils
+import gym
 
 from environments.marlenvironment import PersuasiveMultiAgentEnv
 
@@ -46,21 +43,21 @@ class AgentsDecisions(object):
     """ Stores the decisions made by the agents in a dictionary-like structure. """
     def __init__(self):
         self._data = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [])))
-    
+
     def add_decision(self, origin, destination, action, time, agent_id):
         """ """
         self._data[origin][destination][action].insert(0, (time, agent_id))
-        
+
     def get_history(self, origin, destination, action):
         """ """
         return deepcopy(self._data[origin][destination][action])
-    
+
     def __str__(self):
         pretty = ''
         for origin, vals1 in self._data.items():
             for dest, vals2 in vals1.items():
                 for mode, series in vals2.items():
-                        pretty += '{} {} {} {}\n'.format(origin, dest, mode, series)
+                    pretty += '{} {} {} {}\n'.format(origin, dest, mode, series)
         return pretty
 
 class AgentsCoopMultiAgentEnv(PersuasiveMultiAgentEnv):
@@ -137,11 +134,13 @@ class AgentsCoopMultiAgentEnv(PersuasiveMultiAgentEnv):
 
     def get_obs_space_size(self, agent):
         """ Returns the size of the observation space. """
-        return (len(self._edges_to_int) *                                                                # from
-                len(self._edges_to_int) *                                                                # to
-                self._config['scenario_config']['misc']['max-time'] *                                    # time to event
-                (self._config['scenario_config']['misc']['max-time'] * len(self.agents[agent].modes)) *  # ETT by mode
-                (10 * len(self.agents[agent].modes)))                                                    # Usage by mode
+        _from = len(self._edges_to_int)
+        _to = len(self._edges_to_int)
+        _time_left = self._config['scenario_config']['misc']['max-time']
+        _ett = (
+            self._config['scenario_config']['misc']['max-time'] * len(self.agents[agent].modes))
+        _usage = (10 * len(self.agents[agent].modes))
+        return _from * _to * _time_left * _ett * _usage
 
     def get_obs_space(self, agent):
         """ Returns the observation space. """
@@ -150,8 +149,9 @@ class AgentsCoopMultiAgentEnv(PersuasiveMultiAgentEnv):
             'to': gym.spaces.Discrete(len(self._edges_to_int)),
             'time-left': gym.spaces.Discrete(self._config['scenario_config']['misc']['max-time']),
             'ett': gym.spaces.MultiDiscrete(
-                [self._config['scenario_config']['misc']['max-time']] * (len(self.agents[agent].modes))),
+                [self._config['scenario_config']['misc']['max-time']] * (
+                    len(self.agents[agent].modes))),
             'usage': gym.spaces.MultiDiscrete([10] * (len(self.agents[agent].modes))),
-        })    
+        })
 
     ################################################################################################

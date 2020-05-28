@@ -5,6 +5,8 @@
 import collections
 import unittest
 
+import dill
+
 from qtable import QTable
 
 class QTableTest(unittest.TestCase):
@@ -138,10 +140,9 @@ class QTableTest(unittest.TestCase):
         qtable[state][0] = 1.0
         qtable[state][1] = 1.0
         self.assertTrue(qtable.argmax(state) in [0, 1])
-    
+
     def test_dill(self):
         """ Test the dillability of the class. """
-        import dill
         qtable = QTable(self.actions)
 
         state1 = collections.OrderedDict()

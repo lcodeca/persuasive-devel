@@ -9,9 +9,10 @@ import sys
 
 from pprint import pformat
 
-import gym
 import numpy as np
 from numpy.random import RandomState
+
+import gym
 
 from ray.rllib.env import MultiAgentEnv
 from rllibsumoutils.sumoutils import SUMOUtils
@@ -34,7 +35,7 @@ LOGGER.setLevel(logging.INFO)
 
 def env_creator(config):
     """ Environment creator used in the environment registration. """
-    LOGGER.debug('[env_creator] Environment creation: SUMOTestMultiAgentEnv')
+    LOGGER.debug('[env_creator] Environment creation: PersuasiveMultiAgentEnv')
     return PersuasiveMultiAgentEnv(config)
 
 #@ray.remote(num_cpus=10, num_gpus=1)
@@ -88,15 +89,15 @@ class SUMOModeAgent(object):
 
     ## Configuration for the init
     ## {
-    #       'origin': '-6040', 
-    #       'destination': '2370', 
-    #       'start': 21647, 
-    #       'expected-arrival-time': [32400, 2.0, 4.0], 
-    #       'modes': {'passenger': 1.0, 'public': 1.0}, 
+    #       'origin': '-6040',
+    #       'destination': '2370',
+    #       'start': 21647,
+    #       'expected-arrival-time': [32400, 2.0, 4.0],
+    #       'modes': {'passenger': 1.0, 'public': 1.0},
     #       'seed': 321787075,
     #       'ext-stats': true,
     #  }
-    Config = collections.namedtuple('Config', 
+    Config = collections.namedtuple('Config',
                                     ['ID',              # Agent name
                                      'seed',            # Agent init random seed
                                      'ext',
@@ -105,7 +106,7 @@ class SUMOModeAgent(object):
                                      'destination',     # edge - destination
                                      'modes',           # list of available modes
                                      'exp_arrival'])    # expected arrival time and weight
-    
+
     ## Actions --> Modes
     action_to_mode = {
         1: 'passenger',
@@ -155,11 +156,12 @@ class SUMOModeAgent(object):
 
         # compute the route using findIntermodalRoute
         _mode, _ptype, _vtype = handler.get_mode_parameters(mode)
-        LOGGER.debug('Selected mode: %s. [mode %s, ptype %s, vtype %s]', 
+        LOGGER.debug('Selected mode: %s. [mode %s, ptype %s, vtype %s]',
                      mode, _mode, _ptype, _vtype)
         try:
             route = handler.traci_handler.simulation.findIntermodalRoute(
-                self.origin, self.destination, modes=_mode, pType=_ptype, vType=_vtype, routingMode=1)
+                self.origin, self.destination, modes=_mode, pType=_ptype, vType=_vtype,
+                routingMode=1)
             if not handler.is_valid_route(mode, route):
                 route = None
         except TraCIException:
@@ -216,11 +218,11 @@ class SUMOModeAgent(object):
         self.cost = 0.0
         self.ett = 0.0
         return self.agent_id, self.start
-    
+
     def __str__(self):
         """ Returns a string with all the internal state. """
         return('Config: {} \n Waited steps: {} \n Mode {} --> {} \n Cost: {} \n ETT: {} '.format(
-            self._config, self.waited_steps, self.chosen_mode, 
+            self._config, self.waited_steps, self.chosen_mode,
             self.chosen_mode_error, self.cost, self.ett))
 
 ####################################################################################################
@@ -246,13 +248,8 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         self._environment_steps = 0
 
         self.agents_init_list = dict()
-        self.agents = dict()
-        self.waiting_agents = list()
         self._config_from_agent_init()
-        for agent, agent_config in self.agents_init_list.items():
-            self.waiting_agents.append((agent_config.start, agent))
-            self.agents[agent] = SUMOModeAgent(agent_config)
-        self.waiting_agents.sort()
+        self._initialize_agents()
         self.dones = set()
         self.active = set()
         self.resetted = False
@@ -272,10 +269,18 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
                 conf['ext-stats'] = False
             self.agents_init_list[agent] = SUMOModeAgent.Config(
                 agent, conf['seed'], conf['ext-stats'], conf['start'],
-                conf['origin'], conf['destination'], conf['modes'], 
+                conf['origin'], conf['destination'], conf['modes'],
                 conf['expected-arrival-time'])
             if DEBUGGER:
                 LOGGER.debug('%s', pformat(self.agents_init_list[agent]))
+
+    def _initialize_agents(self):
+        self.agents = dict()
+        self.waiting_agents = list()
+        for agent, agent_config in self.agents_init_list.items():
+            self.waiting_agents.append((agent_config.start, agent))
+            self.agents[agent] = SUMOModeAgent(agent_config)
+        self.waiting_agents.sort()
 
     def _load_edges_from_file(self, filename):
         """ Returns a list containing all the edges in the SUMO NET file. """
@@ -327,7 +332,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
     def _add_observed_ett(self, agent, mode, ett):
         """ Add the observation to the structure """
         if agent not in self.ext_stats:
-            self.ext_stats[agent] = { mode: [ett], }
+            self.ext_stats[agent] = {mode: [ett],}
         elif mode not in self.ext_stats[agent]:
             self.ext_stats[agent][mode] = [ett]
         else:
@@ -353,7 +358,8 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             _mode, _ptype, _vtype = self.simulation.get_mode_parameters(mode)
             try:
                 route = self.simulation.traci_handler.simulation.findIntermodalRoute(
-                    origin, destination, modes=_mode, pType=_ptype, vType=_vtype, depart=now, routingMode=1)
+                    origin, destination, modes=_mode, pType=_ptype, vType=_vtype, depart=now,
+                    routingMode=1)
                 if DEBUGGER:
                     LOGGER.debug('SUMO Route: \n%s', pformat(route))
                 if not self.simulation.is_valid_route(mode, route):
@@ -370,7 +376,8 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             else:
                 ett.append(self.discrete_time(self._config['scenario_config']['misc']['max-time']))
                 if self.agents[agent].ext:
-                    self._add_observed_ett(agent, mode, self._config['scenario_config']['misc']['max-time'])
+                    self._add_observed_ett(
+                        agent, mode, self._config['scenario_config']['misc']['max-time'])
 
         timeleft = self.agents[agent].arrival - now
 
@@ -397,17 +404,17 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
     def get_reward(self, agent):
         """ Return the reward for a given agent. """
         if not self.agents[agent].chosen_mode:
-            LOGGER.warn('Agent %s mode error: "%s"', agent, self.agents[agent].chosen_mode_error) 
+            LOGGER.warning('Agent %s mode error: "%s"', agent, self.agents[agent].chosen_mode_error)
             return 0 - int(self.simulation.get_penalty_time())
 
         journey_time = self.simulation.get_duration(agent)
         if np.isnan(journey_time):
-            ## This should never happen. 
+            ## This should never happen.
             ## If it does, there is a bug/issue with the SUMO/MARL environment interaction.
             raise Exception('{} \n {}'.format(
                 self.compute_info_for_agent(agent), str(self.agents[agent])))
         LOGGER.debug(' Agent: %s, journey: %s', agent, str(journey_time))
-        arrival = self.simulation.get_arrival(agent, 
+        arrival = self.simulation.get_arrival(agent,
                                               default=self.simulation.get_penalty_time())
         LOGGER.debug(' Agent: %s, arrival: %s', agent, str(arrival))
 
@@ -417,13 +424,13 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             ## agent arrived too late
             late_time = arrival - self.agents[agent].arrival
             reward = self.simulation.get_penalty_time()
-            LOGGER.debug('Agent: %s, arrival: %s, wanted arrival: %s, late: %s', 
-                        agent, str(arrival), str(self.agents[agent].arrival), str(late_time))
+            LOGGER.debug('Agent: %s, arrival: %s, wanted arrival: %s, late: %s',
+                         agent, str(arrival), str(self.agents[agent].arrival), str(late_time))
         elif self.agents[agent].arrival > arrival:
             ## agent arrived too early
             waiting_time = self.agents[agent].arrival - arrival
             reward += waiting_time * self.agents[agent].waiting_weight
-            LOGGER.debug('Agent: %s, duration: %s, waiting: %s, wanted arrival: %s', 
+            LOGGER.debug('Agent: %s, duration: %s, waiting: %s, wanted arrival: %s',
                          agent, str(journey_time), str(waiting_time), str(arrival))
         else:
             LOGGER.debug('Agent: %s it is perfectly on time!', agent)
@@ -498,13 +505,13 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         return initial_obs
 
     def compute_info_for_agent(self, agent):
-        """ Gather and return a dictionary containing the info associated with the given agent. """        
-        info = { 
+        """ Gather and return a dictionary containing the info associated with the given agent. """
+        info = {
             'arrival': self.simulation.get_arrival(agent),
             'cost': self.agents[agent].cost,
             'departure': self.simulation.get_depart(agent),
             'discretized-cost': self.discrete_time(self.agents[agent].cost),
-            'ett': self.agents[agent].ett, 
+            'ett': self.agents[agent].ett,
             'mode': self.agents[agent].chosen_mode,
             'rtt': self.simulation.get_duration(agent),
             'timeLoss': self.simulation.get_timeloss(agent),
@@ -552,7 +559,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         self._environment_steps += 1
         dones = {}
 
-        shuffled_agents = sorted(action_dict.keys()) # it may seem not smar to sort something that 
+        shuffled_agents = sorted(action_dict.keys()) # it may seem not smar to sort something that
                                                      # may need to be shuffled afterwards, but it
                                                      # is a matter of consistency instead of using
                                                      # whatever insertion order was used in the dict
@@ -586,7 +593,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
 
         ## add waiting agent to the pool of active agents
         self._move_agents(self.simulation.get_current_time())
-        
+
         # compute the new observation for the WAITING agents
         LOGGER.debug('Computing obseravions for the WAITING agents.')
         obs, rewards, infos = {}, {}, {}
@@ -594,7 +601,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         for agent in self.active:
             LOGGER.debug('[%2f] %s --> %d', current_time, agent, self.agents[agent].arrival)
             if current_time > self.agents[agent].arrival:
-                LOGGER.warn('Agent %s waited for too long.', str(agent))
+                LOGGER.warning('Agent %s waited for too long.', str(agent))
                 self.agents[agent].chosen_mode_error = 'Waiting too long [{}]'.format(current_time)
                 self.agents[agent].ett = float('NaN')
                 self.agents[agent].cost = float('NaN')
@@ -614,7 +621,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             LOGGER.info('All the agent are DONE. Finalizing episode...')
             self.simulation.step(until_end=True, agents=set(self.agents.keys()))
             return self.finalize_episode(dones)
-        
+
         LOGGER.debug('Observations: %s', str(obs))
         LOGGER.debug('Rewards: %s', str(rewards))
         LOGGER.debug('Dones: %s', str(dones))
@@ -642,10 +649,12 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
 
     def get_obs_space_size(self, agent):
         """ Returns the size of the observation space. """
-        return (len(self._edges_to_int) *                                                                # from
-                len(self._edges_to_int) *                                                                # to
-                self._config['scenario_config']['misc']['max-time'] *                                    # time to event
-                (self._config['scenario_config']['misc']['max-time'] * len(self.agents[agent].modes)))   # ETT by mode
+        _from = len(self._edges_to_int)
+        _to = len(self._edges_to_int)
+        _time_left = self._config['scenario_config']['misc']['max-time']
+        _ett = (
+            self._config['scenario_config']['misc']['max-time'] * len(self.agents[agent].modes))
+        return _from * _to * _time_left * _ett
 
     def get_obs_space(self, agent):
         """ Returns the observation space. """
@@ -654,8 +663,9 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             'to': gym.spaces.Discrete(len(self._edges_to_int)),
             'time-left': gym.spaces.Discrete(self._config['scenario_config']['misc']['max-time']),
             'ett': gym.spaces.MultiDiscrete(
-                [self._config['scenario_config']['misc']['max-time']] * (len(self.agents[agent].modes))),
-        })    
+                [self._config['scenario_config']['misc']['max-time']] * (
+                    len(self.agents[agent].modes))),
+        })
 
     def get_agents(self):
         """ Returns a list of the agents. """
@@ -705,7 +715,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
     def get_reward_duration_wait_late_linear(self, agent):
         """ Return the reward for a given agent. """
         if not self.agents[agent].chosen_mode:
-            LOGGER.error('Agent %s selected a mode that was not possible.', agent) 
+            LOGGER.error('Agent %s selected a mode that was not possible.', agent)
             return 0 - int(self.simulation.get_penalty_time() * self.agents[agent].late_weight)
 
         journey_time = self.simulation.get_duration(agent)
@@ -719,23 +729,23 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             ## agent arrived too late
             late_time = arrival - self.agents[agent].arrival
             reward += late_time * self.agents[agent].late_weight
-            LOGGER.debug('Agent: %s, arrival: %s, wanted arrival: %s, late: %s', 
-                        agent, str(arrival), str(self.agents[agent].arrival), str(late_time))
+            LOGGER.debug('Agent: %s, arrival: %s, wanted arrival: %s, late: %s',
+                         agent, str(arrival), str(self.agents[agent].arrival), str(late_time))
         elif self.agents[agent].arrival > arrival:
             ## agent arrived too early
             waiting_time = self.agents[agent].arrival - arrival
             reward += waiting_time * self.agents[agent].waiting_weight
-            LOGGER.debug('Agent: %s, duration: %s, waiting: %s, wanted arrival: %s', 
+            LOGGER.debug('Agent: %s, duration: %s, waiting: %s, wanted arrival: %s',
                          agent, str(journey_time), str(waiting_time), str(arrival))
         else:
             LOGGER.debug('Agent: %s it is perfectly on time!', agent)
 
         return int(0 - (reward))
-    
+
     def get_reward_duration_wait_late_exp(self, agent):
         """ Return the reward for a given agent. """
         if not self.agents[agent].chosen_mode:
-            LOGGER.error('Agent %s selected a mode that was not possible.', agent) 
+            LOGGER.error('Agent %s selected a mode that was not possible.', agent)
             return 0 - int(self.simulation.get_penalty_time() ** self.agents[agent].late_weight)
 
         journey_time = self.simulation.get_duration(agent)
@@ -749,13 +759,13 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             ## agent arrived too late
             late_time = arrival - self.agents[agent].arrival
             reward += late_time ** self.agents[agent].late_weight
-            LOGGER.error('Agent: %s, arrival: %s, wanted arrival: %s, late: %s', 
-                        agent, str(arrival), str(self.agents[agent].arrival), str(late_time))
+            LOGGER.error('Agent: %s, arrival: %s, wanted arrival: %s, late: %s',
+                         agent, str(arrival), str(self.agents[agent].arrival), str(late_time))
         elif self.agents[agent].arrival > arrival:
             ## agent arrived too early
             waiting_time = self.agents[agent].arrival - arrival
             reward += waiting_time ** self.agents[agent].waiting_weight
-            LOGGER.error('Agent: %s, duration: %s, waiting: %s, wanted arrival: %s', 
+            LOGGER.error('Agent: %s, duration: %s, waiting: %s, wanted arrival: %s',
                          agent, str(journey_time), str(waiting_time), str(arrival))
         else:
             LOGGER.error('Agent: %s it is perfectly on time!', agent)
@@ -828,5 +838,5 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         if DEBUGGER:
             LOGGER.debug('Observation: \n%s', pformat(ret))
         return ret
-    
+
     ################################################################################################

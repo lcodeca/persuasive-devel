@@ -19,7 +19,7 @@ class StatAggrExps(object):
         self.prefix = prefix
         self.begin = begin
         self.end = end
-    
+
     def reward_over_agents(self):
         average_average_reward = {}
         average_std_reward = {}
@@ -33,7 +33,7 @@ class StatAggrExps(object):
                     with open(filename, 'r') as jsonfile:
                         average = []
                         std = []
-                        for checkpoint in jsonfile: # enumerate cannot be used due to the size of the file
+                        for checkpoint in jsonfile: # enumerate cannot be used due to the file size
                             complete = json.loads(checkpoint)
                             if complete['timesteps_total'] < self.begin:
                                 continue
@@ -54,8 +54,7 @@ class StatAggrExps(object):
         fig, ax = plt.subplots(figsize=(15, 10))
         ax.plot(agents, mean, label='Average Mean Reward')
         ax.plot(agents, std, label='Average Std Reward')
-        ax.set(xlabel='Number of Agents', ylabel='Reward',
-            title='Reward over Number of Agents')
+        ax.set(xlabel='Number of Agents', ylabel='Reward', title='Reward over Number of Agents')
         ax.legend(loc=1, ncol=2, shadow=True)
         ax.grid()
         fig.savefig('{}.reward_over_agents.svg'.format(self.prefix),

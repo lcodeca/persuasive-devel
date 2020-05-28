@@ -15,18 +15,18 @@
 import collections
 from copy import deepcopy
 import cProfile
-from datetime import timedelta, datetime
-import dill
+from datetime import datetime
 import io
-import json
 import logging
 import os
 import pstats
 import sys
-from pprint import pformat, pprint
+from pprint import pformat
 
 import numpy as np
 from numpy.random import RandomState
+
+import dill
 
 from ray.rllib.agents.trainer import Trainer, with_common_config
 from ray.rllib.policy import Policy
@@ -117,19 +117,19 @@ class QLearningTrainer(Trainer):
                 policy['stats']['sequence'].append(statistics['sequence'])
                 policy['stats']['info'].append(statistics['info'])
                 policy['stats']['actions_this_episode'] += (
-                    (statistics['actions_this_episode'] - policy['stats']['actions_this_episode']) 
+                    (statistics['actions_this_episode'] - policy['stats']['actions_this_episode'])
                     / policy['episodes'])
                 policy['stats']['agent_reward'] += (
-                    (statistics['agent_reward'] - policy['stats']['agent_reward']) 
+                    (statistics['agent_reward'] - policy['stats']['agent_reward'])
                     / policy['episodes'])
                 policy['stats']['agent_reward_max'] += (
-                    (statistics['agent_reward_max'] - policy['stats']['agent_reward_max']) 
+                    (statistics['agent_reward_max'] - policy['stats']['agent_reward_max'])
                     / policy['episodes'])
                 policy['stats']['agent_reward_mean'] += (
-                    (statistics['agent_reward_mean'] - policy['stats']['agent_reward_mean']) 
+                    (statistics['agent_reward_mean'] - policy['stats']['agent_reward_mean'])
                     / policy['episodes'])
                 policy['stats']['agent_reward_min'] += (
-                    (statistics['agent_reward_min'] - policy['stats']['agent_reward_min']) 
+                    (statistics['agent_reward_min'] - policy['stats']['agent_reward_min'])
                     / policy['episodes'])
                 policy['episodes'] += 1
             else:
@@ -156,8 +156,8 @@ class QLearningTrainer(Trainer):
             LOGGER.info('=======================> Episode # %4d <=======================', episode)
             max_retry = 10
             steps = 0
-            while max_retry: 
-                try:    
+            while max_retry:
+                try:
                     # callback
                     self.on_episode_start()
 
@@ -181,10 +181,10 @@ class QLearningTrainer(Trainer):
                         self.on_episode_step
 
                         if states:
-                            # Possibility due to the decoupling of the sumo environment and the 
-                            # learning environment, it's possible that not all of the agents 
-                            # are done, but no agent is active atm and the sumo environment 
-                            # needs to keep moving forward nonetheless. 
+                            # Possibility due to the decoupling of the sumo environment and the
+                            # learning environment, it's possible that not all of the agents
+                            # are done, but no agent is active atm and the sumo environment
+                            # needs to keep moving forward nonetheless.
                             steps += 1
                         if DEBUGGER:
                             LOGGER.debug('State: %s', pformat(states))
@@ -209,33 +209,33 @@ class QLearningTrainer(Trainer):
                             if agent not in latest_state_by_agent:
                                 ## this agent has just been inserted in the simulation
                                 continue
-                            else: 
+                            else:
                                 ## we have something to learn here
                                 sample = {
                                     'old_state': latest_state_by_agent[agent],
                                     'action': latest_action_by_agent[agent],
-                                    'next_state': next_states[agent], 
+                                    'next_state': next_states[agent],
                                     'reward': rewards[agent],
                                     'info': infos[agent],
                                 }
                                 if DEBUGGER:
-                                    LOGGER.debug('Learning sample for agent %s: \n%s', 
-                                                agent, pformat(sample))
+                                    LOGGER.debug('Learning sample for agent %s: \n%s',
+                                                 agent, pformat(sample))
                                 self.policies[agent].learn(sample)
                                 cumul_rewards_by_agent[agent] += rewards[agent]
-                        
+
                         states = next_states
                         for agent, state in states.items():
                             latest_state_by_agent[agent] = state
                     # very dirty, but it works :)
-                    break 
+                    break
                 except TraCIException as excpt:
                     max_retry -= 1
                     LOGGER.critical('SUMO failed with TraCIException: %s', pformat(excpt))
                 except FatalTraCIError as error:
                     max_retry -= 1
                     LOGGER.critical('SUMO failed with FatalTraCIError: %s', pformat(error))
-             
+
             # Gathering metrics at the end of the episode
             if max_retry:
                 LOGGER.debug('Learning steps this iteration: %d', steps)
@@ -254,7 +254,7 @@ class QLearningTrainer(Trainer):
             elapesed_time_by_episode.append(delta.total_seconds())
             # callback
             self.on_episode_end
-                        
+
 
         # Metrics gathering, averaged by number of episodes.
         aggregated_rewards_per_episode = list()
@@ -266,14 +266,14 @@ class QLearningTrainer(Trainer):
                 episode_reward.append(reward)
             aggregated_rewards_per_episode.append(np.mean(episode_reward))
         for agent, values in averaged_rewards_by_agent.items():
-                averaged_rewards_by_agent[agent] = np.mean(values)
+            averaged_rewards_by_agent[agent] = np.mean(values)
 
         for agent, policy in policies_aggregated_by_episode.items():
             if DEBUGGER:
                 LOGGER.debug('[%s] BEFORE \n%s', agent, pformat(policy, compact=True))
-            
-            policy['qtable'] = collections.defaultdict(dict) 
-            policy['max-qvalue'] = dict() 
+
+            policy['qtable'] = collections.defaultdict(dict)
+            policy['max-qvalue'] = dict()
             policy['best-action'] = dict()
             for item in dill.loads(policy['state']['qtable']).get_flattened_dict():
                 _state, _action, _value = item
@@ -290,12 +290,12 @@ class QLearningTrainer(Trainer):
                 _, _action = value
                 policy['best-action'][_state] = _action
 
-            policy['state-action-counter'] = collections.defaultdict(dict) 
+            policy['state-action-counter'] = collections.defaultdict(dict)
             for item in policy['state']['qtable_state_action_counter'].get_flattened_dict():
                 _state, _action, _value = item
                 policy['state-action-counter'][_state][str(_action)] = _value
 
-            policy['state-action-reward-mean'] = collections.defaultdict(dict) 
+            policy['state-action-reward-mean'] = collections.defaultdict(dict)
             for item in policy['state']['qtable_state_action_reward'].get_flattened_dict():
                 _state, _action, _value = item
                 policy['state-action-reward-mean'][_state][str(_action)] = np.mean(_value)
@@ -319,9 +319,9 @@ class QLearningTrainer(Trainer):
             'sumo_steps_this_iter': np.mean(sumo_steps_per_episode),
             'environment_steps_this_iter': self.env.get_environment_steps(),
             'rewards': averaged_rewards_by_agent,
-            'policies': policies_aggregated_by_episode, 
-            'episode_gtt_mean': np.mean(gtt_by_episode), 
-            'episode_gtt_max': max(gtt_by_episode, default=None), 
+            'policies': policies_aggregated_by_episode,
+            'episode_gtt_mean': np.mean(gtt_by_episode),
+            'episode_gtt_max': max(gtt_by_episode, default=None),
             'episode_gtt_min': min(gtt_by_episode, default=None),
         }
 
@@ -350,10 +350,10 @@ class QLearningTrainer(Trainer):
             result (dict): Training result returned by _train().
         """
         # See: https://github.com/ray-project/ray/blob/master/python/ray/tune/logger.py#L177
-        
+
         # callback
         self.on_train_result(result)
-        
+
         self._result_logger.on_result(result)
 
     ################################################################################################
@@ -382,7 +382,7 @@ class EGreedyQLearningPolicy(Policy):
         https://ray.readthedocs.io/en/latest/rllib-concepts.html#policies
         https://github.com/ray-project/ray/blob/master/rllib/policy/policy.py
     this policy is not distributed among the RAY workers.
-    """ 
+    """
 
     def __init__(self, observation_space, action_space, config):
         """
@@ -436,9 +436,9 @@ class EGreedyQLearningPolicy(Policy):
             LOGGER.debug('Observation: %s', pformat(state))
         action = None
 
-        rnd = self.rndgen.uniform(0, 1) 
-        LOGGER.debug('Random: %f - Epsilon: %f - value %s', 
-                    rnd, self.epsilon, str(rnd < self.epsilon))
+        rnd = self.rndgen.uniform(0, 1)
+        LOGGER.debug('Random: %f - Epsilon: %f - value %s',
+                     rnd, self.epsilon, str(rnd < self.epsilon))
         if rnd < self.epsilon:
             # Explore action space
             action = self.action_space.sample()
@@ -454,15 +454,15 @@ class EGreedyQLearningPolicy(Policy):
         return action
 
     def learn(self, sample):
-        """ 
+        """
         Q-Learning implementation
-        
+
         See: https://en.wikipedia.org/wiki/Q-learning#Algorithm
 
         Given a sample = {
                         'old_state': states[agent],
                         'action': actions[agent],
-                        'next_state': next_states[agent], 
+                        'next_state': next_states[agent],
                         'reward': rewards[agent],
                         'info': infos[agent],
                     }
@@ -474,13 +474,15 @@ class EGreedyQLearningPolicy(Policy):
         old_value = self.qtable[sample['old_state']][sample['action']]
         next_max = self.qtable.max(sample['next_state'])
         new_value = old_value + self.alpha * (sample['reward'] + self.gamma * next_max - old_value)
-        LOGGER.debug('%f = %f + %f * (%f + %f * %f - %f)', 
-                    new_value, old_value, self.alpha, sample['reward'], self.gamma, next_max, old_value)
+        LOGGER.debug('%f = %f + %f * (%f + %f * %f - %f)',
+                     new_value, old_value, self.alpha, sample['reward'], self.gamma,
+                     next_max, old_value)
         self.qtable[sample['old_state']][sample['action']] = new_value
         LOGGER.debug('Q-Learning: old = %f, new = %f', old_value, new_value)
 
         self.stats['rewards'].append(sample['reward'])
-        self.qtable_state_action_reward[sample['old_state']][sample['action']].append(sample['reward'])
+        self.qtable_state_action_reward[sample['old_state']][sample['action']].append(
+            sample['reward'])
         self.stats['sequence'].append(
             (sample['old_state'], sample['action'], sample['next_state'], sample['reward']))
         if sample['info']:
@@ -513,13 +515,13 @@ class EGreedyQLearningPolicy(Policy):
         self.epsilon = internal_state['epsilon']
 
     def compute_actions(self,
-                            obs_batch,
-                            state_batches,
-                            prev_action_batch=None,
-                            prev_reward_batch=None,
-                            info_batch=None,
-                            episodes=None,
-                            **kwargs):
+                        obs_batch,
+                        state_batches,
+                        prev_action_batch=None,
+                        prev_reward_batch=None,
+                        info_batch=None,
+                        episodes=None,
+                        **kwargs):
         """ Compute actions for the current policy.
 
         Arguments:

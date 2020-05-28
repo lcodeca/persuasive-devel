@@ -7,7 +7,6 @@ from copy import deepcopy
 import logging
 from pprint import pformat
 
-import numpy as np
 from numpy.random import RandomState
 
 ####################################################################################################
@@ -59,7 +58,7 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
         if callable(self._default_value):
             return self._default_value()
         return deepcopy(self._default_value)
-    
+
     def _generate_default_state(self):
         """ Return the default state. """
         state = {action: self._generate_default_value() for action in self._default_actions}
@@ -76,7 +75,7 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
         return key
 
     def get_state_from_serialized_key(self, key, default=None):
-        """ 
+        """
         Return the original state (collections.OrderedDict) associated with a serialized key 4
         or the default value (None) otherwise.
         """
@@ -85,14 +84,14 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
         return default
 
     def _get_actual_key(self, key):
-        """ 
-        The key should be a collections.OrderedDict or it should be already stored in the dataset. 
+        """
+        The key should be a collections.OrderedDict or it should be already stored in the dataset.
         """
         if not isinstance(key, collections.OrderedDict):
             if key in self._key_to_state:
                 return key # it has been already serialized
             raise KeyError(
-                'The state/key must be collections.OrderedDict or it must already be stored.', 
+                'The state/key must be collections.OrderedDict or it must already be stored.',
                 key)
         return self._state_to_key(key) # serialize key
 
@@ -166,13 +165,13 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
 
     def __repr__(self):
         return pformat(self._data)
-    
+
     def get_flattened_dict(self):
         flattened_data = list()
         for state, item in self._data.items():
             for action, value in item.items():
                 flattened_data.append((state, action, value))
         return flattened_data
-    
+
     def get_items(self):
         return self._data.items()

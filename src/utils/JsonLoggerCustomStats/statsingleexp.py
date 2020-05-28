@@ -2,15 +2,9 @@
 
 """ Process a SINGLE RLLIB logs/result.json """
 
-import argparse
 import collections
-import cProfile
-import io
 import json
 import logging
-from pprint import pformat, pprint
-import pstats
-import sys
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -41,7 +35,7 @@ class StatSingleExp(object):
         ax.patch.set_visible(False)
         for sp in ax.spines.values():
             sp.set_visible(False)
-    
+
     def reward_over_timesteps_total(self):
         logging.info('Loading %s..', self.input)
         x_coords = []
@@ -71,14 +65,13 @@ class StatSingleExp(object):
         ax.plot(x_coords, min_y, label='Min')
         ax.plot(x_coords, max_y, label='Max')
         ax.plot(x_coords, median_y, label='Median')
-        ax.set(xlabel='Learning step', ylabel='Reward',
-            title='Reward over time')
+        ax.set(xlabel='Learning step', ylabel='Reward', title='Reward over time')
         ax.legend(loc=1, ncol=4, shadow=True)
         ax.grid()
         fig.savefig('{}.reward_over_learning.svg'.format(self.prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
         # plt.show()
-        # ZOOM IT 
+        # ZOOM IT
         ax.set_ylim(-20000, 0)
         # plt.show()
         fig.savefig('{}.bounded_reward_over_learning.svg'.format(self.prefix),
@@ -97,12 +90,11 @@ class StatSingleExp(object):
 
         fig, ax = plt.subplots(figsize=(15, 10))
         ax.plot(x_coords, y_coords)
-        ax.set(xlabel='Learning step', ylabel='Time [s]',
-            title='Average Episode Duration')
+        ax.set(xlabel='Learning step', ylabel='Time [s]', title='Average Episode Duration')
         ax.grid()
         fig.savefig('{}.episode_duration_over_learning.svg'.format(self.prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
-        # plt.show()   
+        # plt.show()
         matplotlib.pyplot.close('all')
 
     def average_actions_over_episodes_total(self):
@@ -133,13 +125,12 @@ class StatSingleExp(object):
         ax.plot(x_coords, min_y, label='Min')
         ax.plot(x_coords, max_y, label='Max')
         ax.plot(x_coords, median_y, label='Median')
-        ax.set(xlabel='Episodes', ylabel='Actions',
-            title='Actions per episode')
+        ax.set(xlabel='Episodes', ylabel='Actions', title='Actions per episode')
         ax.legend(loc=1, ncol=4, shadow=True)
         ax.grid()
         fig.savefig('{}.actions_over_episodes.svg'.format(self.prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
-        # plt.show()   
+        # plt.show()
         matplotlib.pyplot.close('all')
 
     def sequence_by_agent(self):
@@ -212,12 +203,12 @@ class StatSingleExp(object):
             lines = [p1, p2, p3]
             host.legend(lines, [l.get_label() for l in lines], loc=0, shadow=True)
 
-            fig.savefig('{}.{}.svg'.format(self.prefix, agent), 
+            fig.savefig('{}.{}.svg'.format(self.prefix, agent),
                         dpi=300, transparent=False, bbox_inches='tight')
             # plt.show()
-            matplotlib.pyplot.close('all')     
+            matplotlib.pyplot.close('all')
             # sys.exit()
-    
+
     def info_by_agent(self):
         logging.info('Loading %s..', self.input)
         agents = {}
@@ -257,7 +248,7 @@ class StatSingleExp(object):
                         agents[agent]['actions'].append(len(actions))
                         agents[agent]['mode'].append(actions[-1])
                     for info in policy['stats']['info']:
-                        # {   
+                        # {
                         #     'arrival': 26640.0,
                         #     'cost': 230.45043123602926,
                         #     'departure': 26306.0,
@@ -302,7 +293,8 @@ class StatSingleExp(object):
                            color='black', marker='o', linestyle='solid', linewidth=2, markersize=8)
             axs[3][0].set_ylabel('Est TT [m]')
             axs[4][0].plot(stats['episode'], stats['rtt'], label='Real Travel Time',
-                           color='magenta', marker='o', linestyle='solid', linewidth=2, markersize=8)
+                           color='magenta', marker='o', linestyle='solid', linewidth=2,
+                           markersize=8)
             axs[4][0].set_ylabel('Real TT [m]')
             axs[4][0].set_xlabel('Episode [#]')
 
@@ -321,8 +313,9 @@ class StatSingleExp(object):
             axs[3][1].plot(stats['episode'], stats['cost'], 'k-', label='Estimated cost',
                            color='black', marker='o', linestyle='solid', linewidth=2, markersize=8)
             axs[3][1].set_ylabel('Est Cost [m]')
-            axs[4][1].plot(stats['episode'], stats['difference'], 'm-', label='ETT / RTT Difference',
-                           color='magenta', marker='o', linestyle='solid', linewidth=2, markersize=8)
+            axs[4][1].plot(stats['episode'], stats['difference'], 'm-',
+                           label='ETT / RTT Difference', color='magenta', marker='o',
+                           linestyle='solid', linewidth=2, markersize=8)
             axs[4][1].axhline(y=0.0, color='red', linestyle='dashed')
             axs[4][1].set_ylabel('ETT / RTT Difference [m]')
             axs[4][1].set_xlabel('Episode [#]')
@@ -331,7 +324,7 @@ class StatSingleExp(object):
             print('Saving {}'.format(fname))
             fig.savefig(fname, dpi=300, transparent=False, bbox_inches='tight')
             # plt.show()
-            matplotlib.pyplot.close('all')     
+            matplotlib.pyplot.close('all')
             # sys.exit()
 
     def estimations_by_agent(self):
@@ -392,10 +385,10 @@ class StatSingleExp(object):
             axs[4].set_ylabel('Real TT [s]')
             axs[4].set_xlabel('Episode [#]')
 
-            fig.savefig('{}.{}.svg'.format(self.prefix, agent), 
+            fig.savefig('{}.{}.svg'.format(self.prefix, agent),
                         dpi=300, transparent=False, bbox_inches='tight')
             # plt.show()
-            matplotlib.pyplot.close('all')     
+            matplotlib.pyplot.close('all')
             # sys.exit()
 
     def additionals_by_agent(self):
@@ -414,12 +407,12 @@ class StatSingleExp(object):
                                 x_coords = list(range(len(values)))
                                 fig, ax = plt.subplots(figsize=(15, 10))
                                 ax.plot(x_coords, values, label='ETT')
-                                ax.set(xlabel='Learning steps', ylabel='Time [s]', 
+                                ax.set(xlabel='Learning steps', ylabel='Time [s]',
                                        title='ETT variation during an episode.')
                                 ax.grid()
                                 fig.savefig(
                                     '{}.{}.{}.ett_over_episode_{}.svg'.format(
                                         self.prefix, agent, mode, len(episodes[agent])),
                                     dpi=300, transparent=False, bbox_inches='tight')
-                                # plt.show()   
+                                # plt.show()
                                 matplotlib.pyplot.close('all')

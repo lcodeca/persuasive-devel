@@ -8,7 +8,6 @@ from copy import deepcopy
 import itertools
 import json
 import os
-from pprint import pformat, pprint
 import random
 import sys
 
@@ -27,18 +26,18 @@ def _argument_parser():
         description='Generates JSON configuration file for a given scenario.')
     parser.add_argument('--net', required=True, type=str, help='The SUMO net.xml.')
     parser.add_argument('--num', default=10, type=int, help='Number of agent to be generated.')
-    parser.add_argument('--out', default='output.agents.josm', type=str, 
+    parser.add_argument('--out', default='output.agents.josm', type=str,
                         help='The JOSM output file.')
-    parser.add_argument('--default', required=True, type=str, 
+    parser.add_argument('--default', required=True, type=str,
                         help='The default agent settings (JOSM file).')
     parser.add_argument('--from-edge', default='', type=str, help='The default edge of origin.')
     parser.add_argument('--to-edge', default='', type=str, help='The default destination edge.')
     parser.add_argument('--all', dest='all', action='store_true',
                         help='Generate all the possible configurations.')
     parser.set_defaults(all=False)
-    parser.add_argument('--random-seed', default=0, type=int, dest='seed', 
+    parser.add_argument('--random-seed', default=0, type=int, dest='seed',
                         help='If set, randomize a seed from 0 to the passed integer.')
-    parser.add_argument('--random-start', nargs=2, type=int, default=[], dest='start', 
+    parser.add_argument('--random-start', nargs=2, type=int, default=[], dest='start',
                         help='If set, randomize the start using the passed interval.')
     return parser.parse_args()
 
@@ -59,7 +58,7 @@ class SUMOAgentGenerator(object):
             config.default  --> 'The default agent settings (JOSM).'
             config.from     --> 'The default edge of origin.'
             config.to       --> 'The default destination edge.'
-            config.all      --> 'Generate all the possible configurations.' 
+            config.all      --> 'Generate all the possible configurations.'
             config.seed     --> 'If set, randomize a seed from 0 to the passed integer.
             config.start    --> 'If set, randomize the start using the passed interval.'
         """
@@ -102,7 +101,7 @@ class SUMOAgentGenerator(object):
             else:
                 default['destination'] = random.choice(self._edges)
             self._agents[agent] = deepcopy(default)
-    
+
     def _generate_all_possible_agents(self):
         """ Generate all the possible agents """
         default = json.load(open(self._config.default))

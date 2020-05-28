@@ -3,24 +3,15 @@
 """ Process the graph directory structure generating a static HTML gallery. """
 
 import argparse
-from collections import defaultdict
 import cProfile
 import io
-import json
 import logging
 import os
-from pprint import pformat, pprint
+from pprint import pformat
 import pstats
 import re
-import sys
 
 from jinja2 import Template
-
-from deepdiff import DeepDiff
-import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
-from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -30,10 +21,10 @@ def _argument_parser():
     parser = argparse.ArgumentParser(
         description='RLLIB & SUMO Gallery generator.')
     parser.add_argument(
-        '--dir-tree', required=True, type=str, 
+        '--dir-tree', required=True, type=str,
         help='Graphs directory.')
     parser.add_argument(
-        '--exp', required=True, type=str, 
+        '--exp', required=True, type=str,
         help='Experiment name.')
     parser.add_argument(
         '--profiler', dest='profiler', action='store_true', help='Enable cProfile.')
@@ -83,7 +74,7 @@ class HTMLGallery():
     @staticmethod
     def get_item(lst, pos):
         return lst[pos] if pos < len(lst) else ''
-    
+
     @staticmethod
     def alphanumeric_sort(iterable):
         """
@@ -150,7 +141,7 @@ class HTMLGallery():
                 agents = os.path.join('aggregated', item)
             elif self.MODES_SUFFIX in item:
                 modes = os.path.join('aggregated', item)
-        
+
         self.html_aggr_string = self.html_aggr_template.render(
             exp_name=self.experiment, rewards=rewards, agents=agents, modes=modes)
 
@@ -158,7 +149,7 @@ class HTMLGallery():
             fstream.write(self.html_aggr_string)
 
     ################################################################################################
-    
+
     AGENTS_TEMPLATE = """
 <!DOCTYPE html>
 <html>
@@ -223,7 +214,7 @@ class HTMLGallery():
 
         self.html_agents_string = self.html_agents_template.render(
             exp_name=self.experiment, items=agents_insight)
-        
+
         with open(os.path.join(self.dir, 'agents.html'), 'w') as fstream:
             fstream.write(self.html_agents_string)
 
@@ -296,7 +287,7 @@ class HTMLGallery():
             fstream.write(self.html_policies_string)
 
     ################################################################################################
-    
+
     QVALUES_TEMPLATE = """
 <!DOCTYPE html>
 <html>
@@ -364,7 +355,7 @@ class HTMLGallery():
             fstream.write(self.html_qvalues_string)
 
     ################################################################################################
-    
+
     QVALUES_EVOL_TEMPLATE = """
 <!DOCTYPE html>
 <html>
@@ -426,7 +417,7 @@ class HTMLGallery():
 
             self.html_qvalues_evol_string = self.html_qvalues_evol_template.render(
                 exp_name=self.experiment, agent=agent_dir, items=qvalues)
-            
+
             gallery_fname = 'qvalues-{}-evol.html'.format(agent_dir)
             with open(os.path.join(self.dir, gallery_fname), 'w') as fstream:
                 fstream.write(self.html_qvalues_evol_string)
