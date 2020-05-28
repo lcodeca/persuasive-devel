@@ -3,21 +3,15 @@
 """ Process the DBLogger directory structure generating ETT plots for specific episodes. """
 
 import argparse
-from collections import defaultdict
 import cProfile
 import io
-import json
 import logging
 import os
-from pprint import pformat, pprint
+from pprint import pformat
 import pstats
-import re
-import sys
 
-from deepdiff import DeepDiff
 import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
 from tqdm import tqdm
 
 from dbloggerstats import DBLoggerStats
@@ -42,22 +36,22 @@ def _argument_parser():
     parser = argparse.ArgumentParser(
         description='RLLIB & SUMO Statistics parser.')
     parser.add_argument(
-        '--dir-tree', required=True, type=str, 
+        '--dir-tree', required=True, type=str,
         help='DBLogger directory.')
     parser.add_argument(
-        '--training', default=None, type=str, 
+        '--training', default=None, type=str,
         help='Training run to parse, if not defined, it process them all. (Ignored if --last-run)')
     parser.add_argument(
-        '--episode', default=None, type=str, 
+        '--episode', default=None, type=str,
         help='Episode to parse, if not defined, it process them all. (Ignored if --last-run)')
     parser.add_argument(
-        '--agent', default=None, type=str, 
+        '--agent', default=None, type=str,
         help='Agent to parse, if not defined, it process them all. (Ignored if --last-run)')
     parser.add_argument(
-        '--graph', required=True, 
+        '--graph', required=True,
         help='Output prefix for the graph(s).')
     parser.add_argument(
-        '--last-run', dest='last_run', action='store_true', 
+        '--last-run', dest='last_run', action='store_true',
         help='Process all episodes and agents in the last training run.')
     parser.set_defaults(last_run=False)
     parser.add_argument(
@@ -77,7 +71,7 @@ def _main():
     ## ========================              PROFILER              ======================== ##
 
     statistics = ETTInsight(
-        config.dir_tree, config.graph, 
+        config.dir_tree, config.graph,
         config.training, config.episode, config.agent, config.last_run)
     statistics.generate_plots()
     LOGGER.info('Done')
@@ -110,7 +104,7 @@ class ETTInsight(DBLoggerStats):
             available_training_runs.append(self.training)
         else:
             available_training_runs = self.alphanumeric_sort(os.listdir(self.dir))
-        
+
         if self.last:
             available_training_runs = [available_training_runs[-1]]
 
@@ -132,17 +126,18 @@ class ETTInsight(DBLoggerStats):
                         x_coords = list(range(len(values)))
                         fig, ax = plt.subplots(figsize=(15, 10))
                         ax.plot(x_coords, values, label='ETT')
-                        ax.set(xlabel='Waiting slots', ylabel='Time [s]', 
+                        ax.set(xlabel='Waiting slots', ylabel='Time [s]',
                                title='ETT variation for mode "{}" during {}/{}.'.format(
                                    mode, training_run, episode))
                         ax.grid()
-                        fig.savefig('{}.{}.{}.{}.{}.svg'.format(
-                                        self.output_prefix, training_run, episode, agent, mode),
-                                    dpi=300, transparent=False, bbox_inches='tight')
+                        fig.savefig(
+                            '{}.{}.{}.{}.{}.svg'.format(
+                                self.output_prefix, training_run, episode, agent, mode),
+                            dpi=300, transparent=False, bbox_inches='tight')
                         # fig.savefig('{}.{}.{}.{}.{}.png'.format(
                         #                 self.output_prefix, training_run, episode, agent, mode),
                         #             dpi=300, transparent=False, bbox_inches='tight')
-                        # plt.show()   
+                        # plt.show()
                         matplotlib.pyplot.close('all')
 
 ####################################################################################################

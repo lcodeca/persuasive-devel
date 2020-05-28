@@ -3,16 +3,13 @@
 """ Process the DBLogger directory structure generating an aggregated overview. """
 
 import argparse
-import collections
 import cProfile
 import io
 import json
 import logging
 import os
-from pprint import pformat, pprint
+from pprint import pformat
 import pstats
-import re
-import sys
 
 from deepdiff import DeepDiff
 import matplotlib
@@ -42,16 +39,16 @@ def _argument_parser():
     parser = argparse.ArgumentParser(
         description='RLLIB & SUMO Statistics parser.')
     parser.add_argument(
-        '--dir-tree', required=True, type=str, 
+        '--dir-tree', required=True, type=str,
         help='DBLogger directory.')
     parser.add_argument(
-        '--graph', required=True, 
+        '--graph', required=True,
         help='Output prefix for the graph.')
     parser.add_argument(
-        '--data', required=True, 
+        '--data', required=True,
         help='Input/Output file for the processed data.')
     parser.add_argument(
-        '--window', default=10, type=int, 
+        '--window', default=10, type=int,
         help='Number of training runs to consider for policy stability.')
     parser.add_argument(
         '--profiler', dest='profiler', action='store_true', help='Enable cProfile.')
@@ -99,7 +96,7 @@ class AggregatedOverview(DBLoggerStats):
         if os.path.exists(self.dataset_fname):
             with open(self.dataset_fname, 'r') as jsonfile:
                 self.aggregated_dataset = json.load(jsonfile)
-        else: 
+        else:
             # main graph: reward over learning
             self.aggregated_dataset['reward-min'] = list()
             self.aggregated_dataset['reward-max'] = list()
@@ -116,9 +113,9 @@ class AggregatedOverview(DBLoggerStats):
 
             # aggregation
             self.aggregated_dataset['training-folders'] = list()
-        
+
         LOGGER.debug('Aggregated data structure: \n%s', pformat(self.aggregated_dataset))
-    
+
     def _save_satastructure(self):
         """ Saves the datastructure to file. """
         with open(self.dataset_fname, 'w') as jsonfile:
@@ -134,7 +131,7 @@ class AggregatedOverview(DBLoggerStats):
                 continue
             print('Processing {}/{}'.format(self.dir, training_run))
             agents, episodes, _ = self.get_training_components(training_run)
-            
+
             # compute the reward
             rewards = list()
             for agent in agents:
@@ -165,14 +162,15 @@ class AggregatedOverview(DBLoggerStats):
             for agent in agents:
                 if self.aggregated_dataset['waited'][agent] is not None:
                     waited += 1
-            # waited : all_agents = x : 100 
-            self.aggregated_dataset['percentage-waited'].append(waited * 100.0 / len(agents)) 
+            # waited : all_agents = x : 100
+            self.aggregated_dataset['percentage-waited'].append(waited * 100.0 / len(agents))
 
             # process the agents to define policy stability
             current_run_index = available_training_runs.index(training_run)
             window = []
             if current_run_index + 1 > self.stability_window:
-                window = available_training_runs[current_run_index-self.stability_window:current_run_index]
+                window = available_training_runs[
+                    current_run_index - self.stability_window : current_run_index]
             # print(current_run_index, self.stability_window, window)
             stables = 0
             for agent in agents:
@@ -192,42 +190,42 @@ class AggregatedOverview(DBLoggerStats):
                         # print(agent, run)
                 self.aggregated_dataset['stable'][agent] = stable
                 if stable:
-                    stables +=1
-            # stables : all_agents = x : 100 
-            self.aggregated_dataset['percentage-stable'].append(stables * 100.0 / len(agents)) 
+                    stables += 1
+            # stables : all_agents = x : 100
+            self.aggregated_dataset['percentage-stable'].append(stables * 100.0 / len(agents))
 
             self.aggregated_dataset['training-folders'].append(training_run)
 
         LOGGER.debug('UPDATED aggregated data structure: \n%s', pformat(self.aggregated_dataset))
 
         # save the new dataset into the dataset file
-        self._save_satastructure() 
+        self._save_satastructure()
 
     ######################################## PLOT GENERATOR ########################################
 
     def generate_plot(self):
         print('Plot generation...')
         fig, axs = plt.subplots(
-            3, sharex=True, figsize=(15, 15), constrained_layout=True, 
+            3, sharex=True, figsize=(15, 15), constrained_layout=True,
             gridspec_kw={'height_ratios': [4, 1, 1]})
 
         axs[0].errorbar(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['reward-mean'], 
-            yerr=self.aggregated_dataset['reward-std'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['reward-mean'],
+            yerr=self.aggregated_dataset['reward-std'],
             label='Mean [std]',
             color='blue', marker='o', linestyle='solid', linewidth=2, markersize=8, capsize=5)
         axs[0].plot(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['reward-min'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['reward-min'],
             label='Min', color='red')
         axs[0].plot(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['reward-max'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['reward-max'],
             label='Max', color='green')
         axs[0].plot(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['reward-median'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['reward-median'],
             label='Median', color='cyan')
         axs[0].set_ylabel('Reward')
         axs[0].set_ylim(-20000, 0)
@@ -235,34 +233,34 @@ class AggregatedOverview(DBLoggerStats):
         axs[0].legend(loc=1, ncol=4, shadow=True)
 
         axs[1].errorbar(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['reward-mean'], 
-            yerr=self.aggregated_dataset['reward-std'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['reward-mean'],
+            yerr=self.aggregated_dataset['reward-std'],
             label='Mean [std]',
             color='blue', marker='o', linestyle='solid', linewidth=2, markersize=8, capsize=5)
         axs[1].plot(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['reward-min'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['reward-min'],
             label='Min', color='red')
         axs[1].plot(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['reward-max'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['reward-max'],
             label='Max', color='green')
         axs[1].plot(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['reward-median'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['reward-median'],
             label='Median', color='cyan')
         axs[1].set_ylabel('Reward')
         axs[1].set_xlabel('Learning step')
         axs[1].grid(True)
 
         axs[2].plot(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['percentage-waited'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['percentage-waited'],
             label='% Waiting too long', color='black', linestyle='dotted')
         axs[2].plot(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['percentage-stable'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['percentage-stable'],
             label='% Stable policy', color='magenta', linestyle='dashed')
         axs[2].set_ylabel('Agents [%]')
         axs[2].set_ylim(-10, 110)
@@ -275,7 +273,7 @@ class AggregatedOverview(DBLoggerStats):
                     dpi=300, transparent=False, bbox_inches='tight')
         # fig.savefig('{}.png'.format(self.output_prefix),
         #             dpi=300, transparent=False, bbox_inches='tight')
-        # plt.show()   
+        # plt.show()
         matplotlib.pyplot.close('all')
 
     def generate_plot_old(self):
@@ -283,30 +281,30 @@ class AggregatedOverview(DBLoggerStats):
         fig, host = plt.subplots(figsize=(15, 10))
         perc = host.twinx()
         p1 = host.errorbar(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['reward-mean'], 
-            yerr=self.aggregated_dataset['reward-std'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['reward-mean'],
+            yerr=self.aggregated_dataset['reward-std'],
             label='Mean [std]',
             color='blue', marker='o', linestyle='solid', linewidth=2, markersize=8, capsize=5)
         p2 = host.plot(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['reward-min'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['reward-min'],
             label='Min', color='red')
         p3 = host.plot(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['reward-max'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['reward-max'],
             label='Max', color='green')
         p4 = host.plot(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['reward-median'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['reward-median'],
             label='Median', color='cyan')
         p5 = perc.plot(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['percentage-waited'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['percentage-waited'],
             label='% Waiting too long', color='orange', linestyle='dotted')
         p6 = perc.plot(
-            self.aggregated_dataset['learning-step'], 
-            self.aggregated_dataset['percentage-stable'], 
+            self.aggregated_dataset['learning-step'],
+            self.aggregated_dataset['percentage-stable'],
             label='% Stable policy', color='magenta', linestyle='dashed')
 
         host.set_xlabel('Learning step')
@@ -317,7 +315,7 @@ class AggregatedOverview(DBLoggerStats):
         perc.set_ylabel('Agents [%]')
         perc.set_ylim(-10, 110)
 
-        plots = [p1 , p2[0], p3[0], p4[0], p5[0], p6[0]]
+        plots = [p1, p2[0], p3[0], p4[0], p5[0], p6[0]]
         host.legend(plots, [l.get_label() for l in plots], shadow=True,
                     bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',
                     ncol=3, mode="expand", borderaxespad=0.)
@@ -326,7 +324,7 @@ class AggregatedOverview(DBLoggerStats):
                     dpi=300, transparent=False, bbox_inches='tight')
         # fig.savefig('{}.png'.format(self.output_prefix),
         #             dpi=300, transparent=False, bbox_inches='tight')
-        # plt.show()   
+        # plt.show()
         matplotlib.pyplot.close('all')
 
     ####################################### GENERIC  GETTERS #######################################
@@ -336,7 +334,7 @@ class AggregatedOverview(DBLoggerStats):
             # covers the initial empty structure
             return False
         return self.aggregated_dataset['waited'][agent] is not None
-    
+
     ################################################################################################
 
 ####################################################################################################

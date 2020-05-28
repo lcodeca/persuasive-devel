@@ -3,35 +3,13 @@
 """
     Stand-Alone Trainer for Q-Learning with Eligibility Traces Trainer based on QLearningTrainer
 """
-import collections
 from copy import deepcopy
-import cProfile
-from datetime import timedelta, datetime
-import dill
-import io
-import json
 import logging
-import os
-import pstats
-import sys
-from pprint import pformat, pprint
-
-import numpy as np
-from numpy.random import RandomState
-
-from ray.rllib.agents.trainer import Trainer, with_common_config
-from ray.rllib.policy import Policy
+from pprint import pformat
 
 from utils.qtable import QTable
 
 from learning.qlearningstandalonetrainer import QLearningTrainer, EGreedyQLearningPolicy
-
-# """ Import SUMO library """
-if 'SUMO_HOME' in os.environ:
-    sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
-    from traci.exceptions import TraCIException, FatalTraCIError
-else:
-    sys.exit("please declare environment variable 'SUMO_HOME'")
 
 ####################################################################################################
 
@@ -46,7 +24,7 @@ LOGGER.setLevel(logging.DEBUG)
 ####################################################################################################
 
 class QLearningEligibilityTracesTrainer(QLearningTrainer):
-    """ 
+    """
     See:
         https://towardsdatascience.com/eligibility-traces-in-reinforcement-learning-a6b458c019d6
     """
@@ -74,7 +52,7 @@ class EGreedyQLearningEligibilityTracesPolicy(EGreedyQLearningPolicy):
     """
     See:
         https://towardsdatascience.com/eligibility-traces-in-reinforcement-learning-a6b458c019d6
-    """ 
+    """
 
     def __init__(self, observation_space, action_space, config):
         """
@@ -99,17 +77,17 @@ class EGreedyQLearningEligibilityTracesPolicy(EGreedyQLearningPolicy):
         self.eligibility_trace = QTable(self.set_of_actions, default=0.0)
 
     def learn(self, sample):
-        """ 
+        """
         Q-Learning with Eligibility Traces implementation
-        
-        See: 
+
+        See:
             https://en.wikipedia.org/wiki/Q-learning#Algorithm
             https://stackoverflow.com/questions/40862578/how-to-understand-watkinss-q%CE%BB-learning-algorithm-in-suttonbartos-rl-book
 
         Given a sample = {
                         'old_state': states[agent],
                         'action': actions[agent],
-                        'next_state': next_states[agent], 
+                        'next_state': next_states[agent],
                         'reward': rewards[agent],
                         'info': infos[agent],
                     }
@@ -121,17 +99,19 @@ class EGreedyQLearningEligibilityTracesPolicy(EGreedyQLearningPolicy):
 
         # in case the action chosen was a greedy one
         best_actions = self.qtable.maxactions(sample['old_state'])
-        LOGGER.debug('Q-Learning: best actions = %s, action taken = %d', 
+        LOGGER.debug('Q-Learning: best actions = %s, action taken = %d',
                      str(best_actions), sample['action'])
         if sample['action'] not in best_actions:
-            LOGGER.debug('Q-Learning: the eligibility trace will be reset.')  
-        best_action = list(best_actions)[0]  
+            LOGGER.debug('Q-Learning: the eligibility trace will be reset.')
+        best_action = list(best_actions)[0]
 
-        # compute the error 
-        error = (sample['reward'] + 
-            (self.gamma * self.qtable[sample['next_state']][best_action]) - 
-            self.qtable[sample['old_state']][sample['action']])  
-        LOGGER.debug('Q-Learning: error = %.2f + %.2f * %.2f - %.2f', 
+        # compute the error
+        error = (
+            sample['reward'] +
+            (self.gamma * self.qtable[sample['next_state']][best_action]) -
+            self.qtable[sample['old_state']][sample['action']])
+        LOGGER.debug(
+            'Q-Learning: error = %.2f + %.2f * %.2f - %.2f',
             sample['reward'], self.gamma, self.qtable[sample['next_state']][sample['action']],
             self.qtable[sample['old_state']][best_action])
         LOGGER.debug('Q-Learning: error = %.2f', error)
@@ -146,7 +126,7 @@ class EGreedyQLearningEligibilityTracesPolicy(EGreedyQLearningPolicy):
             LOGGER.debug('State %s', pformat(state))
             LOGGER.debug('Values %s', pformat(values))
             for action in values:
-                LOGGER.debug('===========================> Action %d <===========================', 
+                LOGGER.debug('===========================> Action %d <===========================',
                              action)
                 # adjust q-values
                 old_qvalue = self.qtable[state][action]
@@ -167,7 +147,7 @@ class EGreedyQLearningEligibilityTracesPolicy(EGreedyQLearningPolicy):
                     self.eligibility_trace[state][action] = 0.0
                 LOGGER.debug('==================================================================')
             LOGGER.debug('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-            
+
         if DEBUGGER:
             LOGGER.debug('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
             LOGGER.debug('Q-Learning: eligibility traces \n%s', str(self.eligibility_trace))
@@ -175,7 +155,8 @@ class EGreedyQLearningEligibilityTracesPolicy(EGreedyQLearningPolicy):
 
         # STATS
         self.stats['rewards'].append(sample['reward'])
-        self.qtable_state_action_reward[sample['old_state']][sample['action']].append(sample['reward'])
+        self.qtable_state_action_reward[sample['old_state']][sample['action']].append(
+            sample['reward'])
         self.stats['sequence'].append(
             (sample['old_state'], sample['action'], sample['next_state'], sample['reward']))
         if sample['info']:

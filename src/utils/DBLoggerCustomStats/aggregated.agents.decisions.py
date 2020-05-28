@@ -9,12 +9,9 @@ import io
 import json
 import logging
 import os
-from pprint import pformat, pprint
+from pprint import pformat
 import pstats
-import re
-import sys
 
-from deepdiff import DeepDiff
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -42,16 +39,17 @@ def _argument_parser():
     parser = argparse.ArgumentParser(
         description='RLLIB & SUMO Statistics parser.')
     parser.add_argument(
-        '--dir-tree', required=True, type=str, 
+        '--dir-tree', required=True, type=str,
         help='DBLogger directory.')
     parser.add_argument(
-        '--graph', required=True, 
+        '--graph', required=True,
         help='Output prefix for the graph.')
     parser.add_argument(
-        '--data', required=True, 
+        '--data', required=True,
         help='Input/Output file for the processed data.')
     parser.add_argument(
-        '--profiler', dest='profiler', action='store_true', help='Enable cProfile.')
+        '--profiler', dest='profiler', action='store_true',
+        help='Enable cProfile.')
     parser.set_defaults(profiler=False)
     return parser.parse_args()
 
@@ -82,7 +80,7 @@ def _main():
 class AggregatedAgentsOutcome(DBLoggerStats):
     """ Process the DBLogger directory structure plotting the agents decision making outcome. """
 
-    MODES = { 
+    MODES = {
         '0': 'wait too long',
         '1': 'passenger',
         '2': 'public',
@@ -106,9 +104,9 @@ class AggregatedAgentsOutcome(DBLoggerStats):
         if os.path.exists(self.dataset_fname):
             with open(self.dataset_fname, 'r') as jsonfile:
                 self.aggregated_dataset = json.load(jsonfile)
-        else: 
+        else:
             # Y - average
-            self.aggregated_dataset['modes-departure'] = { 
+            self.aggregated_dataset['modes-departure'] = {
                 '1': list(),
                 '2': list(),
                 '3': list(),
@@ -117,7 +115,7 @@ class AggregatedAgentsOutcome(DBLoggerStats):
                 '6': list(),
             }
             # Y - average
-            self.aggregated_dataset['modes-waiting'] = { 
+            self.aggregated_dataset['modes-waiting'] = {
                 '1': list(),
                 '2': list(),
                 '3': list(),
@@ -126,7 +124,7 @@ class AggregatedAgentsOutcome(DBLoggerStats):
                 '6': list(),
             }
             # Y - number of agents
-            self.aggregated_dataset['modes-late'] = { 
+            self.aggregated_dataset['modes-late'] = {
                 '1': list(),
                 '2': list(),
                 '3': list(),
@@ -149,9 +147,9 @@ class AggregatedAgentsOutcome(DBLoggerStats):
             self.aggregated_dataset['max-wait'] = float('-inf')
             # aggregation
             self.aggregated_dataset['training-folders'] = list()
-        
+
         LOGGER.debug('Aggregated data structure: \n%s', pformat(self.aggregated_dataset))
-    
+
     def _save_satastructure(self):
         """ Saves the datastructure to file. """
         with open(self.dataset_fname, 'w') as jsonfile:
@@ -166,7 +164,7 @@ class AggregatedAgentsOutcome(DBLoggerStats):
             if training_run in self.aggregated_dataset['training-folders']:
                 continue
             agents, episodes, _ = self.get_training_components(training_run)
-            
+
             # process the info file
             for episode in episodes:
                 self.aggregated_dataset['episodes'].append(
@@ -237,21 +235,21 @@ class AggregatedAgentsOutcome(DBLoggerStats):
 
                 self.aggregated_dataset['mistake'].append(mistake)
                 self.aggregated_dataset['min-agents'] = min(
-                        self.aggregated_dataset['min-agents'], mistake)
+                    self.aggregated_dataset['min-agents'], mistake)
                 self.aggregated_dataset['max-agents'] = max(
-                        self.aggregated_dataset['max-agents'], mistake)
+                    self.aggregated_dataset['max-agents'], mistake)
                 self.aggregated_dataset['waiting-too-long'].append(too_long)
                 self.aggregated_dataset['min-agents'] = min(
-                        self.aggregated_dataset['min-agents'], too_long)
+                    self.aggregated_dataset['min-agents'], too_long)
                 self.aggregated_dataset['max-agents'] = max(
-                        self.aggregated_dataset['max-agents'], too_long)
+                    self.aggregated_dataset['max-agents'], too_long)
 
             self.aggregated_dataset['training-folders'].append(training_run)
 
         LOGGER.debug('UPDATED aggregated data structure: \n%s', pformat(self.aggregated_dataset))
 
         # save the new dataset into the dataset file
-        self._save_satastructure() 
+        self._save_satastructure()
 
     ######################################## PLOT GENERATOR ########################################
 
@@ -259,19 +257,20 @@ class AggregatedAgentsOutcome(DBLoggerStats):
         print('Plotting..')
         fig, axs = plt.subplots(
             len(self.MODES), 3, sharex=True, figsize=(20, 25), constrained_layout=True)
-        
+
         delta_agents = self.aggregated_dataset['max-agents'] - self.aggregated_dataset['min-agents']
-        delta_agents *= 0.1 
+        delta_agents *= 0.1
         min_agents = self.aggregated_dataset['min-agents'] - delta_agents
         max_agents = self.aggregated_dataset['max-agents'] + delta_agents
 
-        delta_departure = self.aggregated_dataset['max-departure'] - self.aggregated_dataset['min-departure']
-        delta_departure *= 0.1 
+        delta_departure = (
+            self.aggregated_dataset['max-departure'] - self.aggregated_dataset['min-departure'])
+        delta_departure *= 0.1
         min_departure = self.aggregated_dataset['min-departure'] - delta_departure
         max_departure = self.aggregated_dataset['max-departure'] + delta_departure
 
         delta_wait = self.aggregated_dataset['max-wait'] - self.aggregated_dataset['min-wait']
-        delta_wait *= 0.1 
+        delta_wait *= 0.1
         min_wait = self.aggregated_dataset['min-wait'] - delta_wait
         max_wait = self.aggregated_dataset['max-wait'] + delta_wait
 
@@ -303,8 +302,8 @@ class AggregatedAgentsOutcome(DBLoggerStats):
                 continue
             axs[int(mode)][0].set_title('{} - Departure'.format(self.MODES[mode]))
             axs[int(mode)][0].plot(
-                self.aggregated_dataset['episodes'], 
-                self.aggregated_dataset['modes-departure'][mode], 
+                self.aggregated_dataset['episodes'],
+                self.aggregated_dataset['modes-departure'][mode],
                 label='Average departure')
             axs[int(mode)][0].set_ylabel('Time [h]')
             axs[int(mode)][0].set_ylim(min_departure, max_departure)
@@ -313,8 +312,8 @@ class AggregatedAgentsOutcome(DBLoggerStats):
 
             axs[int(mode)][1].set_title('{} - Waiting'.format(self.MODES[mode]))
             axs[int(mode)][1].plot(
-                self.aggregated_dataset['episodes'], 
-                self.aggregated_dataset['modes-waiting'][mode], 
+                self.aggregated_dataset['episodes'],
+                self.aggregated_dataset['modes-waiting'][mode],
                 label='Average waiting')
             axs[int(mode)][1].set_ylabel('Time [m]')
             axs[int(mode)][1].set_ylim(min_wait, max_wait)
@@ -323,8 +322,8 @@ class AggregatedAgentsOutcome(DBLoggerStats):
 
             axs[int(mode)][2].set_title('{} - Too late'.format(self.MODES[mode]))
             axs[int(mode)][2].plot(
-                self.aggregated_dataset['episodes'], 
-                self.aggregated_dataset['modes-late'][mode], 
+                self.aggregated_dataset['episodes'],
+                self.aggregated_dataset['modes-late'][mode],
                 label='Late arrival')
             axs[int(mode)][2].set_ylabel('Agents [#]')
             axs[int(mode)][2].set_ylim(min_agents, max_agents)
@@ -332,7 +331,7 @@ class AggregatedAgentsOutcome(DBLoggerStats):
             # axs[int(mode)][2].legend(loc=1, ncol=1, shadow=True)
 
         axs[len(self.MODES)-1][0].set_xlabel('Episodes')
-        axs[len(self.MODES)-1][1].set_xlabel('Episodes')        
+        axs[len(self.MODES)-1][1].set_xlabel('Episodes')
         axs[len(self.MODES)-1][2].set_xlabel('Episodes')
 
         print('Saving to file..')
@@ -340,8 +339,8 @@ class AggregatedAgentsOutcome(DBLoggerStats):
                     dpi=300, transparent=False, bbox_inches='tight')
         # fig.savefig('{}.png'.format(self.output_prefix),
         #             dpi=300, transparent=False, bbox_inches='tight')
-        # plt.show()   
-        matplotlib.pyplot.close('all')   
+        # plt.show()
+        matplotlib.pyplot.close('all')
 
 ####################################################################################################
 

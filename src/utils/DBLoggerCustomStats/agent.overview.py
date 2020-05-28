@@ -9,15 +9,11 @@ import io
 import json
 import logging
 import os
-from pprint import pformat, pprint
+from pprint import pformat
 import pstats
-import re
-import sys
 
-from deepdiff import DeepDiff
 import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
 from tqdm import tqdm
 
 from dbloggerstats import DBLoggerStats
@@ -42,13 +38,13 @@ def _argument_parser():
     parser = argparse.ArgumentParser(
         description='RLLIB & SUMO Statistics parser.')
     parser.add_argument(
-        '--dir-tree', required=True, type=str, 
+        '--dir-tree', required=True, type=str,
         help='DBLogger directory.')
     parser.add_argument(
-        '--graph', required=True, 
+        '--graph', required=True,
         help='Output prefix for the graph.')
     parser.add_argument(
-        '--data', required=True, 
+        '--data', required=True,
         help='Input/Output file for the processed data.')
     parser.add_argument(
         '--profiler', dest='profiler', action='store_true', help='Enable cProfile.')
@@ -95,16 +91,16 @@ class AgentOverview(DBLoggerStats):
         if os.path.exists(self.dataset_fname):
             with open(self.dataset_fname, 'r') as jsonfile:
                 self.aggregated_dataset = json.load(jsonfile)
-        else: 
+        else:
             # Agent overview from info.json
             self.aggregated_dataset['agents'] = defaultdict(lambda: defaultdict(lambda: list()))
             self.aggregated_dataset['episodes'] = list()
 
             # aggregation
             self.aggregated_dataset['training-folders'] = list()
-        
+
         LOGGER.debug('Aggregated data structure: \n%s', pformat(self.aggregated_dataset))
-    
+
     def _save_satastructure(self):
         """ Saves the datastructure to file. """
         with open(self.dataset_fname, 'w') as jsonfile:
@@ -120,7 +116,7 @@ class AgentOverview(DBLoggerStats):
                 continue
             print('Processing {}/{}'.format(self.dir, training_run))
             agents, episodes, _ = self.get_training_components(training_run)
-            
+
             # process the info file
             for episode in episodes:
                 self.aggregated_dataset['episodes'].append(
@@ -147,15 +143,19 @@ class AgentOverview(DBLoggerStats):
                     #  'rtt': 1842.0,
                     #  'timeLoss': 235.33,
                     #  'wait': 1771.0}
-                    self.aggregated_dataset['agents'][agent]['arrival'].append(info['arrival']/3600.0)
+                    self.aggregated_dataset['agents'][agent]['arrival'].append(
+                        info['arrival']/3600.0)
                     self.aggregated_dataset['agents'][agent]['cost'].append(info['cost']/60.0)
-                    self.aggregated_dataset['agents'][agent]['departure'].append(info['departure']/3600.0)
+                    self.aggregated_dataset['agents'][agent]['departure'].append(
+                        info['departure']/3600.0)
                     self.aggregated_dataset['agents'][agent]['ett'].append(info['ett']/60.0)
                     self.aggregated_dataset['agents'][agent]['rtt'].append(info['rtt']/60.0)
-                    self.aggregated_dataset['agents'][agent]['timeLoss'].append(info['timeLoss']/60.0)
+                    self.aggregated_dataset['agents'][agent]['timeLoss'].append(
+                        info['timeLoss']/60.0)
                     self.aggregated_dataset['agents'][agent]['wait'].append(info['wait']/60.0)
-                    self.aggregated_dataset['agents'][agent]['difference'].append((info['ett'] - info['rtt'])/60.0)
-                    
+                    self.aggregated_dataset['agents'][agent]['difference'].append(
+                        (info['ett'] - info['rtt'])/60.0)
+
                     sequence = self.get_learning_sequence(training_run, episode, agent)
                     self.aggregated_dataset['agents'][agent]['reward'].append(sequence[-1][3])
                     self.aggregated_dataset['agents'][agent]['mode'].append(sequence[-1][1])
@@ -166,7 +166,7 @@ class AgentOverview(DBLoggerStats):
         LOGGER.debug('UPDATED aggregated data structure: \n%s', pformat(self.aggregated_dataset))
 
         # save the new dataset into the dataset file
-        self._save_satastructure() 
+        self._save_satastructure()
 
     ######################################## PLOT GENERATOR ########################################
 
@@ -177,7 +177,7 @@ class AgentOverview(DBLoggerStats):
             fig, axs = plt.subplots(5, 2, sharex=True, figsize=(20, 20), constrained_layout=True)
             fig.suptitle('{}'.format(agent))
 
-            ett_rtt_max = max(max(stats['ett']),max(stats['rtt']))
+            ett_rtt_max = max(max(stats['ett']), max(stats['rtt']))
             ett_rtt_max += ett_rtt_max * 0.1
 
             # Plot each graph
@@ -186,66 +186,75 @@ class AgentOverview(DBLoggerStats):
             axs[0][0].set_ylabel('Reward')
             axs[0][0].grid(True)
 
-            axs[1][0].plot(self.aggregated_dataset['episodes'], stats['actions'], label='Number of actions',
-                           color='red', marker='o', linestyle='solid', linewidth=2, markersize=8)
+            axs[1][0].plot(self.aggregated_dataset['episodes'], stats['actions'],
+                           label='Number of actions', color='red', marker='o', linestyle='solid',
+                           linewidth=2, markersize=8)
             axs[1][0].set_ylabel('Actions [#]')
             axs[1][0].grid(True)
-            
-            axs[2][0].plot(self.aggregated_dataset['episodes'], stats['mode'], label='Selected mode',
-                           color='green', marker='o', linestyle='solid', linewidth=2, markersize=8)
+
+            axs[2][0].plot(self.aggregated_dataset['episodes'], stats['mode'],
+                           label='Selected mode', color='green', marker='o', linestyle='solid',
+                           linewidth=2, markersize=8)
             axs[4][0].set_ylim(0, max(stats['mode']))
             axs[2][0].set_ylabel('Mode')
             axs[2][0].grid(True)
-            
-            axs[3][0].plot(self.aggregated_dataset['episodes'], stats['ett'], label='Estimated Travel Time',
-                           color='black', marker='o', linestyle='solid', linewidth=2, markersize=8)
+
+            axs[3][0].plot(self.aggregated_dataset['episodes'], stats['ett'],
+                           label='Estimated Travel Time', color='black', marker='o',
+                           linestyle='solid', linewidth=2, markersize=8)
             axs[3][0].set_ylim(0, ett_rtt_max)
             axs[3][0].set_ylabel('Est TT [m]')
             axs[3][0].grid(True)
-            
-            axs[4][0].plot(self.aggregated_dataset['episodes'], stats['rtt'], label='Real Travel Time',
-                           color='magenta', marker='o', linestyle='solid', linewidth=2, markersize=8)
+
+            axs[4][0].plot(self.aggregated_dataset['episodes'], stats['rtt'],
+                           label='Real Travel Time', color='magenta', marker='o', linestyle='solid',
+                           linewidth=2, markersize=8)
             axs[4][0].set_ylim(0, ett_rtt_max)
             axs[4][0].set_ylabel('Real TT [m]')
             axs[4][0].set_xlabel('Episode [#]')
             axs[4][0].grid(True)
 
-            axs[0][1].plot(self.aggregated_dataset['episodes'], stats['departure'], 'b-', label='Departure',
-                           color='blue', marker='o', linestyle='solid', linewidth=2, markersize=8)
+            axs[0][1].plot(self.aggregated_dataset['episodes'], stats['departure'], 'b-',
+                           label='Departure', color='blue', marker='o', linestyle='solid',
+                           linewidth=2, markersize=8)
             axs[0][1].axhline(y=9.0, color='red', linestyle='dashed')
             axs[0][1].set_ylabel('Departure [h]')
             axs[0][1].grid(True)
-            
-            axs[1][1].plot(self.aggregated_dataset['episodes'], stats['arrival'], 'r-', label='Arrival',
-                           color='red', marker='o', linestyle='solid', linewidth=2, markersize=8)
+
+            axs[1][1].plot(self.aggregated_dataset['episodes'], stats['arrival'], 'r-',
+                           label='Arrival', color='red', marker='o', linestyle='solid', linewidth=2,
+                           markersize=8)
             axs[1][1].axhline(y=9.0, color='red', linestyle='dashed')
             axs[1][1].set_ylabel('Arrival [h]')
             axs[1][1].grid(True)
 
-            axs[2][1].plot(self.aggregated_dataset['episodes'], stats['wait'], 'g-', label='Waiting at destination',
-                           color='green', marker='o', linestyle='solid', linewidth=2, markersize=8)
+            axs[2][1].plot(self.aggregated_dataset['episodes'], stats['wait'], 'g-',
+                           label='Waiting at destination', color='green', marker='o',
+                           linestyle='solid', linewidth=2, markersize=8)
             axs[2][1].axhline(y=0.0, color='red', linestyle='dashed')
             axs[2][1].set_ylabel('Wait @ destination [m]')
             axs[2][1].grid(True)
 
-            axs[3][1].plot(self.aggregated_dataset['episodes'], stats['cost'], 'k-', label='Estimated cost',
-                           color='black', marker='o', linestyle='solid', linewidth=2, markersize=8)
+            axs[3][1].plot(self.aggregated_dataset['episodes'], stats['cost'], 'k-',
+                           label='Estimated cost', color='black', marker='o', linestyle='solid',
+                           linewidth=2, markersize=8)
             axs[3][1].set_ylabel('Est Cost [m]')
             axs[3][1].grid(True)
 
-            axs[4][1].plot(self.aggregated_dataset['episodes'], stats['difference'], 'm-', label='ETT / RTT Difference',
-                           color='magenta', marker='o', linestyle='solid', linewidth=2, markersize=8)
+            axs[4][1].plot(self.aggregated_dataset['episodes'], stats['difference'], 'm-',
+                           label='ETT / RTT Difference', color='magenta', marker='o',
+                           linestyle='solid', linewidth=2, markersize=8)
             axs[4][1].axhline(y=0.0, color='red', linestyle='dashed')
             axs[4][1].set_ylabel('ETT / RTT Difference [m]')
             axs[4][1].set_xlabel('Episode [#]')
             axs[4][1].grid(True)
 
             fig.savefig('{}.{}.svg'.format(self.output_prefix, agent),
-                    dpi=300, transparent=False, bbox_inches='tight')
+                        dpi=300, transparent=False, bbox_inches='tight')
             # fig.savefig('{}.{}.png'.format(self.output_prefix, agent),
             #         dpi=300, transparent=False, bbox_inches='tight')
             # plt.show()
-            matplotlib.pyplot.close('all')     
+            matplotlib.pyplot.close('all')
 
 ####################################################################################################
 

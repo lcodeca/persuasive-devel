@@ -6,18 +6,14 @@ import argparse
 from collections import defaultdict
 import cProfile
 import io
-import json
 import logging
 import os
-from pprint import pformat, pprint
+from pprint import pformat
 import pstats
 import re
-import sys
 
-from deepdiff import DeepDiff
 import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
 from tqdm import tqdm
 
 from dbloggerstats import DBLoggerStats
@@ -42,19 +38,19 @@ def _argument_parser():
     parser = argparse.ArgumentParser(
         description='RLLIB & SUMO Statistics parser.')
     parser.add_argument(
-        '--dir-tree', required=True, type=str, 
+        '--dir-tree', required=True, type=str,
         help='DBLogger directory.')
     parser.add_argument(
-        '--training', default=None, type=str, 
+        '--training', default=None, type=str,
         help='Training run to parse, if not defined, it process them all. (Ignored if --last-run)')
     parser.add_argument(
-        '--agent', default=None, type=str, 
+        '--agent', default=None, type=str,
         help='Agent to parse, if not defined, it process them all. (Ignored if --last-run)')
     parser.add_argument(
-        '--graph', required=True, 
+        '--graph', required=True,
         help='Output prefix for the graph(s).')
     parser.add_argument(
-        '--last-run', dest='last_run', action='store_true', 
+        '--last-run', dest='last_run', action='store_true',
         help='Process all episodes and agents in the last training run.')
     parser.set_defaults(last_run=False)
     parser.add_argument(
@@ -105,7 +101,7 @@ class PolicyInsight(DBLoggerStats):
             available_training_runs.append(self.training)
         else:
             available_training_runs = self.alphanumeric_sort(os.listdir(self.dir))
-        
+
         if self.last:
             available_training_runs = [available_training_runs[-1]]
 
@@ -137,7 +133,8 @@ class PolicyInsight(DBLoggerStats):
                         except KeyError:
                             pass
                         if counter > 0:
-                            structure[int(time_left)][int(action)].append('{} {}'.format(counter, ett))
+                            structure[int(time_left)][int(action)].append(
+                                '{} {}'.format(counter, ett))
 
                 x_coord = []
                 y_coord = []
@@ -151,24 +148,24 @@ class PolicyInsight(DBLoggerStats):
                         x_coord.append(time_left)
                         y_coord.append(action)
                         labels.append(aggr)
-                
+
                 ## PLOTTING TIME!
                 fig, ax = plt.subplots(figsize=(30, 10))
                 ax.scatter(x_coord, y_coord, label='Best Action')
                 ax.set_ylim(-0.5, max(y_coord)+0.5)
                 ax.set_yticks(range(0, max(y_coord)+1, 1))
                 for i, txt in enumerate(labels):
-                    ax.annotate(txt, (x_coord[i], y_coord[i]), rotation=90, horizontalalignment='center')
-                ax.set(xlabel='Waiting slots', ylabel='Action [#]', 
+                    ax.annotate(txt, (x_coord[i], y_coord[i]), rotation=90,
+                                horizontalalignment='center')
+                ax.set(xlabel='Waiting slots', ylabel='Action [#]',
                        title='Best Action "{}" during {}.'.format(agent, training_run))
                 ax.grid()
-                fig.savefig('{}.{}.{}.svg'.format(
-                                self.output_prefix, training_run, agent),
+                fig.savefig('{}.{}.{}.svg'.format(self.output_prefix, training_run, agent),
                             dpi=300, transparent=False, bbox_inches='tight')
                 # fig.savefig('{}.{}.{}.png'.format(
                 #                 self.output_prefix, training_run, agent),
                 #             dpi=300, transparent=False, bbox_inches='tight')
-                # plt.show()   
+                # plt.show()
                 matplotlib.pyplot.close('all')
 
 ####################################################################################################
