@@ -67,6 +67,9 @@ class QLearningTrainer(Trainer):
         LOGGER.debug('QLearningTrainer:_init() MARL Environment Creation..')
         self._latest_checkpoint = ''
         self.env = env_creator(config['env_config'])
+        self._initialize_policies(config)
+
+    def _initialize_policies(self, config):
         self.policies = dict()
         for agent, parameters in config['multiagent']['policies'].items():
             _, obs_space, action_space, add_cfg = parameters
@@ -178,7 +181,7 @@ class QLearningTrainer(Trainer):
                     # until all the agents are not done
                     while not dones['__all__']:
                         # callback
-                        self.on_episode_step
+                        self.on_episode_step()
 
                         if states:
                             # Possibility due to the decoupling of the sumo environment and the
@@ -253,8 +256,7 @@ class QLearningTrainer(Trainer):
             LOGGER.info('=======================> %s <=======================', str(delta))
             elapesed_time_by_episode.append(delta.total_seconds())
             # callback
-            self.on_episode_end
-
+            self.on_episode_end()
 
         # Metrics gathering, averaged by number of episodes.
         aggregated_rewards_per_episode = list()
