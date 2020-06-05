@@ -87,9 +87,9 @@ class HTMLGallery():
 
     ################################################################################################
 
-    REWARD_SUFFIX = ".aggregated-overview.png"
-    AGENTS_SUFFIX = ".agents-decisions-overview.png"
-    MODES_SUFFIX = ".mode-share-overview.png"
+    REWARD_SUFFIX = "aggregated-overview.png"
+    AGENTS_SUFFIX = "agents-decisions-overview.png"
+    MODES_SUFFIX = "mode-share-overview.png"
 
     AGGREGATED_TEMPLATE = """
 <!DOCTYPE html>
@@ -137,10 +137,13 @@ class HTMLGallery():
         for item in os.listdir(os.path.join(self.dir, 'aggregated')):
             if self.REWARD_SUFFIX in item:
                 rewards = os.path.join('aggregated', item)
+                # print('Found: {} --> {}'.format(item, rewards))
             elif self.AGENTS_SUFFIX in item:
                 agents = os.path.join('aggregated', item)
+                # print('Found: {} --> {}'.format(item, agents))
             elif self.MODES_SUFFIX in item:
                 modes = os.path.join('aggregated', item)
+                # print('Found: {} --> {}'.format(item, modes))
 
         self.html_aggr_string = self.html_aggr_template.render(
             exp_name=self.experiment, rewards=rewards, agents=agents, modes=modes)
