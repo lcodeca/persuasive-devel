@@ -27,6 +27,7 @@ from configs import egreedyqlearning_conf, ppo_conf
 
 from environments import marlenvironment, marlenvironmentagentscoop, marlenvironmentlatereward
 
+import learning.pdegreedyqlearningwithet as PDEGQLETStandAlone
 import learning.qlearningstandalonetrainer as QLStandAlone
 import learning.qlearningeligibilitytraces as QLETStandAlone
 
@@ -37,7 +38,7 @@ def argument_parser():
     parser = argparse.ArgumentParser(
         description='Reinforcement learning applied to traffic assignment.')
     parser.add_argument(
-        '--algo', default='QLET', choices=['PPO', 'QLSA', 'QLET'],
+        '--algo', default='QLSA', choices=['PPO', 'QLSA', 'QLET', 'PDEGQLET'],
         help='The RL optimization algorithm to use.')
     parser.add_argument(
         '--env', default='MARL', choices=['MARL', 'MARLCoop', 'LateMARL'],
@@ -66,6 +67,9 @@ def argument_parser():
     parser.add_argument(
         '--decay', default=0.9, type=float,
         help="Decay, default value is 0.9")
+    parser.add_argument(
+        '--action-distr', type=float, nargs='+',
+        help="Probability distribution for the epsilon action. Required with PDEGQLET.")
     parser.add_argument(
         '--profiler', dest='profiler', action='store_true',
         help='Enables cProfile.')
@@ -192,6 +196,21 @@ def _main():
             # Epsilon Greedy default
             'epsilon': ARGS.epsilon,
         }
+    elif ARGS.algo == 'PDEGQLET':
+        policy_class = PDEGQLETStandAlone.PDEGreedyQLearningETPolicy
+        policy_conf = egreedyqlearning_conf.egreedy_qlearning_conf(
+            ARGS.checkout_steps, debug_dir) # COMMON_CONFIG.copy()
+        policy_params = {
+            # Q-Learning defaults
+            'alpha': ARGS.alpha,
+            'gamma': ARGS.gamma,
+            # Eligibility traces defaults
+            'decay': ARGS.decay,
+            # Epsilon Greedy default
+            'epsilon': ARGS.epsilon,
+            # Probability distribution for the epsilon-action
+            'actions-distribution': ARGS.action_distr,
+        }
     else:
         raise Exception('Unknown algorithm %s' % ARGS.algo)
 
@@ -261,6 +280,9 @@ def _main():
                                                 logger_creator=logger_creator)
     elif ARGS.algo == 'QLET':
         trainer = QLETStandAlone.QLearningEligibilityTracesTrainer(
+            env='marl_env', config=policy_conf, logger_creator=logger_creator)
+    elif ARGS.algo == 'PDEGQLET':
+        trainer = PDEGQLETStandAlone.PDEGreedyQLearningETTrainer(
             env='marl_env', config=policy_conf, logger_creator=logger_creator)
     else:
         raise Exception('Unknown algorithm %s' % ARGS.algo)

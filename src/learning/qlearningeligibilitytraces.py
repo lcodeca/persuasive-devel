@@ -29,11 +29,7 @@ class QLearningEligibilityTracesTrainer(QLearningTrainer):
         https://towardsdatascience.com/eligibility-traces-in-reinforcement-learning-a6b458c019d6
     """
 
-    def _init(self, config, env_creator):
-        """ Q-Learning Trainer init. """
-        LOGGER.debug('QLearningEligibilityTracesTrainer:_init() MARL Environment Creation..')
-        self._latest_checkpoint = ''
-        self.env = env_creator(config['env_config'])
+    def _initialize_policies(self, config):
         self.policies = dict()
         for agent, parameters in config['multiagent']['policies'].items():
             _, obs_space, action_space, add_cfg = parameters
