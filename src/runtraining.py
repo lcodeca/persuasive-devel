@@ -19,17 +19,18 @@ from pprint import pformat
 import ray
 
 from ray.rllib.agents.ppo import ppo
+from ray.rllib.agents.a3c import a3c
 
 from ray.tune.logger import UnifiedLogger
 from utils.logger import DBLogger
 
-from configs import egreedyqlearning_conf, ppo_conf
+from configs import egreedyqlearning_conf, ppo_conf, a3c_conf
 
 from environments import marlenvironment, marlenvironmentagentscoop, marlenvironmentlatereward
 
-import learning.pdegreedyqlearningwithet as PDEGQLETStandAlone
 import learning.qlearningstandalonetrainer as QLStandAlone
 import learning.qlearningeligibilitytraces as QLETStandAlone
+import learning.pdegreedyqlearningwithet as PDEGQLETStandAlone
 
 ####################################################################################################
 
@@ -38,7 +39,7 @@ def argument_parser():
     parser = argparse.ArgumentParser(
         description='Reinforcement learning applied to traffic assignment.')
     parser.add_argument(
-        '--algo', default='QLSA', choices=['PPO', 'QLSA', 'QLET', 'PDEGQLET'],
+        '--algo', default='QLSA', choices=['A3C', 'PPO', 'QLSA', 'QLET', 'PDEGQLET'],
         help='The RL optimization algorithm to use.')
     parser.add_argument(
         '--env', default='MARL', choices=['MARL', 'MARLCoop', 'LateMARL'],
@@ -161,6 +162,9 @@ def print_sas_sequence(sequence):
 
 def _main():
     """ Training loop """
+    # Args
+    print(ARGS)
+
     # Results
     metrics_dir, checkpoint_dir, debug_dir = results_handler(ARGS)
 
@@ -170,7 +174,11 @@ def _main():
     policy_params = None
     if ARGS.algo == 'PPO':
         policy_class = ppo.PPOTFPolicy
-        policy_conf = ppo_conf.ppo_conf(ARGS.checkout_steps, debug_dir) # ppo.DEFAULT_CONFIG
+        policy_conf = {**ppo.DEFAULT_CONFIG, **ppo_conf.ppo_conf(ARGS.checkout_steps, debug_dir)}
+        policy_params = {}
+    elif ARGS.algo == 'A3C':
+        policy_class = a3c.A3CTFPolicy
+        policy_conf = {**a3c.DEFAULT_CONFIG, **a3c_conf.a3c_conf(ARGS.checkout_steps, debug_dir)}
         policy_params = {}
     elif ARGS.algo == 'QLSA':
         policy_class = QLStandAlone.EGreedyQLearningPolicy
@@ -259,7 +267,7 @@ def _main():
     }
     policy_conf['env_config'] = env_config
 
-    def logger_creator(config):
+    def default_logger_creator(config):
         """
             Creates a Unified logger with a default logdir prefix
             containing the agent name and the env id
@@ -267,23 +275,36 @@ def _main():
         log_dir = os.path.join(os.path.normpath(ARGS.dir), 'logs')
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
-        return UnifiedLogger(config, log_dir, loggers=[DBLogger]) # None) >> Default loggers
+        return UnifiedLogger(config, log_dir) # loggers = None) >> Default loggers
+
+    def dblogger_logger_creator(config):
+        """
+            Creates a Unified logger with a default logdir prefix
+            containing the agent name and the env id
+        """
+        log_dir = os.path.join(os.path.normpath(ARGS.dir), 'logs')
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        return UnifiedLogger(config, log_dir, loggers=[DBLogger])
 
     trainer = None
     if ARGS.algo == 'PPO':
         trainer = ppo.PPOTrainer(env='marl_env',
                                  config=policy_conf,
-                                 logger_creator=logger_creator)
+                                 logger_creator=default_logger_creator)
+    elif ARGS.algo == 'A3C':
+        trainer = a3c.A3CTrainer(env='marl_env',
+                                 config=policy_conf,
+                                 logger_creator=default_logger_creator)
     elif ARGS.algo == 'QLSA':
-        trainer = QLStandAlone.QLearningTrainer(env='marl_env',
-                                                config=policy_conf,
-                                                logger_creator=logger_creator)
+        trainer = QLStandAlone.QLearningTrainer(
+            env='marl_env', config=policy_conf, logger_creator=dblogger_logger_creator)
     elif ARGS.algo == 'QLET':
         trainer = QLETStandAlone.QLearningEligibilityTracesTrainer(
-            env='marl_env', config=policy_conf, logger_creator=logger_creator)
+            env='marl_env', config=policy_conf, logger_creator=dblogger_logger_creator)
     elif ARGS.algo == 'PDEGQLET':
         trainer = PDEGQLETStandAlone.PDEGreedyQLearningETTrainer(
-            env='marl_env', config=policy_conf, logger_creator=logger_creator)
+            env='marl_env', config=policy_conf, logger_creator=dblogger_logger_creator)
     else:
         raise Exception('Unknown algorithm %s' % ARGS.algo)
 

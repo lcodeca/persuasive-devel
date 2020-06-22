@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 
-""" PPO Configuration """
+""" A3C Configuration """
 
-def ppo_conf(tr_steps=1, debug_folder=None):
+def a3c_conf(tr_steps=1, debug_folder=None):
     """
         https://github.com/ray-project/ray/blob/master/rllib/agents/trainer.py#L42
-        https://github.com/ray-project/ray/blob/master/rllib/agents/ppo/ppo.py#L18
+        https://github.com/ray-project/ray/blob/master/rllib/agents/a3c/a3c.py#L14
     """
     return {
         'batch_mode': 'complete_episodes',
         'ignore_worker_failures': True,
         'no_done_at_end': True,
-        # In multi-agent mode, policies will be optimized sequentially by the multi-GPU optimizer.
-        # Consider setting simple_optimizer=True if this doesn't work for you.
-        'simple_optimizer': True,
 
         'num_cpus_for_driver': 1,
         'num_cpus_per_worker': 1,
@@ -24,7 +21,6 @@ def ppo_conf(tr_steps=1, debug_folder=None):
 
         'rollout_fragment_length': tr_steps,            # Deprecating sample_batch_size
         'train_batch_size': tr_steps,
-        'sgd_minibatch_size': round(tr_steps / 2),      # Minibatch size must be <= train batch size
 
         'log_level': 'DEBUG',
         # Whether to write episode stats and videos to the agent log dir
