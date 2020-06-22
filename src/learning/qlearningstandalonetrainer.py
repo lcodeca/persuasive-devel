@@ -546,3 +546,68 @@ class EGreedyQLearningPolicy(Policy):
                 shape like {"f1": [BATCH_SIZE, ...], "f2": [BATCH_SIZE, ...]}.
         """
         return [], [], {}
+
+####################################################################################################
+#                                      TESTING "TRAINER"
+####################################################################################################
+
+class QLearningTester(QLearningTrainer):
+    """ Testing environment for a QLearningTrainer policy """
+
+    def _initialize_policies(self, config):
+        self.policies = dict()
+        for agent, parameters in config['multiagent']['policies'].items():
+            _, obs_space, action_space, add_cfg = parameters
+            self.policies[agent] = QLearningTestingPolicy(obs_space, action_space, add_cfg)
+
+
+####################################################################################################
+#                                       TESTING POLICY
+####################################################################################################
+
+class QLearningTestingPolicy(EGreedyQLearningPolicy):
+    """ Testing policy """
+
+    def __init__(self, observation_space, action_space, config):
+        """
+        Example of a config = {
+            'actions': {0, 1, 2},
+            'seed': 42,
+            'init': 0.0,
+        }
+        """
+        Policy.__init__(self, observation_space, action_space, config)
+        # Parameters
+        self.set_of_actions = deepcopy(config['actions'])
+        self.qtable = QTable(self.set_of_actions, default=config['init'], seed=config['seed'])
+        self.qtable_state_action_counter = QTable(self.set_of_actions, default=0)
+        self.qtable_state_action_reward = QTable(self.set_of_actions, default=list())
+        self.rndgen = RandomState(config['seed'])
+        # Logging
+        self.stats = dict()
+        self._reset_stats_values()
+
+    def compute_action(self, state):
+        # Epsilon-Greedy Implementation
+        if DEBUGGER:
+            LOGGER.debug('Observation: %s', pformat(state))
+
+        # Exploit learned values
+        action = self.qtable.argmax(state)
+        if DEBUGGER:
+            LOGGER.debug('State: %s --> action: %s', pformat(self.qtable[state]), str(action))
+
+        self.stats['actions'].append(action)
+        self.qtable_state_action_counter[state][action] += 1
+        return action
+
+    def learn(self, sample):
+        """ Nothing to do here for learning, only saving the stats. """
+        self.stats['rewards'].append(sample['reward'])
+        self.qtable_state_action_reward[sample['old_state']][sample['action']].append(
+            sample['reward'])
+        self.stats['sequence'].append(
+            (sample['old_state'], sample['action'], sample['next_state'], sample['reward']))
+        if sample['info']:
+            sample['info']['from-state'] = sample['old_state']
+            self.stats['info'].append(sample['info'])

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Persuasive Trainer for RLLIB + SUMO """
+""" Persuasive Policy Testing environment for RLLIB + SUMO """
 
 import argparse
 from copy import deepcopy
@@ -29,8 +29,6 @@ from configs import qlearning_conf, ppo_conf, a3c_conf
 from environments import marlenvironment, marlenvironmentagentscoop, marlenvironmentlatereward
 
 import learning.qlearningstandalonetrainer as QLStandAlone
-import learning.qlearningeligibilitytraces as QLETStandAlone
-import learning.pdegreedyqlearningwithet as PDEGQLETStandAlone
 
 ####################################################################################################
 
@@ -39,7 +37,7 @@ def argument_parser():
     parser = argparse.ArgumentParser(
         description='Reinforcement learning applied to traffic assignment.')
     parser.add_argument(
-        '--algo', default='QLSA', choices=['A3C', 'PPO', 'QLSA', 'QLET', 'PDEGQLET'],
+        '--algo', default='QLSA', choices=['A3C', 'PPO', 'QLSA'],
         help='The RL optimization algorithm to use.')
     parser.add_argument(
         '--env', default='MARL', choices=['MARL', 'MARLCoop', 'LateMARL'],
@@ -48,29 +46,14 @@ def argument_parser():
         '--config', required=True, type=str,
         help='Training configuration.')
     parser.add_argument(
+        '--target-checkpoint', required=True,
+        help='Path to the target checkpoint to load.')
+    parser.add_argument(
         '--dir', required=True,
         help='Path to the directory to use.')
     parser.add_argument(
-        '--checkout-steps', default=10, type=int,
-        help='Number of steps between checkouts.')
-    parser.add_argument(
-        '--training-steps', default=1000, type=int,
-        help='Total number of desired training steps.')
-    parser.add_argument(
-        '--gamma', default=0.9, type=float,
-        help="Discount rate, default value is 0.9")
-    parser.add_argument(
-        '--alpha', default=0.1, type=float,
-        help="Learning rate, default value is 0.1")
-    parser.add_argument(
-        '--epsilon', default=0.01, type=float,
-        help="Epsilon, default value is 0.01")
-    parser.add_argument(
-        '--decay', default=0.9, type=float,
-        help="Decay, default value is 0.9")
-    parser.add_argument(
-        '--action-distr', type=float, nargs='+',
-        help="Probability distribution for the epsilon action. Required with PDEGQLET.")
+        '--testing-episodes', default=10, type=int,
+        help='Total number of testing episodes.')
     parser.add_argument(
         '--profiler', dest='profiler', action='store_true',
         help='Enables cProfile.')
@@ -104,20 +87,16 @@ def results_handler(options):
     debug_dir = os.path.abspath(debug_dir)
     return metrics_dir, checkpoint_dir, debug_dir
 
-def get_last_checkpoint(checkpoint_dir):
-    """ Return the newest available checkpoint, or None. """
-    LOGGER.debug('Return the newest available checkpoint, or None.')
+def get_target_checkpoint(checkpoint_dir):
+    """ Return target checkpoint, or None. """
+    LOGGER.debug('Return the target checkpoint, or None.')
     if not os.path.isdir(checkpoint_dir):
         return None
-    checkpoints = [os.path.join(checkpoint_dir, folder) for folder in os.listdir(checkpoint_dir)]
-    if checkpoints:
-        last_checkpoint_dir = max(checkpoints, key=os.path.getmtime)
-        for filename in os.listdir(last_checkpoint_dir):
-            if '.' in filename:
-                continue
-            LOGGER.info('Checkpoint: %s',
-                        os.path.join(last_checkpoint_dir, filename))
-            return os.path.join(last_checkpoint_dir, filename)
+    for filename in os.listdir(checkpoint_dir):
+        if '.' in filename:
+            continue
+        LOGGER.info('Checkpoint: %s', os.path.join(checkpoint_dir, filename))
+        return os.path.join(checkpoint_dir, filename)
     return None
 
 ####################################################################################################
@@ -161,7 +140,7 @@ def print_sas_sequence(sequence):
 ####################################################################################################
 
 def _main():
-    """ Training loop """
+    """ Testing loop """
     # Args
     print(ARGS)
 
@@ -172,50 +151,19 @@ def _main():
     policy_class = None
     policy_conf = None
     policy_params = None
+    checkout_steps = 1 # save each episode
     if ARGS.algo == 'PPO':
         policy_class = ppo.PPOTFPolicy
-        policy_conf = {**ppo.DEFAULT_CONFIG, **ppo_conf.ppo_conf(ARGS.checkout_steps, debug_dir)}
+        policy_conf = {**ppo.DEFAULT_CONFIG, **ppo_conf.ppo_conf(checkout_steps, debug_dir)}
         policy_params = {}
     elif ARGS.algo == 'A3C':
         policy_class = a3c.A3CTFPolicy
-        policy_conf = {**a3c.DEFAULT_CONFIG, **a3c_conf.a3c_conf(ARGS.checkout_steps, debug_dir)}
+        policy_conf = {**a3c.DEFAULT_CONFIG, **a3c_conf.a3c_conf(checkout_steps, debug_dir)}
         policy_params = {}
     elif ARGS.algo == 'QLSA':
-        policy_class = QLStandAlone.EGreedyQLearningPolicy
-        policy_conf = qlearning_conf.qlearning_conf(ARGS.checkout_steps, debug_dir)
-        policy_params = {
-            # Q-Learning defaults
-            'alpha': ARGS.alpha,
-            'gamma': ARGS.gamma,
-            # Epsilon Greedy default
-            'epsilon': ARGS.epsilon,
-        }
-    elif ARGS.algo == 'QLET':
-        policy_class = QLETStandAlone.EGreedyQLearningEligibilityTracesPolicy
-        policy_conf = qlearning_conf.qlearning_conf(ARGS.checkout_steps, debug_dir)
-        policy_params = {
-            # Q-Learning defaults
-            'alpha': ARGS.alpha,
-            'gamma': ARGS.gamma,
-            # Eligibility traces defaults
-            'decay': ARGS.decay,
-            # Epsilon Greedy default
-            'epsilon': ARGS.epsilon,
-        }
-    elif ARGS.algo == 'PDEGQLET':
-        policy_class = PDEGQLETStandAlone.PDEGreedyQLearningETPolicy
-        policy_conf = qlearning_conf.qlearning_conf(ARGS.checkout_steps, debug_dir)
-        policy_params = {
-            # Q-Learning defaults
-            'alpha': ARGS.alpha,
-            'gamma': ARGS.gamma,
-            # Eligibility traces defaults
-            'decay': ARGS.decay,
-            # Epsilon Greedy default
-            'epsilon': ARGS.epsilon,
-            # Probability distribution for the epsilon-action
-            'actions-distribution': ARGS.action_distr,
-        }
+        policy_class = QLStandAlone.QLearningTestingPolicy
+        policy_conf = qlearning_conf.qlearning_conf(checkout_steps, debug_dir)
+        policy_params = {}
     else:
         raise Exception('Unknown algorithm %s' % ARGS.algo)
 
@@ -294,26 +242,22 @@ def _main():
                                  config=policy_conf,
                                  logger_creator=default_logger_creator)
     elif ARGS.algo == 'QLSA':
-        trainer = QLStandAlone.QLearningTrainer(
-            env='marl_env', config=policy_conf, logger_creator=dblogger_logger_creator)
-    elif ARGS.algo == 'QLET':
-        trainer = QLETStandAlone.QLearningEligibilityTracesTrainer(
-            env='marl_env', config=policy_conf, logger_creator=dblogger_logger_creator)
-    elif ARGS.algo == 'PDEGQLET':
-        trainer = PDEGQLETStandAlone.PDEGreedyQLearningETTrainer(
+        trainer = QLStandAlone.QLearningTester(
             env='marl_env', config=policy_conf, logger_creator=dblogger_logger_creator)
     else:
         raise Exception('Unknown algorithm %s' % ARGS.algo)
 
-    last_checkpoint = get_last_checkpoint(checkpoint_dir)
-    if last_checkpoint is not None:
-        LOGGER.info('[Trainer:main] Restoring checkpoint: %s', last_checkpoint)
-        trainer.restore(last_checkpoint)
+    target_checkpoint = get_target_checkpoint(ARGS.target_checkpoint)
+    if target_checkpoint is not None:
+        LOGGER.info('[Trainer:main] Restoring checkpoint: %s', target_checkpoint)
+        trainer.restore(target_checkpoint)
+    else:
+        raise Exception('Checkpoint {} does not exist.'.format(ARGS.target_checkpoint))
 
     steps = 0
     final_result = None
 
-    while steps < ARGS.training_steps:
+    for _ in range(ARGS.testing_episodes):
         # Do one step.
         result = trainer.train()
         checkpoint = trainer.save(checkpoint_dir)

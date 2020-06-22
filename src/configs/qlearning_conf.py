@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-""" Epsilon Greedy Q-Learning Configuration """
+""" Q-Learning Configuration """
 
-def egreedy_qlearning_conf(tr_steps=1, debug_folder=None):
+def qlearning_conf(tr_steps=1, debug_folder=None):
     """
         https://github.com/ray-project/ray/blob/master/rllib/agents/trainer.py#L42
         https://github.com/ray-project/ray/blob/master/rllib/agents/ppo/ppo.py#L18
