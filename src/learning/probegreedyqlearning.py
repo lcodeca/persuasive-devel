@@ -90,7 +90,7 @@ class ProbabilityDistributionEGreedyQLearningPolicy(EGreedyQLearningPolicy):
             # Explore action space
             rnd = self.rndgen.uniform(0, 1)
             action = self._get_action_from_distribution(rnd)
-            LOGGER.critical('Rnd value: %f - Action: %d', rnd, action)
+            LOGGER.debug('Rnd value: %f - Action: %d', rnd, action)
         else:
             # Exploit learned values
             action = self.qtable.argmax(state)
