@@ -1,21 +1,17 @@
 #!/bin/bash
+set -e # error
+set -u # unset variables
 
 export RLLIB_SUMO_INFRASTRUCTURE="/home/alice/devel/persuasive-devel"
+export DISPLAY=:0
 
-EXP=$1
-AGENT="$2"
-if [ -z "$AGENT" ]
-then
-    AGENT="agent_0"
-fi
+EXP="$1"
 
 # Folders for the graphs
 AGGREGATED="$EXP/graphs/aggregated"
 mkdir -p $AGGREGATED
 AGENTS="$EXP/graphs/agents"
 mkdir -p $AGENTS
-ETT="$EXP/graphs/ett"
-mkdir -p $ETT
 
 # Results directory
 RESULTS="$EXP/logs/results"
