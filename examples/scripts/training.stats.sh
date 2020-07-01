@@ -1,7 +1,8 @@
 #!/bin/bash
+set -e # error
+set -u # unset variables
 
 export RLLIB_SUMO_INFRASTRUCTURE="/home/alice/devel/persuasive-devel"
-
 export DISPLAY=:0
 
 AGENT="$1"
