@@ -43,11 +43,30 @@ def _main():
     ## ========================              PROFILER              ======================== ##
 
     gallery = HTMLGallery(config.dir_tree, config.exp)
-    gallery.generate_aggregated()
-    gallery.generate_agents()
-    gallery.generate_policies()
-    gallery.generate_qvalues()
-    gallery.generate_qvalues_evol()
+    try:
+        gallery.generate_aggregated()
+    except FileNotFoundError as err:
+        LOGGER.error("Impossible to generate gallery: '%s'", str(err))
+
+    try:
+        gallery.generate_agents()
+    except FileNotFoundError as err:
+        LOGGER.error("Impossible to generate gallery: '%s'", str(err))
+
+    try:
+        gallery.generate_policies()
+    except FileNotFoundError as err:
+        LOGGER.error("Impossible to generate gallery: '%s'", str(err))
+
+    try:
+        gallery.generate_qvalues()
+    except FileNotFoundError as err:
+        LOGGER.error("Impossible to generate gallery: '%s'", str(err))
+    try:
+        gallery.generate_qvalues_evol()
+    except FileNotFoundError as err:
+        LOGGER.error("Impossible to generate gallery: '%s'", str(err))
+
     LOGGER.info('Done')
 
     ## ========================              PROFILER              ======================== ##
