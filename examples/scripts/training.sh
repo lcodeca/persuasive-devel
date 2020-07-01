@@ -1,9 +1,12 @@
 #!/bin/bash
+set -e # error
+set -u # unset variables
 
 export SUMO_HOME="/home/alice/sumo"
 export PATH="$SUMO_HOME/bin:$PATH"
 
 export RLLIB_SUMO_INFRASTRUCTURE="/home/alice/devel/persuasive-devel"
+export DISPLAY=:0
 
 # Folder for the sumo simulation
 SIMULATION="sumo"
