@@ -152,8 +152,8 @@ class PolicyInsight(DBLoggerStats):
                 ## PLOTTING TIME!
                 fig, ax = plt.subplots(figsize=(30, 10))
                 ax.scatter(x_coord, y_coord, label='Best Action')
-                ax.set_ylim(-0.5, max(y_coord)+0.5)
-                ax.set_yticks(range(0, max(y_coord)+1, 1))
+                ax.set_ylim(-0.5, max(y_coord, default=0.0)+0.5)
+                ax.set_yticks(range(0, max(y_coord, default=0)+1, 1))
                 for i, txt in enumerate(labels):
                     ax.annotate(txt, (x_coord[i], y_coord[i]), rotation=90,
                                 horizontalalignment='center')
