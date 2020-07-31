@@ -312,23 +312,20 @@ def _main():
     # print_policy_by_agent(final_result['policies'])
 
 if __name__ == '__main__':
-
+    ret = 0
     ## ========================              PROFILER              ======================== ##
     if ARGS.profiler:
         profiler = cProfile.Profile()
         profiler.enable()
     ## ========================              PROFILER              ======================== ##
-
     try:
         _main()
-
     except Exception: # traci.exceptions.TraCIException:
+        ret = 666
         EXC_TYPE, EXC_VALUE, EXC_TRACEBACK = sys.exc_info()
         traceback.print_exception(EXC_TYPE, EXC_VALUE, EXC_TRACEBACK, file=sys.stdout)
-
     finally:
         ray.shutdown()
-
         ## ========================          PROFILER              ======================== ##
         if ARGS.profiler:
             profiler.disable()
@@ -336,3 +333,4 @@ if __name__ == '__main__':
             pstats.Stats(profiler, stream=results).sort_stats('cumulative').print_stats(50)
             logger.info('Profiler: \n%s', results.getvalue())
         ## ========================          PROFILER              ======================== ##
+        sys.exit(ret)
