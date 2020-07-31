@@ -17,8 +17,9 @@ from learning.qlearningstandalonetrainer import QLearningTrainer, EGreedyQLearni
 DEBUGGER = False
 PROFILER = False
 
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARN)
 
 ####################################################################################################
 #                                             TRAINER
@@ -67,7 +68,7 @@ class ProbabilityDistributionEGreedyQLearningPolicy(EGreedyQLearningPolicy):
         for probability in config['actions-distribution']:
             cumul += probability
             self.cumulative_probability.append(cumul)
-        LOGGER.debug('Cumulative probability: %s', pformat(self.cumulative_probability))
+        logger.debug('Cumulative probability: %s', pformat(self.cumulative_probability))
 
     def _get_action_from_distribution(self, value):
         # self.action_space.sample()
@@ -80,22 +81,22 @@ class ProbabilityDistributionEGreedyQLearningPolicy(EGreedyQLearningPolicy):
     def compute_action(self, state):
         # Epsilon-Greedy Implementation
         if DEBUGGER:
-            LOGGER.debug('Observation: %s', pformat(state))
+            logger.debug('Observation: %s', pformat(state))
         action = None
 
         rnd = self.rndgen.uniform(0, 1)
-        LOGGER.debug('Random: %f - Epsilon: %f - value %s',
+        logger.debug('Random: %f - Epsilon: %f - value %s',
                      rnd, self.epsilon, str(rnd < self.epsilon))
         if rnd < self.epsilon:
             # Explore action space
             rnd = self.rndgen.uniform(0, 1)
             action = self._get_action_from_distribution(rnd)
-            LOGGER.debug('Rnd value: %f - Action: %d', rnd, action)
+            logger.debug('Rnd value: %f - Action: %d', rnd, action)
         else:
             # Exploit learned values
             action = self.qtable.argmax(state)
             if DEBUGGER:
-                LOGGER.debug('State: %s --> action: %s', pformat(self.qtable[state]), str(action))
+                logger.debug('State: %s --> action: %s', pformat(self.qtable[state]), str(action))
 
         self.stats['actions'].append(action)
         self.qtable_state_action_counter[state][action] += 1

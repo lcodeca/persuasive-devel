@@ -21,8 +21,9 @@ from learning.qlearningeligibilitytraces import (QLearningEligibilityTracesTrain
 DEBUGGER = False
 PROFILER = False
 
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARN)
 
 ####################################################################################################
 #                                             TRAINER

@@ -1,5 +1,11 @@
 # Testing
 misc
+examples/tests/*
+
+# docs
+docs/*
+
+# logs
 *.log
 
 # Byte-compiled / optimized / DLL files
