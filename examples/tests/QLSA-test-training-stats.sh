@@ -39,7 +39,7 @@ for i in {1..5} ;do
         --algo PDEGQLET --env MARLCoop \
         --epsilon 0.1 --action-distr 0.9 0.1 \
         --dir "res_PDEGQLET_MARLCoop" --config "configuration.json" \
-        --checkout-steps 2 --training-steps 2 \
+        --checkout-steps 3 --training-steps 1 \
         --alpha 0.1 --gamma 0.9 --decay 0.3
 done
 

@@ -168,18 +168,18 @@ def _main():
         raise Exception('Unknown algorithm %s' % ARGS.algo)
 
     # Load default Scenario configuration
-    scenario_config = load_json_file(ARGS.config)
+    experiment_config = load_json_file(ARGS.config)
 
     # Initialize the simulation.
     ray.init(memory=52428800, object_store_memory=78643200) ## minimum values
 
     # Associate the agents with something
-    agent_init = load_json_file(scenario_config['agent-init-file'])
+    agent_init = load_json_file(experiment_config['agents_init_file'])
     env_config = {
         'metrics_dir': metrics_dir,
         'checkpoint_dir': checkpoint_dir,
         'agent_init': agent_init,
-        'scenario_config': scenario_config,
+        'scenario_config': experiment_config['marl_env_config'],
     }
     marl_env = None
     if ARGS.env == 'MARL':
@@ -271,23 +271,20 @@ def _main():
     # print_policy_by_agent(final_result['policies'])
 
 if __name__ == '__main__':
-
+    ret = 0
     ## ========================              PROFILER              ======================== ##
     if ARGS.profiler:
         profiler = cProfile.Profile()
         profiler.enable()
     ## ========================              PROFILER              ======================== ##
-
     try:
         _main()
-
     except Exception: # traci.exceptions.TraCIException:
+        ret = 666
         EXC_TYPE, EXC_VALUE, EXC_TRACEBACK = sys.exc_info()
         traceback.print_exception(EXC_TYPE, EXC_VALUE, EXC_TRACEBACK, file=sys.stdout)
-
     finally:
         ray.shutdown()
-
         ## ========================          PROFILER              ======================== ##
         if ARGS.profiler:
             profiler.disable()
@@ -295,3 +292,4 @@ if __name__ == '__main__':
             pstats.Stats(profiler, stream=results).sort_stats('cumulative').print_stats(50)
             LOGGER.info('Profiler: \n%s', results.getvalue())
         ## ========================          PROFILER              ======================== ##
+        sys.exit(ret)

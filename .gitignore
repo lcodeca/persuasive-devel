@@ -1,9 +1,8 @@
 # Testing
 misc
-examples/tests/*
-
-# docs
-docs/*
+examples/tests/res_*
+examples/tests/test_*
+examples/tests/sumo
 
 # logs
 *.log
