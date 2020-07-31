@@ -27,14 +27,15 @@ else:
 ####################################################################################################
 
 DEBUGGER = True
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.INFO)
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARN)
 
 ####################################################################################################
 
 def env_creator(config):
     """ Environment creator used in the environment registration. """
-    LOGGER.debug('[env_creator] Environment creation: AgentsCoopMultiAgentEnv')
+    logger.debug('[env_creator] Environment creation: AgentsCoopMultiAgentEnv')
     return AgentsCoopMultiAgentEnv(config)
 
 ####################################################################################################
@@ -81,7 +82,7 @@ class AgentsCoopMultiAgentEnv(PersuasiveMultiAgentEnv):
         ## multiplied by 100 to have a percentage
         ## divided by the level of usage we intend to cover
         ret = round(active / len(self.agents) * 100 / 10)
-        LOGGER.debug('Usage: %d / %d * 100 / 10 = %d (rounded).', active, len(self.agents), ret)
+        logger.debug('Usage: %d / %d * 100 / 10 = %d (rounded).', active, len(self.agents), ret)
         return ret
 
     def get_observation(self, agent):
@@ -95,7 +96,7 @@ class AgentsCoopMultiAgentEnv(PersuasiveMultiAgentEnv):
             usage.append(self.agents_to_usage_active(agents_choice))
         ret['usage'] = usage
         if DEBUGGER:
-            LOGGER.debug('Observation: \n%s', pformat(ret))
+            logger.debug('Observation: \n%s', pformat(ret))
         return ret
 
     ################################################################################################
@@ -120,9 +121,9 @@ class AgentsCoopMultiAgentEnv(PersuasiveMultiAgentEnv):
                 self.agents[agent].destination,
                 self.agents[agent].action_to_mode[action],
                 now, agent)
-        LOGGER.debug('========================================================')
-        LOGGER.debug('Snapshot: \n%s', str(self.episode_snapshot))
-        LOGGER.debug('========================================================')
+        logger.debug('========================================================')
+        logger.debug('Snapshot: \n%s', str(self.episode_snapshot))
+        logger.debug('========================================================')
         return super().step(action_dict)
 
     def craft_final_state(self, agent):
@@ -136,9 +137,9 @@ class AgentsCoopMultiAgentEnv(PersuasiveMultiAgentEnv):
         """ Returns the size of the observation space. """
         _from = len(self._edges_to_int)
         _to = len(self._edges_to_int)
-        _time_left = self._config['scenario_config']['misc']['max-time']
+        _time_left = self._config['scenario_config']['misc']['max_time']
         _ett = (
-            self._config['scenario_config']['misc']['max-time'] * len(self.agents[agent].modes))
+            self._config['scenario_config']['misc']['max_time'] * len(self.agents[agent].modes))
         _usage = (10 * len(self.agents[agent].modes))
         return _from * _to * _time_left * _ett * _usage
 
@@ -147,9 +148,9 @@ class AgentsCoopMultiAgentEnv(PersuasiveMultiAgentEnv):
         return gym.spaces.Dict({
             'from': gym.spaces.Discrete(len(self._edges_to_int)),
             'to': gym.spaces.Discrete(len(self._edges_to_int)),
-            'time-left': gym.spaces.Discrete(self._config['scenario_config']['misc']['max-time']),
+            'time-left': gym.spaces.Discrete(self._config['scenario_config']['misc']['max_time']),
             'ett': gym.spaces.MultiDiscrete(
-                [self._config['scenario_config']['misc']['max-time']] * (
+                [self._config['scenario_config']['misc']['max_time']] * (
                     len(self.agents[agent].modes))),
             'usage': gym.spaces.MultiDiscrete([10] * (len(self.agents[agent].modes))),
         })

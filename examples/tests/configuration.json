@@ -1,0 +1,29 @@
+{
+    "agents_init_file": "/home/alice/devel/persuasive-devel/examples/tests/gold-10ag-1m-rndstart.json",
+
+    "marl_env_config": {
+        "sumo_config": {
+            "sumo_connector": "libsumo",
+            "sumo_cfg": "/home/alice/devel/persuasive-devel/examples/tests/rndgrid.saga.nobgt.sumocfg",
+            "sumo_output": "sumo/",
+            "sumo_params": [],
+            "trace_file": false,
+            "end_of_sim": 86400,
+            "update_freq": 120,
+            "tripinfo_keyword": ".tripinfo.xml",
+            "tripinfo_xml_schema": "/home/alice/sumo/data/xsd/tripinfo_file.xsd",
+            "log_level": "WARN",
+            "misc": {
+                "max_time": 86400
+            }
+        },
+
+        "agent_rnd_order": true,
+        "seed": 42,
+        "log_level": "WARN",
+        "misc": {
+            "sumo_net_file": "/home/alice/devel/scenarios/random-grid-sumo/scenario/random.net.xml",
+            "max_time": 86400
+        }
+    }
+}

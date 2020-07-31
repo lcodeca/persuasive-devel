@@ -15,7 +15,7 @@ from numpy.random import RandomState
 import gym
 
 from ray.rllib.env import MultiAgentEnv
-from rllibsumoutils.sumoutils import SUMOUtils
+from rllibsumoutils.sumoutils import SUMOUtils, sumo_default_config
 
 # """ Import SUMO library """
 if 'SUMO_HOME' in os.environ:
@@ -28,14 +28,15 @@ else:
 ####################################################################################################
 
 DEBUGGER = False
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.INFO)
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 ####################################################################################################
 
 def env_creator(config):
     """ Environment creator used in the environment registration. """
-    LOGGER.debug('[env_creator] Environment creation: PersuasiveMultiAgentEnv')
+    logger.debug('Environment creator --> PersuasiveMultiAgentEnv')
     return PersuasiveMultiAgentEnv(config)
 
 #@ray.remote(num_cpus=10, num_gpus=1)
@@ -64,22 +65,22 @@ class SUMOSimulationWrapper(SUMOUtils):
             pass
         if agents:
             now = self.traci_handler.simulation.getTime() # seconds
-            LOGGER.debug('[%.2f] Agents: %s', now, str(agents))
+            logger.debug('[%.2f] Agents: %s', now, str(agents))
             people = self.traci_handler.person.getIDList()
-            LOGGER.debug('[%.2f] People: %s', now, str(people))
+            logger.debug('[%.2f] People: %s', now, str(people))
             left = set()
             for agent in agents:
                 if agent not in people:
                     left.add(agent)
             if len(agents) == len(left):
                 # all the agents left the simulation
-                LOGGER.info('All the AGENTS left the SUMO simulation.')
+                logger.info('All the AGENTS left the SUMO simulation.')
                 self.end_simulation()
         return True
 
     def get_penalty_time(self):
         """ Return the penalty max time. """
-        return self._config['misc']['max-time']
+        return self._config['misc']['max_time']
 
 ####################################################################################################
 
@@ -156,7 +157,7 @@ class SUMOModeAgent(object):
 
         # compute the route using findIntermodalRoute
         _mode, _ptype, _vtype = handler.get_mode_parameters(mode)
-        LOGGER.debug('Selected mode: %s. [mode %s, ptype %s, vtype %s]',
+        logger.debug('Selected mode: %s. [mode %s, ptype %s, vtype %s]',
                      mode, _mode, _ptype, _vtype)
         try:
             route = handler.traci_handler.simulation.findIntermodalRoute(
@@ -170,7 +171,7 @@ class SUMOModeAgent(object):
         if route:
             try:
                 # generate the person trip
-                LOGGER.debug('Adding person %s', str(self.agent_id))
+                logger.debug('Adding person %s', str(self.agent_id))
                 # add(self, personID, edgeID, pos, depart=-3, typeID='DEFAULT_PEDTYPE')
                 handler.traci_handler.person.add(self.agent_id, self.origin, 0.0)
                 veh_counter = 0
@@ -179,7 +180,7 @@ class SUMOModeAgent(object):
                     self.ett += stage.travelTime
                     # appendStage(self, personID, stage)
                     if DEBUGGER:
-                        LOGGER.debug('%s', pformat(stage))
+                        logger.debug('%s', pformat(stage))
                     if stage.type == tc.STAGE_DRIVING and stage.vType in self.modes_w_vehicles:
                         vehicle_name = '{}_{}_tr'.format(self.agent_id, veh_counter)
                         route_name = '{}_rou'.format(vehicle_name)
@@ -200,14 +201,14 @@ class SUMOModeAgent(object):
                 self.chosen_mode_error = 'TraCIException for mode {}'.format(mode)
                 self.cost = float('NaN')
                 self.ett = float('NaN')
-                LOGGER.error('Route not usable for %s using mode %s', self.agent_id, mode)
+                logger.error('Route not usable for %s using mode %s', self.agent_id, mode)
                 return True # wrong decision, paid badly at the end
 
         self.chosen_mode = None
         self.chosen_mode_error = 'Invalid route using mode {}'.format(mode)
         self.cost = float('NaN')
         self.ett = float('NaN')
-        LOGGER.error('Route not found for %s using mode %s', self.agent_id, mode)
+        logger.error('Route not found for %s using mode %s', self.agent_id, mode)
         return True # wrong decision, paid badly at the end
 
     def reset(self):
@@ -227,6 +228,35 @@ class SUMOModeAgent(object):
 
 ####################################################################################################
 
+DEFAULT_SCENARIO_CONFING = {
+    'sumo_config': sumo_default_config(),
+    'agent_rnd_order': True,
+    'log_level': 'WARN',
+    'seed': 42,
+    'misc': {
+        'sumo_net_file': '',
+        'max_time': 86400
+    }
+}
+
+DEFAULT_AGENT_CONFING = {
+    'origin': '-6040',
+    'destination': '2370',
+    'start': 0,
+    'expected-arrival-time': [32400, 2.0, 4.0],
+        'modes': {
+            'passenger': 1.0,
+            'public': 1.0,
+            'walk': 1.0,
+            'bicycle': 1.0,
+            'ptw': 1.0,
+            'on-demand': 1.0
+        },
+    'seed': 42,
+    'init': [0, 0],
+    'ext-stats': False
+}
+
 class PersuasiveMultiAgentEnv(MultiAgentEnv):
     """
     Persuasive MARL environment for RLLIB SUMO Utils.
@@ -238,26 +268,37 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         """ Initialize the environment. """
         super().__init__()
 
+        logger.info('Environment creation: PersuasiveMultiAgentEnv')
+
         self._config = config
         self.metrics_dir = config['metrics_dir']
         self.checkpoint_dir = config['checkpoint_dir']
 
+        # logging
+        level = logging.getLevelName(config['scenario_config']['log_level'])
+        logger.setLevel(level)
+
+        # Random number generator
         self.rndgen = RandomState(config['scenario_config']['seed'])
 
+        # SUMO Connector
         self.simulation = None
-        self._environment_steps = 0
 
+        # Agent initialization
         self.agents_init_list = dict()
         self._config_from_agent_init()
         self._initialize_agents()
         self.dones = set()
         self.active = set()
-        self.resetted = False
         self.ext_stats = dict()
 
+        # Environment initialization
+        self.resetted = True
+        self.environment_steps = 0
+        self.episodes = 0
         self._edges_to_int = dict()
         self._ints_to_edge = dict()
-        edges = self._load_edges_from_file(config['scenario_config']['sumo-net-file'])
+        edges = self._load_edges_from_file(config['scenario_config']['misc']['sumo_net_file'])
         for pos, edge in enumerate(edges):
             self._edges_to_int[edge] = pos
             self._ints_to_edge[pos] = edge
@@ -272,7 +313,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
                 conf['origin'], conf['destination'], conf['modes'],
                 conf['expected-arrival-time'])
             if DEBUGGER:
-                LOGGER.debug('%s', pformat(self.agents_init_list[agent]))
+                logger.debug('%s', pformat(self.agents_init_list[agent]))
 
     def _initialize_agents(self):
         self.agents = dict()
@@ -285,7 +326,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
     def _load_edges_from_file(self, filename):
         """ Returns a list containing all the edges in the SUMO NET file. """
         edges = list()
-        LOGGER.debug('Load from file %s', filename)
+        logger.debug('Load from file %s', filename)
         with open(filename, 'r') as net:
             for line in net:
                 if '<edge ' not in line:
@@ -297,7 +338,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
                         continue
                     edges.append(token.split('=')[-1].strip('"'))
                     break
-        LOGGER.debug('Loaded %d edges', len(edges))
+        logger.debug('Loaded %d edges', len(edges))
         return edges
 
     def seed(self, seed):
@@ -308,8 +349,17 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         if np.isnan(time_s):
             return time_s
         # seconds to minutes, then slots of 2m
-        minutes = self._config['scenario_config']['misc']['algo-update-freq'] / 60.0
+        minutes = self._config['scenario_config']['sumo_config']['update_freq'] / 60.0
         return int(round((time_s / 60.0 / minutes), 0))
+
+    def get_agents(self):
+        """ Returns a list of the agents. """
+        return self.agents.keys()
+
+    def __del__(self):
+        logger.info('Environment destruction: PersuasiveMultiAgentEnv')
+        if self.simulation:
+            del self.simulation
 
     ################################################################################################
 
@@ -351,7 +401,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         ett = []
         now = self.simulation.get_current_time()
         if DEBUGGER:
-            LOGGER.debug('Time: \n%s', pformat(now))
+            logger.debug('Time: \n%s', pformat(now))
         origin = self.agents[agent].origin
         destination = self.agents[agent].destination
         for mode in sorted(self.agents[agent].modes):
@@ -361,23 +411,23 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
                     origin, destination, modes=_mode, pType=_ptype, vType=_vtype, depart=now,
                     routingMode=1)
                 if DEBUGGER:
-                    LOGGER.debug('SUMO Route: \n%s', pformat(route))
+                    logger.debug('SUMO Route: \n%s', pformat(route))
                 if not self.simulation.is_valid_route(mode, route):
                     route = None
             except TraCIException:
                 route = None
             if DEBUGGER:
-                LOGGER.debug('Filtered route: \n%s', pformat(route))
+                logger.debug('Filtered route: \n%s', pformat(route))
             if route:
                 cost = self.simulation.cost_from_route(route)
                 ett.append(self.discrete_time(cost))
                 if self.agents[agent].ext:
                     self._add_observed_ett(agent, mode, cost)
             else:
-                ett.append(self.discrete_time(self._config['scenario_config']['misc']['max-time']))
+                ett.append(self.discrete_time(self._config['scenario_config']['misc']['max_time']))
                 if self.agents[agent].ext:
                     self._add_observed_ett(
-                        agent, mode, self._config['scenario_config']['misc']['max-time'])
+                        agent, mode, self._config['scenario_config']['misc']['max_time'])
 
         timeleft = self.agents[agent].arrival - now
 
@@ -387,7 +437,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         ret['time-left'] = self.discrete_time(timeleft)
         ret['ett'] = np.array(ett)
         if DEBUGGER:
-            LOGGER.debug('Observation: \n%s', pformat(ret))
+            logger.debug('Observation: \n%s', pformat(ret))
         return ret
 
     def compute_observations(self, agents):
@@ -396,7 +446,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         for agent in agents:
             obs[agent] = self.get_observation(agent)
         if DEBUGGER:
-            LOGGER.debug('Observations: \n%s', pformat(obs))
+            logger.debug('Observations: \n%s', pformat(obs))
         return obs
 
     ################################################################################################
@@ -404,7 +454,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
     def get_reward(self, agent):
         """ Return the reward for a given agent. """
         if not self.agents[agent].chosen_mode:
-            LOGGER.warning('Agent %s mode error: "%s"', agent, self.agents[agent].chosen_mode_error)
+            logger.warning('Agent %s mode error: "%s"', agent, self.agents[agent].chosen_mode_error)
             return 0 - int(self.simulation.get_penalty_time())
 
         journey_time = self.simulation.get_duration(agent)
@@ -413,10 +463,10 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             ## If it does, there is a bug/issue with the SUMO/MARL environment interaction.
             raise Exception('{} \n {}'.format(
                 self.compute_info_for_agent(agent), str(self.agents[agent])))
-        LOGGER.debug(' Agent: %s, journey: %s', agent, str(journey_time))
+        logger.debug(' Agent: %s, journey: %s', agent, str(journey_time))
         arrival = self.simulation.get_arrival(agent,
                                               default=self.simulation.get_penalty_time())
-        LOGGER.debug(' Agent: %s, arrival: %s', agent, str(arrival))
+        logger.debug(' Agent: %s, arrival: %s', agent, str(arrival))
 
         # REWARD = journey time * mode weight + ....
         reward = journey_time * self.agents[agent].modes[self.agents[agent].chosen_mode]
@@ -424,16 +474,16 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             ## agent arrived too late
             late_time = arrival - self.agents[agent].arrival
             reward = self.simulation.get_penalty_time()
-            LOGGER.debug('Agent: %s, arrival: %s, wanted arrival: %s, late: %s',
+            logger.debug('Agent: %s, arrival: %s, wanted arrival: %s, late: %s',
                          agent, str(arrival), str(self.agents[agent].arrival), str(late_time))
         elif self.agents[agent].arrival > arrival:
             ## agent arrived too early
             waiting_time = self.agents[agent].arrival - arrival
             reward += waiting_time * self.agents[agent].waiting_weight
-            LOGGER.debug('Agent: %s, duration: %s, waiting: %s, wanted arrival: %s',
+            logger.debug('Agent: %s, duration: %s, waiting: %s, wanted arrival: %s',
                          agent, str(journey_time), str(waiting_time), str(arrival))
         else:
-            LOGGER.debug('Agent: %s it is perfectly on time!', agent)
+            logger.debug('Agent: %s it is perfectly on time!', agent)
 
         return int(0 - (reward))
 
@@ -465,7 +515,8 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
     def reset(self):
         """ Resets the env and returns observations from ready agents. """
         self.resetted = True
-        self._environment_steps = 0
+        self.environment_steps = 0
+        self.episodes += 1
         self.active = set()
         self.dones = set()
         self.ext_stats = dict()
@@ -473,19 +524,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         # Reset the SUMO simulation
         if self.simulation:
             del self.simulation
-        config = {
-            'sumo_cfg': self._config['scenario_config']['sumo-cfg-file'],
-            'sumo_params': self._config['scenario_config']['sumo-params'],
-            'end_of_sim': self._config['scenario_config']['misc']['end-of-sim'],
-            'update_freq': self._config['scenario_config']['misc']['algo-update-freq'],
-            'tripinfo_xml_file': self._config['scenario_config']['tripinfo-file'],
-            'tripinfo_xml_schema': self._config['scenario_config']['tripinfo-schema-file'],
-            'misc': {
-                'max-time': self._config['scenario_config']['misc']['max-time'],
-            },
-        }
-
-        self.simulation = SUMOSimulationWrapper(config)
+        self.simulation = SUMOSimulationWrapper(self._config['scenario_config']['sumo_config'])
 
         # Reset the agents
         self.waiting_agents = list()
@@ -517,7 +556,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             'timeLoss': self.simulation.get_timeloss(agent),
             'wait': self.agents[agent].arrival - self.simulation.get_arrival(agent)
         }
-        LOGGER.debug('Info for agent %s: \n%s', agent, pformat(info))
+        logger.debug('Info for agent %s: \n%s', agent, pformat(info))
         return info
 
     def finalize_episode(self, dones):
@@ -532,10 +571,10 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             infos[agent] = self.compute_info_for_agent(agent)
             if agent in self.ext_stats:
                 infos[agent]['ext'] = self.ext_stats[agent]
-        LOGGER.debug('Observations: %s', str(obs))
-        LOGGER.debug('Rewards: %s', str(rewards))
-        LOGGER.debug('Dones: %s', str(dones))
-        LOGGER.debug('Info: %s', str(infos))
+        logger.debug('Observations: %s', str(obs))
+        logger.debug('Rewards: %s', str(rewards))
+        logger.debug('Dones: %s', str(dones))
+        logger.debug('Info: %s', str(infos))
         return obs, rewards, dones, infos
 
     def step(self, action_dict):
@@ -555,17 +594,18 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             infos (dict): Optional info values for each agent id.
         """
         self.resetted = False
-        LOGGER.debug('============== SUMOTestMultiAgentEnv:step ==============')
-        self._environment_steps += 1
+        self.environment_steps += 1
+        logger.debug('====> [PersuasiveMultiAgentEnv:step] Episode: %d - Step: %d <====',
+                     self.episodes, self.environment_steps)
         dones = {}
 
         shuffled_agents = sorted(action_dict.keys()) # it may seem not smar to sort something that
                                                      # may need to be shuffled afterwards, but it
                                                      # is a matter of consistency instead of using
                                                      # whatever insertion order was used in the dict
-        if self._config['scenario_config']['agent-rnd-order']:
+        if self._config['scenario_config']['agent_rnd_order']:
             ## randomize the agent order to minimize SUMO's insertion queues impact
-            LOGGER.debug('Shuffling the order of the agents.')
+            logger.debug('Shuffling the order of the agents.')
             self.rndgen.shuffle(shuffled_agents) # in-place shuffle
 
         # Take action
@@ -576,32 +616,32 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
                 self.active.remove(agent)
         dones['__all__'] = len(self.dones) == len(self.agents)
 
-        LOGGER.debug('Before SUMO')
+        logger.debug('Before SUMO')
         until_end, agents_ids = False, set()
         if dones['__all__']:
             until_end = True
             agents_ids = set(self.agents.keys())
         ongoing_simulation = self.simulation.step(until_end=until_end, agents=agents_ids)
-        LOGGER.debug('After SUMO')
+        logger.debug('After SUMO')
 
         current_time = self.simulation.get_current_time()
 
         ## end of the episode
         if not ongoing_simulation:
-            LOGGER.debug('Reached the end of the SUMO simulation. Finalizing episode...')
+            logger.debug('Reached the end of the SUMO simulation. Finalizing episode...')
             return self.finalize_episode(dones)
 
         ## add waiting agent to the pool of active agents
         self._move_agents(self.simulation.get_current_time())
 
         # compute the new observation for the WAITING agents
-        LOGGER.debug('Computing obseravions for the WAITING agents.')
+        logger.debug('Computing obseravions for the WAITING agents.')
         obs, rewards, infos = {}, {}, {}
         agents_to_remove = set()
         for agent in self.active:
-            LOGGER.debug('[%2f] %s --> %d', current_time, agent, self.agents[agent].arrival)
+            logger.debug('[%2f] %s --> %d', current_time, agent, self.agents[agent].arrival)
             if current_time > self.agents[agent].arrival:
-                LOGGER.warning('Agent %s waited for too long.', str(agent))
+                logger.warning('Agent %s waited for too long.', str(agent))
                 self.agents[agent].chosen_mode_error = 'Waiting too long [{}]'.format(current_time)
                 self.agents[agent].ett = float('NaN')
                 self.agents[agent].cost = float('NaN')
@@ -611,27 +651,27 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             else:
                 rewards[agent] = 0
                 obs[agent] = self.get_observation(agent)
-                infos[agent] = None
+                infos[agent] = {}
         for agent in agents_to_remove:
             self.active.remove(agent)
 
         # in case all the reamining agents WAITED TOO LONG
         dones['__all__'] = len(self.dones) == len(self.agents)
         if dones['__all__']:
-            LOGGER.info('All the agent are DONE. Finalizing episode...')
+            logger.info('All the agent are DONE. Finalizing episode...')
             self.simulation.step(until_end=True, agents=set(self.agents.keys()))
             return self.finalize_episode(dones)
 
-        LOGGER.debug('Observations: %s', str(obs))
-        LOGGER.debug('Rewards: %s', str(rewards))
-        LOGGER.debug('Dones: %s', str(dones))
-        LOGGER.debug('Info: %s', str(infos))
-        LOGGER.debug('========================================================')
+        logger.debug('Observations: %s', str(obs))
+        logger.debug('Rewards: %s', str(rewards))
+        logger.debug('Dones: %s', str(dones))
+        logger.debug('Info: %s', str(infos))
+        logger.debug('========================================================')
         return obs, rewards, dones, infos
 
     def get_environment_steps(self):
         """ Returns the total number of SUMOSimulation.step() """
-        return self._environment_steps
+        return self.environment_steps
 
     ################################################################################################
 
@@ -651,9 +691,9 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         """ Returns the size of the observation space. """
         _from = len(self._edges_to_int)
         _to = len(self._edges_to_int)
-        _time_left = self._config['scenario_config']['misc']['max-time']
+        _time_left = self._config['scenario_config']['misc']['max_time']
         _ett = (
-            self._config['scenario_config']['misc']['max-time'] * len(self.agents[agent].modes))
+            self._config['scenario_config']['misc']['max_time'] * len(self.agents[agent].modes))
         return _from * _to * _time_left * _ett
 
     def get_obs_space(self, agent):
@@ -661,15 +701,11 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         return gym.spaces.Dict({
             'from': gym.spaces.Discrete(len(self._edges_to_int)),
             'to': gym.spaces.Discrete(len(self._edges_to_int)),
-            'time-left': gym.spaces.Discrete(self._config['scenario_config']['misc']['max-time']),
+            'time-left': gym.spaces.Discrete(self._config['scenario_config']['misc']['max_time']),
             'ett': gym.spaces.MultiDiscrete(
-                [self._config['scenario_config']['misc']['max-time']] * (
+                [self._config['scenario_config']['misc']['max_time']] * (
                     len(self.agents[agent].modes))),
         })
-
-    def get_agents(self):
-        """ Returns a list of the agents. """
-        return self.agents.keys()
 
     def get_metrics(self):
         """ Returns the custom experiment metrics. """
@@ -715,13 +751,13 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
     def get_reward_duration_wait_late_linear(self, agent):
         """ Return the reward for a given agent. """
         if not self.agents[agent].chosen_mode:
-            LOGGER.error('Agent %s selected a mode that was not possible.', agent)
+            logger.error('Agent %s selected a mode that was not possible.', agent)
             return 0 - int(self.simulation.get_penalty_time() * self.agents[agent].late_weight)
 
         journey_time = self.simulation.get_duration(agent)
-        LOGGER.debug(' Agent: %s, journey: %s', agent, str(journey_time))
+        logger.debug(' Agent: %s, journey: %s', agent, str(journey_time))
         arrival = self.simulation.get_arrival(agent)
-        LOGGER.debug(' Agent: %s, arrival: %s', agent, str(arrival))
+        logger.debug(' Agent: %s, arrival: %s', agent, str(arrival))
 
         # REWARD = journey time * mode weight + ....
         reward = journey_time * self.agents[agent].modes[self.agents[agent].chosen_mode]
@@ -729,29 +765,29 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             ## agent arrived too late
             late_time = arrival - self.agents[agent].arrival
             reward += late_time * self.agents[agent].late_weight
-            LOGGER.debug('Agent: %s, arrival: %s, wanted arrival: %s, late: %s',
+            logger.debug('Agent: %s, arrival: %s, wanted arrival: %s, late: %s',
                          agent, str(arrival), str(self.agents[agent].arrival), str(late_time))
         elif self.agents[agent].arrival > arrival:
             ## agent arrived too early
             waiting_time = self.agents[agent].arrival - arrival
             reward += waiting_time * self.agents[agent].waiting_weight
-            LOGGER.debug('Agent: %s, duration: %s, waiting: %s, wanted arrival: %s',
+            logger.debug('Agent: %s, duration: %s, waiting: %s, wanted arrival: %s',
                          agent, str(journey_time), str(waiting_time), str(arrival))
         else:
-            LOGGER.debug('Agent: %s it is perfectly on time!', agent)
+            logger.debug('Agent: %s it is perfectly on time!', agent)
 
         return int(0 - (reward))
 
     def get_reward_duration_wait_late_exp(self, agent):
         """ Return the reward for a given agent. """
         if not self.agents[agent].chosen_mode:
-            LOGGER.error('Agent %s selected a mode that was not possible.', agent)
+            logger.error('Agent %s selected a mode that was not possible.', agent)
             return 0 - int(self.simulation.get_penalty_time() ** self.agents[agent].late_weight)
 
         journey_time = self.simulation.get_duration(agent)
-        LOGGER.debug(' Agent: %s, journey: %s', agent, str(journey_time))
+        logger.debug(' Agent: %s, journey: %s', agent, str(journey_time))
         arrival = self.simulation.get_arrival(agent)
-        LOGGER.debug(' Agent: %s, arrival: %s', agent, str(arrival))
+        logger.debug(' Agent: %s, arrival: %s', agent, str(arrival))
 
         # REWARD = journey time * mode weight + ....
         reward = journey_time * self.agents[agent].modes[self.agents[agent].chosen_mode]
@@ -759,16 +795,16 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             ## agent arrived too late
             late_time = arrival - self.agents[agent].arrival
             reward += late_time ** self.agents[agent].late_weight
-            LOGGER.error('Agent: %s, arrival: %s, wanted arrival: %s, late: %s',
+            logger.error('Agent: %s, arrival: %s, wanted arrival: %s, late: %s',
                          agent, str(arrival), str(self.agents[agent].arrival), str(late_time))
         elif self.agents[agent].arrival > arrival:
             ## agent arrived too early
             waiting_time = self.agents[agent].arrival - arrival
             reward += waiting_time ** self.agents[agent].waiting_weight
-            LOGGER.error('Agent: %s, duration: %s, waiting: %s, wanted arrival: %s',
+            logger.error('Agent: %s, duration: %s, waiting: %s, wanted arrival: %s',
                          agent, str(journey_time), str(waiting_time), str(arrival))
         else:
-            LOGGER.error('Agent: %s it is perfectly on time!', agent)
+            logger.error('Agent: %s it is perfectly on time!', agent)
 
         return int(0 - (reward))
 
@@ -824,7 +860,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             if route:
                 ett.append((float(self.simulation.cost_from_route(route)), mode))
             else:
-                ett.append((self._config['scenario_config']['misc']['max-time'], mode))
+                ett.append((self._config['scenario_config']['misc']['max_time'], mode))
 
         obs = []
         ett = [mode for _, mode in sorted(ett)]
@@ -836,7 +872,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         ret['to'] = self.edge_to_enum(self.agents[agent].destination)
         ret['rank'] = np.array(obs)
         if DEBUGGER:
-            LOGGER.debug('Observation: \n%s', pformat(ret))
+            logger.debug('Observation: \n%s', pformat(ret))
         return ret
 
     ################################################################################################

@@ -18,13 +18,10 @@ from pprint import pformat
 
 import ray
 
-from ray.rllib.agents.ppo import ppo
-from ray.rllib.agents.a3c import a3c
-
 from ray.tune.logger import UnifiedLogger
 from utils.logger import DBLogger
 
-from configs import qlearning_conf, ppo_conf, a3c_conf
+from configs import qlearning_conf
 
 from environments import marlenvironment, marlenvironmentagentscoop, marlenvironmentlatereward
 
@@ -34,12 +31,18 @@ import learning.pdegreedyqlearningwithet as PDEGQLETStandAlone
 
 ####################################################################################################
 
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARN)
+
+####################################################################################################
+
 def argument_parser():
     """ Argument parser for the trainer"""
     parser = argparse.ArgumentParser(
         description='Reinforcement learning applied to traffic assignment.')
     parser.add_argument(
-        '--algo', default='QLSA', choices=['A3C', 'PPO', 'QLSA', 'QLET', 'PDEGQLET'],
+        '--algo', default='QLSA', choices=['QLSA', 'QLET', 'PDEGQLET'],
         help='The RL optimization algorithm to use.')
     parser.add_argument(
         '--env', default='MARL', choices=['MARL', 'MARLCoop', 'LateMARL'],
@@ -78,19 +81,17 @@ def argument_parser():
     return parser.parse_args()
 
 ARGS = argument_parser()
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.INFO)
 
 ####################################################################################################
 
 def load_json_file(json_file):
     """ Loads a JSON file. """
-    LOGGER.debug('Loading %s.', json_file)
+    logger.debug('Loading %s.', json_file)
     return json.load(open(json_file))
 
 def results_handler(options):
     """ Generate (or retrieve) the results folder for the experiment. """
-    LOGGER.debug('Generate (or retrieve) the results folder for the experiment.')
+    logger.debug('Generate (or retrieve) the results folder for the experiment.')
     output_dir = os.path.normpath(options.dir)
     checkpoint_dir = os.path.join(output_dir, 'checkpoints')
     metrics_dir = os.path.join(output_dir, 'metrics')
@@ -106,7 +107,7 @@ def results_handler(options):
 
 def get_last_checkpoint(checkpoint_dir):
     """ Return the newest available checkpoint, or None. """
-    LOGGER.debug('Return the newest available checkpoint, or None.')
+    logger.debug('Return the newest available checkpoint, or None.')
     if not os.path.isdir(checkpoint_dir):
         return None
     checkpoints = [os.path.join(checkpoint_dir, folder) for folder in os.listdir(checkpoint_dir)]
@@ -115,7 +116,7 @@ def get_last_checkpoint(checkpoint_dir):
         for filename in os.listdir(last_checkpoint_dir):
             if '.' in filename:
                 continue
-            LOGGER.info('Checkpoint: %s',
+            logger.info('Checkpoint: %s',
                         os.path.join(last_checkpoint_dir, filename))
             return os.path.join(last_checkpoint_dir, filename)
     return None
@@ -133,29 +134,29 @@ SELECTION = [
 def print_selected_results(dictionary, keys):
     for key, value in dictionary.items():
         if key in keys:
-            LOGGER.info(' %s: %s', key, pformat(value, depth=None, compact=True))
+            logger.info(' %s: %s', key, pformat(value, depth=None, compact=True))
 
 def print_policy_by_agent(policies):
     for agent, policy in policies.items():
-        LOGGER.debug('[policies] %s: \n%s', agent, pformat(policy.keys(), depth=None, compact=True))
+        logger.debug('[policies] %s: \n%s', agent, pformat(policy.keys(), depth=None, compact=True))
         keys = ['episodes', 'state', 'qtable', 'max-qvalue', 'best-action',
                 'state-action-counter', 'state-action-reward-mean']
         for key, value in policy.items():
             if key in keys:
-                LOGGER.info('-> %s: \n%s', key, pformat(value, depth=None, compact=True))
+                logger.info('-> %s: \n%s', key, pformat(value, depth=None, compact=True))
         if 'stats' in policy and 'sequence' in policy['stats']:
-            LOGGER.info('Sequence of state-action-state in this checkout.')
+            logger.info('Sequence of state-action-state in this checkout.')
             print_sas_sequence(policy['stats']['sequence'])
 
 def print_sas_sequence(sequence):
     for seq, episode in enumerate(sequence):
-        LOGGER.info('Sequence of state-action-state from episode %d.', seq)
+        logger.info('Sequence of state-action-state from episode %d.', seq)
         before = None
         for state0, action, state1, reward in episode:
             if state0 == before:
-                LOGGER.info('A(%s) --> S1(%s) R[%s]', action, state1, reward)
+                logger.info('A(%s) --> S1(%s) R[%s]', action, state1, reward)
             else:
-                LOGGER.info('S0(%s) --> A(%s) --> S1(%s) R[%s]', state0, action, state1, reward)
+                logger.info('S0(%s) --> A(%s) --> S1(%s) R[%s]', state0, action, state1, reward)
             before = state1
 
 ####################################################################################################
@@ -172,15 +173,7 @@ def _main():
     policy_class = None
     policy_conf = None
     policy_params = None
-    if ARGS.algo == 'PPO':
-        policy_class = ppo.PPOTFPolicy
-        policy_conf = {**ppo.DEFAULT_CONFIG, **ppo_conf.ppo_conf(ARGS.checkout_steps, debug_dir)}
-        policy_params = {}
-    elif ARGS.algo == 'A3C':
-        policy_class = a3c.A3CTFPolicy
-        policy_conf = {**a3c.DEFAULT_CONFIG, **a3c_conf.a3c_conf(ARGS.checkout_steps, debug_dir)}
-        policy_params = {}
-    elif ARGS.algo == 'QLSA':
+    if ARGS.algo == 'QLSA':
         policy_class = QLStandAlone.EGreedyQLearningPolicy
         policy_conf = qlearning_conf.qlearning_conf(ARGS.checkout_steps, debug_dir)
         policy_params = {
@@ -220,18 +213,18 @@ def _main():
         raise Exception('Unknown algorithm %s' % ARGS.algo)
 
     # Load default Scenario configuration
-    scenario_config = load_json_file(ARGS.config)
+    experiment_config = load_json_file(ARGS.config)
 
     # Initialize the simulation.
     ray.init(memory=52428800, object_store_memory=78643200) ## minimum values
 
     # Associate the agents with something
-    agent_init = load_json_file(scenario_config['agent-init-file'])
+    agent_init = load_json_file(experiment_config['agents_init_file'])
     env_config = {
         'metrics_dir': metrics_dir,
         'checkpoint_dir': checkpoint_dir,
         'agent_init': agent_init,
-        'scenario_config': scenario_config,
+        'scenario_config': experiment_config['marl_env_config'],
     }
     marl_env = None
     if ARGS.env == 'MARL':
@@ -285,15 +278,7 @@ def _main():
         return UnifiedLogger(config, log_dir, loggers=[DBLogger])
 
     trainer = None
-    if ARGS.algo == 'PPO':
-        trainer = ppo.PPOTrainer(env='marl_env',
-                                 config=policy_conf,
-                                 logger_creator=default_logger_creator)
-    elif ARGS.algo == 'A3C':
-        trainer = a3c.A3CTrainer(env='marl_env',
-                                 config=policy_conf,
-                                 logger_creator=default_logger_creator)
-    elif ARGS.algo == 'QLSA':
+    if ARGS.algo == 'QLSA':
         trainer = QLStandAlone.QLearningTrainer(
             env='marl_env', config=policy_conf, logger_creator=dblogger_logger_creator)
     elif ARGS.algo == 'QLET':
@@ -307,7 +292,7 @@ def _main():
 
     last_checkpoint = get_last_checkpoint(checkpoint_dir)
     if last_checkpoint is not None:
-        LOGGER.info('[Trainer:main] Restoring checkpoint: %s', last_checkpoint)
+        logger.info('[Trainer:main] Restoring checkpoint: %s', last_checkpoint)
         trainer.restore(last_checkpoint)
 
     steps = 0
@@ -317,7 +302,7 @@ def _main():
         # Do one step.
         result = trainer.train()
         checkpoint = trainer.save(checkpoint_dir)
-        LOGGER.info('[Trainer:main] Checkpoint saved in %s', checkpoint)
+        logger.info('[Trainer:main] Checkpoint saved in %s', checkpoint)
         # steps += result['info']['num_steps_trained']
         steps += result['timesteps_this_iter'] # is related to 'timesteps_total' that is the same
                                                # as result['info']['num_steps_sampled']
@@ -349,5 +334,5 @@ if __name__ == '__main__':
             profiler.disable()
             results = io.StringIO()
             pstats.Stats(profiler, stream=results).sort_stats('cumulative').print_stats(50)
-            LOGGER.info('Profiler: \n%s', results.getvalue())
+            logger.info('Profiler: \n%s', results.getvalue())
         ## ========================          PROFILER              ======================== ##

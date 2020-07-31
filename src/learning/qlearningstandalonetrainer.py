@@ -45,8 +45,9 @@ else:
 DEBUGGER = False
 PROFILER = False
 
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.INFO)
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARN)
 
 ####################################################################################################
 #                                             TRAINER
@@ -64,7 +65,7 @@ class QLearningTrainer(Trainer):
 
     def _init(self, config, env_creator):
         """ Q-Learning Trainer init. """
-        LOGGER.debug('QLearningTrainer:_init() MARL Environment Creation..')
+        logger.debug('QLearningTrainer:_init() MARL Environment Creation..')
         self._latest_checkpoint = ''
         self.env = env_creator(config['env_config'])
         self._initialize_policies(config)
@@ -103,7 +104,7 @@ class QLearningTrainer(Trainer):
             profiler.enable()
         ## ========================              PROFILER              ======================== ##
 
-        LOGGER.debug('QLearningTrainer:_train()')
+        logger.debug('QLearningTrainer:_train()')
 
         gtt_by_episode = list()
         sumo_steps_per_episode = list()
@@ -113,7 +114,7 @@ class QLearningTrainer(Trainer):
         def aggregate_policies(policy, internal_state, statistics):
             """ Equivalent of a moving average between episodes. """
             if DEBUGGER:
-                LOGGER.debug('%s', pformat(policy, compact=True))
+                logger.debug('%s', pformat(policy, compact=True))
             if policy:
                 # aggregate
                 policy['state'] = internal_state
@@ -150,13 +151,13 @@ class QLearningTrainer(Trainer):
                     },
                 }
             if DEBUGGER:
-                LOGGER.debug('%s', pformat(policy, compact=True))
+                logger.debug('%s', pformat(policy, compact=True))
             return policy
 
         learning_steps = 0
         for episode in range(self.config['rollout_fragment_length']):
             before = datetime.now()
-            LOGGER.info('=======================> Episode # %4d <=======================', episode)
+            logger.info('=======================> Episode # %4d <=======================', episode)
             max_retry = 10
             steps = 0
             while max_retry:
@@ -190,23 +191,23 @@ class QLearningTrainer(Trainer):
                             # needs to keep moving forward nonetheless.
                             steps += 1
                         if DEBUGGER:
-                            LOGGER.debug('State: %s', pformat(states))
+                            logger.debug('State: %s', pformat(states))
                         actions = {}
                         for agent, state in states.items():
                             actions[agent] = self.policies[agent].compute_action(state)
                             latest_action_by_agent[agent] = actions[agent]
-                            LOGGER.debug('Agent %s selected action %d', agent, actions[agent])
+                            logger.debug('Agent %s selected action %d', agent, actions[agent])
                         if DEBUGGER:
-                            LOGGER.debug('Actions: %s', pformat(actions))
+                            logger.debug('Actions: %s', pformat(actions))
 
-                        LOGGER.debug('STEP!')
+                        logger.debug('STEP!')
                         next_states, rewards, dones, infos = self.env.step(actions)
 
                         if DEBUGGER:
-                            LOGGER.debug('Observations: %s', pformat(next_states))
-                            LOGGER.debug('Rewards: %s', pformat(rewards))
-                            LOGGER.debug('Dones: %s', pformat(dones))
-                            LOGGER.debug('Info: %s', pformat(infos))
+                            logger.debug('Observations: %s', pformat(next_states))
+                            logger.debug('Rewards: %s', pformat(rewards))
+                            logger.debug('Dones: %s', pformat(dones))
+                            logger.debug('Info: %s', pformat(infos))
 
                         for agent in next_states:
                             if agent not in latest_state_by_agent:
@@ -222,7 +223,7 @@ class QLearningTrainer(Trainer):
                                     'info': infos[agent],
                                 }
                                 if DEBUGGER:
-                                    LOGGER.debug('Learning sample for agent %s: \n%s',
+                                    logger.debug('Learning sample for agent %s: \n%s',
                                                  agent, pformat(sample))
                                 self.policies[agent].learn(sample)
                                 cumul_rewards_by_agent[agent] += rewards[agent]
@@ -234,26 +235,26 @@ class QLearningTrainer(Trainer):
                     break
                 except TraCIException as excpt:
                     max_retry -= 1
-                    LOGGER.critical('SUMO failed with TraCIException: %s', pformat(excpt))
+                    logger.critical('SUMO failed with TraCIException: %s', pformat(excpt))
                 except FatalTraCIError as error:
                     max_retry -= 1
-                    LOGGER.critical('SUMO failed with FatalTraCIError: %s', pformat(error))
+                    logger.critical('SUMO failed with FatalTraCIError: %s', pformat(error))
 
             # Gathering metrics at the end of the episode
             if max_retry:
-                LOGGER.debug('Learning steps this iteration: %d', steps)
+                logger.debug('Learning steps this iteration: %d', steps)
                 learning_steps += steps
                 gtt_by_episode.append(self.env.simulation.get_global_travel_time())
                 sumo_steps_per_episode.append(self.env.simulation.get_sumo_steps())
                 rewards_by_episode.append(cumul_rewards_by_agent)
                 for agent, policy in self.policies.items():
-                    LOGGER.debug('Collecting stats from agent: %s', agent)
+                    logger.debug('Collecting stats from agent: %s', agent)
                     policies_aggregated_by_episode[agent] = aggregate_policies(
                         policies_aggregated_by_episode[agent],
                         policy.get_internal_state(),
                         policy.get_stats_and_reset())
             delta = datetime.now() - before
-            LOGGER.info('=======================> %s <=======================', str(delta))
+            logger.info('=======================> %s <=======================', str(delta))
             elapesed_time_by_episode.append(delta.total_seconds())
             # callback
             self.on_episode_end()
@@ -272,7 +273,7 @@ class QLearningTrainer(Trainer):
 
         for agent, policy in policies_aggregated_by_episode.items():
             if DEBUGGER:
-                LOGGER.debug('[%s] BEFORE \n%s', agent, pformat(policy, compact=True))
+                logger.debug('[%s] BEFORE \n%s', agent, pformat(policy, compact=True))
 
             policy['qtable'] = collections.defaultdict(dict)
             policy['max-qvalue'] = dict()
@@ -303,7 +304,7 @@ class QLearningTrainer(Trainer):
                 policy['state-action-reward-mean'][_state][str(_action)] = np.mean(_value)
 
             if DEBUGGER:
-                LOGGER.debug('[%s] AFTER \n%s', agent, pformat(policy, compact=True))
+                logger.debug('[%s] AFTER \n%s', agent, pformat(policy, compact=True))
 
         ## ========================              PROFILER              ======================== ##
         if PROFILER:
@@ -329,17 +330,17 @@ class QLearningTrainer(Trainer):
 
     def _save(self, tmp_checkpoint_dir):
         """ Subclasses should override this to implement ``save()``. """
-        LOGGER.debug('Checkpoint directory: %s', tmp_checkpoint_dir)
+        logger.debug('Checkpoint directory: %s', tmp_checkpoint_dir)
         checkpoint = dict()
         for key, item in self.policies.items():
-            LOGGER.debug('Policy[%s]: \n%s', key, item)
+            logger.debug('Policy[%s]: \n%s', key, item)
             checkpoint[key] = item.get_internal_state()
         return checkpoint
 
     def _restore(self, checkpoint):
         """ Subclasses should override this to implement restore(). """
         for key, item in checkpoint.items():
-            LOGGER.debug('Checkpoint[%s]: \n%s', key, item)
+            logger.debug('Checkpoint[%s]: \n%s', key, item)
             if 'tune_checkpoint_path' in key:
                 self._latest_checkpoint = checkpoint['tune_checkpoint_path']
             else:
@@ -422,7 +423,7 @@ class EGreedyQLearningPolicy(Policy):
     def get_stats_and_reset(self):
         """ Returns all the stats metrics used for logging (and reset them). """
         if DEBUGGER:
-            LOGGER.debug('Stats: \n%s', pformat(self.stats))
+            logger.debug('Stats: \n%s', pformat(self.stats))
         statscp = deepcopy(self.stats)
         self._reset_stats_values()
         statscp['actions_this_episode'] = len(statscp['actions'])
@@ -435,21 +436,21 @@ class EGreedyQLearningPolicy(Policy):
     def compute_action(self, state):
         # Epsilon-Greedy Implementation
         if DEBUGGER:
-            LOGGER.debug('Observation: %s', pformat(state))
+            logger.debug('Observation: %s', pformat(state))
         action = None
 
         rnd = self.rndgen.uniform(0, 1)
-        LOGGER.debug('Random: %f - Epsilon: %f - value %s',
+        logger.debug('Random: %f - Epsilon: %f - value %s',
                      rnd, self.epsilon, str(rnd < self.epsilon))
         if rnd < self.epsilon:
             # Explore action space
             action = self.action_space.sample()
-            LOGGER.debug('Random (%f) action: %d', rnd, action)
+            logger.debug('Random (%f) action: %d', rnd, action)
         else:
             # Exploit learned values
             action = self.qtable.argmax(state)
             if DEBUGGER:
-                LOGGER.debug('State: %s --> action: %s', pformat(self.qtable[state]), str(action))
+                logger.debug('State: %s --> action: %s', pformat(self.qtable[state]), str(action))
 
         self.stats['actions'].append(action)
         self.qtable_state_action_counter[state][action] += 1
@@ -470,17 +471,17 @@ class EGreedyQLearningPolicy(Policy):
                     }
         """
         if DEBUGGER:
-            LOGGER.debug('Learning sample \n%s', pformat(sample))
-            LOGGER.debug('Old State \n%s', pformat(self.qtable[sample['old_state']]))
-            LOGGER.debug('Next State \n%s', pformat(self.qtable[sample['next_state']]))
+            logger.debug('Learning sample \n%s', pformat(sample))
+            logger.debug('Old State \n%s', pformat(self.qtable[sample['old_state']]))
+            logger.debug('Next State \n%s', pformat(self.qtable[sample['next_state']]))
         old_value = self.qtable[sample['old_state']][sample['action']]
         next_max = self.qtable.max(sample['next_state'])
         new_value = old_value + self.alpha * (sample['reward'] + self.gamma * next_max - old_value)
-        LOGGER.debug('%f = %f + %f * (%f + %f * %f - %f)',
+        logger.debug('%f = %f + %f * (%f + %f * %f - %f)',
                      new_value, old_value, self.alpha, sample['reward'], self.gamma,
                      next_max, old_value)
         self.qtable[sample['old_state']][sample['action']] = new_value
-        LOGGER.debug('Q-Learning: old = %f, new = %f', old_value, new_value)
+        logger.debug('Q-Learning: old = %f, new = %f', old_value, new_value)
 
         self.stats['rewards'].append(sample['reward'])
         self.qtable_state_action_reward[sample['old_state']][sample['action']].append(
@@ -590,12 +591,12 @@ class QLearningTestingPolicy(EGreedyQLearningPolicy):
     def compute_action(self, state):
         # Epsilon-Greedy Implementation
         if DEBUGGER:
-            LOGGER.debug('Observation: %s', pformat(state))
+            logger.debug('Observation: %s', pformat(state))
 
         # Exploit learned values
         action = self.qtable.argmax(state)
         if DEBUGGER:
-            LOGGER.debug('State: %s --> action: %s', pformat(self.qtable[state]), str(action))
+            logger.debug('State: %s --> action: %s', pformat(self.qtable[state]), str(action))
 
         self.stats['actions'].append(action)
         self.qtable_state_action_counter[state][action] += 1
