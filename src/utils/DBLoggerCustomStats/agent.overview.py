@@ -14,6 +14,8 @@ import pstats
 
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
+
 from tqdm import tqdm
 
 from dbloggerstats import DBLoggerStats
@@ -177,7 +179,9 @@ class AgentOverview(DBLoggerStats):
             fig, axs = plt.subplots(5, 2, sharex=True, figsize=(20, 20), constrained_layout=True)
             fig.suptitle('{}'.format(agent))
 
-            ett_rtt_max = max(max(stats['ett']), max(stats['rtt']))
+            rtt_max = np.nanmax(stats['rtt'])
+            ett_max = np.nanmax(stats['ett'])
+            ett_rtt_max = np.nanmax(np.array([ett_max, rtt_max]))
             ett_rtt_max += ett_rtt_max * 0.1
 
             # Plot each graph
@@ -195,7 +199,7 @@ class AgentOverview(DBLoggerStats):
             axs[2][0].plot(self.aggregated_dataset['episodes'], stats['mode'],
                            label='Selected mode', color='green', marker='o', linestyle='solid',
                            linewidth=2, markersize=8)
-            axs[4][0].set_ylim(0, max(stats['mode']))
+            axs[4][0].set_ylim(0, np.nanmax(stats['mode']))
             axs[2][0].set_ylabel('Mode')
             axs[2][0].grid(True)
 

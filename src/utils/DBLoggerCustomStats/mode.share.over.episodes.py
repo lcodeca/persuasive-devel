@@ -16,6 +16,7 @@ import pstats
 
 import matplotlib
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from dbloggerstats import DBLoggerStats
 
@@ -136,7 +137,7 @@ class ModeShareEpisodes(DBLoggerStats):
         self._init_datastructure()
         # process the directory tree
         available_training_runs = self.alphanumeric_sort(os.listdir(self.dir))
-        for training_run in available_training_runs:
+        for training_run in tqdm(available_training_runs):
             if training_run in self.aggregated_dataset['training-folders']:
                 continue
             print('Processing {}/{}'.format(self.dir, training_run))

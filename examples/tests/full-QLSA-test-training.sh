@@ -23,7 +23,7 @@ for i in {1..2} ;do
     python3 -u $RLLIB_SUMO_INFRASTRUCTURE/src/runQLSAtraining.py \
         --algo QLSA --env MARL \
         --dir "res_QLSA_MARL" --config "configuration.json" \
-        --checkout-steps 1 --training-steps 1 \
+        --checkout-steps 2 --training-steps 2 \
         --alpha 0.1 --gamma 0.9 --epsilon 0.0001
 done
 
@@ -33,7 +33,7 @@ for i in {1..2} ;do
     python3 -u $RLLIB_SUMO_INFRASTRUCTURE/src/runQLSAtraining.py \
         --algo QLSA --env LateMARL \
         --dir "res_QLSA_LateMARL" --config "configuration.json" \
-        --checkout-steps 1 --training-steps 1 \
+        --checkout-steps 2 --training-steps 2 \
         --alpha 0.1 --gamma 0.9 --epsilon 0.0001
 done
 
@@ -43,7 +43,7 @@ for i in {1..2} ;do
     python3 -u $RLLIB_SUMO_INFRASTRUCTURE/src/runQLSAtraining.py \
         --algo QLSA --env MARLCoop \
         --dir "res_QLSA_MARLCoop" --config "configuration.json" \
-        --checkout-steps 1 --training-steps 1 \
+        --checkout-steps 2 --training-steps 2 \
         --alpha 0.1 --gamma 0.9 --epsilon 0.0001
 done
 
@@ -55,7 +55,7 @@ for i in {1..2} ;do
     python3 -u $RLLIB_SUMO_INFRASTRUCTURE/src/runQLSAtraining.py \
         --algo QLET --env MARL \
         --dir "res_QLET_MARL" --config "configuration.json" \
-        --checkout-steps 1 --training-steps 1 \
+        --checkout-steps 2 --training-steps 2 \
         --alpha 0.1 --gamma 0.9 --epsilon 0.0001 --decay 0.3
 done
 
@@ -65,7 +65,7 @@ for i in {1..2} ;do
     python3 -u $RLLIB_SUMO_INFRASTRUCTURE/src/runQLSAtraining.py \
         --algo QLET --env LateMARL \
         --dir "res_QLET_LateMARL" --config "configuration.json" \
-        --checkout-steps 1 --training-steps 1 \
+        --checkout-steps 2 --training-steps 2 \
         --alpha 0.1 --gamma 0.9 --epsilon 0.0001 --decay 0.3
 done
 
@@ -75,7 +75,7 @@ for i in {1..2} ;do
     python3 -u $RLLIB_SUMO_INFRASTRUCTURE/src/runQLSAtraining.py \
         --algo QLET --env MARLCoop \
         --dir "res_QLET_MARLCoop" --config "configuration.json" \
-        --checkout-steps 1 --training-steps 1 \
+        --checkout-steps 2 --training-steps 2 \
         --alpha 0.1 --gamma 0.9 --epsilon 0.0001 --decay 0.3
 done
 
@@ -88,7 +88,7 @@ for i in {1..2} ;do
         --algo PDEGQLET --env MARL \
         --epsilon 0.1 --action-distr 0.9 0.1 \
         --dir "res_PDEGQLET_MARL" --config "configuration.json" \
-        --checkout-steps 1 --training-steps 1 \
+        --checkout-steps 2 --training-steps 2 \
         --alpha 0.1 --gamma 0.9 --decay 0.3
 done
 
@@ -99,7 +99,7 @@ for i in {1..2} ;do
         --algo PDEGQLET --env LateMARL \
         --epsilon 0.1 --action-distr 0.9 0.1 \
         --dir "res_PDEGQLET_LateMARL" --config "configuration.json" \
-        --checkout-steps 1 --training-steps 1 \
+        --checkout-steps 2 --training-steps 2 \
         --alpha 0.1 --gamma 0.9 --decay 0.3
 done
 
@@ -110,7 +110,7 @@ for i in {1..2} ;do
         --algo PDEGQLET --env MARLCoop \
         --epsilon 0.1 --action-distr 0.9 0.1 \
         --dir "res_PDEGQLET_MARLCoop" --config "configuration.json" \
-        --checkout-steps 1 --training-steps 1 \
+        --checkout-steps 2 --training-steps 2 \
         --alpha 0.1 --gamma 0.9 --decay 0.3
 done
 
