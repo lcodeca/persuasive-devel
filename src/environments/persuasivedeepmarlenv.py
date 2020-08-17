@@ -125,7 +125,17 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
     def craft_final_state(self, agent):
         final_state = super().craft_final_state(agent)
         final_state['usage'] = np.array([-1 for _ in self.agents[agent].modes])
-        return final_state
+
+        # Flattening of the dictionary
+        deep_final_state = [
+            final_state['from'],
+            final_state['to'],
+            final_state['time-left']
+        ]
+        deep_final_state.extend(final_state['ett'])
+        deep_final_state.extend(final_state['usage'])
+
+        return deep_final_state
 
     ################################################################################################
 
@@ -226,8 +236,8 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
             0,  # to
             0,  # time-left
         ]
-        lows.extend([0] * len(self.agents[agent].modes))    # ett
-        lows.extend([0] * len(self.agents[agent].modes))    # usage
+        lows.extend([-1] * len(self.agents[agent].modes))    # ett
+        lows.extend([-1] * len(self.agents[agent].modes))    # usage
 
         highs = [
             len(self._edges_to_int),                                # from

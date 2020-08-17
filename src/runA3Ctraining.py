@@ -22,7 +22,7 @@ from ray.tune.logger import UnifiedLogger
 from utils.logger import DBLogger
 
 from configs.a3c_conf import persuasive_a3c_conf
-from learning import persuasivea3cpolicy, persuasivea3ctrainer
+from learning import persuasivea3c
 from environments import persuasivedeepmarlenv
 
 ####################################################################################################
@@ -159,7 +159,7 @@ def _main():
     metrics_dir, checkpoint_dir, debug_dir = results_handler(ARGS)
 
     # Persuasive A3C Algorithm.
-    policy_class = persuasivea3cpolicy.A3CTFPolicy
+    policy_class = persuasivea3c.PersuasiveA3CTFPolicy
     policy_conf = persuasive_a3c_conf(ARGS.checkout_steps, debug_dir)
     policy_params = {}
 
@@ -194,7 +194,7 @@ def _main():
     agent_policy_params = deepcopy(policy_params)
     from_val, to_val = agent_init[agent]['init']
     agent_policy_params['init'] = lambda: random.randint(from_val, to_val)
-    agent_policy_params['actions'] = marl_env.get_set_of_actions(agent)
+    # agent_policy_params['actions'] = marl_env.get_set_of_actions(agent)
     # agent_policy_params['actions'] = ray.get(marl_env.get_set_of_actions.remote(agent))
     agent_policy_params['seed'] = agent_init[agent]['seed']
     policies['unique'] = (policy_class,
@@ -227,7 +227,7 @@ def _main():
             os.makedirs(log_dir)
         return UnifiedLogger(config, log_dir, loggers=[DBLogger])
 
-    trainer = persuasivea3ctrainer.A3CTrainer(
+    trainer = persuasivea3c.PersuasiveA3CTrainer(
         env='marl_env', config=policy_conf, logger_creator=default_logger_creator)
 
     last_checkpoint = get_last_checkpoint(checkpoint_dir)
@@ -244,9 +244,8 @@ def _main():
         checkpoint = trainer.save(checkpoint_dir)
         logger.info('[Trainer:main] Checkpoint saved in %s', checkpoint)
         pprint(result)
-        # steps += result['info']['num_steps_trained']
-        steps += result['timesteps_this_iter'] # is related to 'timesteps_total' that is the same
-                                               # as result['info']['num_steps_sampled']
+        steps += result['info']['num_steps_trained']
+        # steps += result['timesteps_this_iter']
         final_result = result
 
     print_selected_results(final_result, SELECTION)
