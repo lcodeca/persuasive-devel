@@ -3,14 +3,12 @@
 """ Persuasive Trainer for RLLIB + SUMO """
 
 import argparse
-from copy import deepcopy
 import cProfile
 import io
 import json
 import logging
 import os
 import pstats
-import random
 import sys
 import traceback
 
@@ -161,14 +159,13 @@ def _main():
     # Persuasive A3C Algorithm.
     policy_class = persuasivea3c.PersuasiveA3CTFPolicy
     policy_conf = persuasive_a3c_conf(ARGS.checkout_steps, debug_dir)
-    policy_params = {}
 
     # Load default Scenario configuration
     experiment_config = load_json_file(ARGS.config)
 
     # Initialize the simulation.
     # ray.init(memory=52428800, object_store_memory=78643200) ## minimum values
-    ray.init() #memory=52428800, object_store_memory=90000000
+    ray.init()
 
     # Associate the agents with something
     agent_init = load_json_file(experiment_config['agents_init_file'])
@@ -188,21 +185,11 @@ def _main():
 
     # Gen config
     policies = {}
-    # without get+remote: TypeError: 'ray._raylet.ObjectID' object is not iterable
     agent = marl_env.get_agents()[0]
-    # agent = ray.get(marl_env.get_agents.remote())[0]
-    agent_policy_params = deepcopy(policy_params)
-    from_val, to_val = agent_init[agent]['init']
-    agent_policy_params['init'] = lambda: random.randint(from_val, to_val)
-    # agent_policy_params['actions'] = marl_env.get_set_of_actions(agent)
-    # agent_policy_params['actions'] = ray.get(marl_env.get_set_of_actions.remote(agent))
-    agent_policy_params['seed'] = agent_init[agent]['seed']
     policies['unique'] = (policy_class,
                           marl_env.get_obs_space(agent),
                           marl_env.get_action_space(agent),
-                        #   ray.get(marl_env.get_obs_space.remote(agent)),
-                        #   ray.get(marl_env.get_action_space.remote(agent)),
-                          agent_policy_params)
+                          {})
     policy_conf['multiagent']['policies'] = policies
     policy_conf['multiagent']['policy_mapping_fn'] = lambda agent_id: 'unique'
     policy_conf['env_config'] = env_config
@@ -243,7 +230,7 @@ def _main():
         result = trainer.train()
         checkpoint = trainer.save(checkpoint_dir)
         logger.info('[Trainer:main] Checkpoint saved in %s', checkpoint)
-        pprint(result)
+        # pprint(result)
         steps += result['info']['num_steps_trained']
         # steps += result['timesteps_this_iter']
         final_result = result
