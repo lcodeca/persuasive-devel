@@ -42,6 +42,7 @@ class RNNModel(RecurrentNetwork):
         super(RNNModel, self).__init__(obs_space, action_space, num_outputs,
                                        model_config, name)
         self.cell_size = cell_size
+        self.hiddens_size = hiddens_size
 
         # Define input layers
         input_layer = tf.keras.layers.Input(

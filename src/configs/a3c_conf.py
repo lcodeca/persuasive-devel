@@ -7,7 +7,10 @@ from pprint import pprint
 from learning.persuasivea3c import DEFAULT_CONFIG
 
 from ray.rllib.models import ModelCatalog
-from learning.lstm import RNNModel
+from learning.persuasivea3c import PersuasiveCallbacks
+from learning.persuasivelstm import RNNModel
+from learning.persuasiveactiondistribution import PersuasiveActionDistribution
+from learning.persuasivestochasticsampling import PersuasiveStochasticSampling
 
 def persuasive_a3c_conf(tr_steps=1, debug_folder=None, alpha=0.0001, gamma=0.99):
     """
@@ -17,12 +20,15 @@ def persuasive_a3c_conf(tr_steps=1, debug_folder=None, alpha=0.0001, gamma=0.99)
     """
 
     ModelCatalog.register_custom_model('custom_rrn', RNNModel)
+    ModelCatalog.register_custom_action_dist(
+        "custom_action_distribution", PersuasiveActionDistribution)
 
     custom_configuration = DEFAULT_CONFIG
 
     custom_configuration['batch_mode'] = 'complete_episodes'
     custom_configuration['collect_metrics_timeout'] = 86400 # a day
-    custom_configuration['gamma'] = gamma
+    custom_configuration['framework'] = 'tf'
+    # custom_configuration['gamma'] = gamma
     custom_configuration['ignore_worker_failures'] = True
     custom_configuration['log_level'] = 'WARN'
     custom_configuration['monitor'] = True
@@ -41,17 +47,10 @@ def persuasive_a3c_conf(tr_steps=1, debug_folder=None, alpha=0.0001, gamma=0.99)
     custom_configuration['train_batch_size'] = tr_steps
 
     # === Exploration Settings ===
-    # Default exploration behavior, iff `explore`=None is passed into
-    # compute_action(s).
-    # Set to False for no exploration behavior (e.g., for evaluation).
     custom_configuration['explore'] = True
-    # Provide a dict specifying the Exploration object's config.
-    # The Exploration class to use. In the simplest case, this is the name
-    # (str) of any class present in the `rllib.utils.exploration` package.
-    # You can also provide the python class directly or the full location
-    # of your class (e.g. "ray.rllib.utils.exploration.epsilon_greedy.
-    # EpsilonGreedy").
+    # custom_configuration['exploration_config']['type'] = 'EpsilonGreedy'
     custom_configuration['exploration_config']['type'] = 'StochasticSampling'
+    # custom_configuration['exploration_config']['type'] = PersuasiveStochasticSampling
     # Add constructor kwargs here (if any).
 
     # == MODEL - DEFAULT ==
@@ -66,8 +65,16 @@ def persuasive_a3c_conf(tr_steps=1, debug_folder=None, alpha=0.0001, gamma=0.99)
     # == MODEL - CUSTOM ==
     custom_configuration['model']['custom_model'] = 'custom_rrn'
 
+    # See:
+    #  https://docs.ray.io/en/releases-0.8.7/rllib-models.html#custom-action-distributions
+    # custom_configuration['model']['custom_action_dist'] = 'custom_action_distribution'
+    # custom_configuration['model']['custom_action_dist_par'] = {
+    #     'probabilities': [0.9, 0.1],
+    # }
+
     # == Persuasive A3C ==
-    custom_configuration['lr'] = alpha
+    custom_configuration['callbacks'] = PersuasiveCallbacks
+    # custom_configuration['lr'] = alpha
     custom_configuration['min_iter_time_s'] = 5
     custom_configuration['rollout_fragment_length'] = tr_steps
     custom_configuration['use_gae'] = False

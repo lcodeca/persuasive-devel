@@ -37,11 +37,6 @@ logger.setLevel(logging.WARN)
 def env_creator(config):
     """ Environment creator used in the environment registration. """
     logger.debug('[env_creator] Environment creation: PersuasiveDeepMARLEnv')
-    # ValueError: Returned env should be an instance of
-    #       gym.Env, MultiAgentEnv, ExternalEnv, VectorEnv, or BaseEnv.
-    # The provided env creator function returned Actor(PersuasiveDeepMARLEnv, 6f53dca10100)
-    #                                                             (<class 'ray.actor.ActorHandle'>).
-    # return PersuasiveDeepMARLEnv.remote(config)
     return PersuasiveDeepMARLEnv(config)
 
 ####################################################################################################
@@ -122,21 +117,6 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
         logger.debug('========================================================')
         return super().step(action_dict)
 
-    def craft_final_state(self, agent):
-        final_state = super().craft_final_state(agent)
-        final_state['usage'] = np.array([-1 for _ in self.agents[agent].modes])
-
-        # Flattening of the dictionary
-        deep_final_state = [
-            final_state['from'],
-            final_state['to'],
-            final_state['time-left']
-        ]
-        deep_final_state.extend(final_state['ett'])
-        deep_final_state.extend(final_state['usage'])
-
-        return deep_final_state
-
     ################################################################################################
 
     def get_reward(self, agent):
@@ -177,6 +157,23 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
 
     ################################################################################################
 
+    @staticmethod
+    def deep_state_flattener(state):
+        # Flattening of the dictionary
+        deep = [
+            state['from'],
+            state['to'],
+            state['time-left']
+        ]
+        deep.extend(state['ett'])
+        deep.extend(state['usage'])
+        return deepcopy(deep)
+
+    def craft_final_state(self, agent):
+        final_state = super().craft_final_state(agent)
+        final_state['usage'] = np.array([-1 for _ in self.agents[agent].modes])
+        return self.deep_state_flattener(final_state)
+
     def get_observation(self, agent):
         """ Returns the observation of a given agent. """
         ret = super().get_observation(agent)
@@ -187,43 +184,13 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
             agents_choice = self.episode_snapshot.get_history(origin, destination, mode)
             usage.append(self.agents_to_usage_active(agents_choice))
         ret['usage'] = usage
-
         # Flattening of the dictionary
-        deep_ret = [
-            ret['from'],
-            ret['to'],
-            ret['time-left']
-        ]
-        deep_ret.extend(ret['ett'])
-        deep_ret.extend(ret['usage'])
-
+        deep_ret = self.deep_state_flattener(ret)
         logger.debug('Observation: %s', str(deep_ret))
         return np.array(deep_ret, dtype=np.int64)
 
-    ################################################################################################
-
-    def get_agents(self):
-        """ Returns a list of agents, due to REMOTE, it cannot be an iterarator. """
-        keys = [key for key in self.agents.keys()]
-        return keys
-
     def get_obs_space(self, agent):
         """ Returns the observation space. """
-        # return gym.spaces.Dict({
-        #     'from': gym.spaces.Box(
-        #         low=0, high=len(self._edges_to_int), shape=(1,), dtype=np.int64),
-        #     'to': gym.spaces.Box(
-        #         low=0, high=len(self._edges_to_int), shape=(1,), dtype=np.int64),
-        #     'time-left': gym.spaces.Box(
-        #         low=0, high=self._config['scenario_config']['misc']['max_time'],
-        #         shape=(1,), dtype=np.int64),
-        #     'ett': gym.spaces.Box(
-        #         low=0, high=self._config['scenario_config']['misc']['max_time'],
-        #         shape=(1, len(self.agents[agent].modes)), dtype=np.int64),
-        #     'usage': gym.spaces.Box(
-        #         low=0, high=10,
-        #         shape=(1, len(self.agents[agent].modes)), dtype=np.int64),
-        # })
         parameters = 0
         parameters += 1                                 # from
         parameters += 1                                 # to
@@ -258,5 +225,15 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
         return gym.spaces.Box(
             low=np.array(lows), high=np.array(highs), dtype=np.int64)
         # return gym.spaces.Box(low=lows, high=highs, shape=(parameters,), dtype=np.int64)
+
+    ################################################################################################
+
+    def get_agents(self):
+        """ Returns a list of agents, due to REMOTE, it cannot be an iterarator. """
+        keys = [key for key in self.agents.keys()]
+        return keys
+
+    def get_expected_arrival(self, agent):
+        return self.agents[agent].arrival
 
     ################################################################################################
