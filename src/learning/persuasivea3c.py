@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
 """ Persuasive implementation of A3C Tensorflow-based Policy & Trainer """
+
+import collections
 import logging
+import numpy as np
 from pprint import pprint, pformat
 
 # Policy
@@ -21,6 +24,15 @@ from ray.rllib.agents.trainer_template import build_trainer
 from ray.rllib.execution.rollout_ops import AsyncGradients
 from ray.rllib.execution.train_ops import ApplyGradients
 from ray.rllib.execution.metric_ops import StandardMetricsReporting
+
+# Callbacks
+from typing import Dict
+from ray import tune
+from ray.rllib.env import BaseEnv
+from ray.rllib.policy import Policy
+from ray.rllib.policy.sample_batch import SampleBatch
+from ray.rllib.evaluation import MultiAgentEpisode, RolloutWorker
+from ray.rllib.agents.callbacks import DefaultCallbacks
 
 ####################################################################################################
 
@@ -227,3 +239,42 @@ PersuasiveA3CTrainer = build_trainer(
     execution_plan=execution_plan)
 
 ####################################################################################################
+
+# ##################################################################################################
+
+#     Persuasive callbacks implementation
+#     See:
+#         https://docs.ray.io/en/latest/rllib-training.html#callbacks-and-custom-metrics
+#         https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/agents/callbacks.py
+#         https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/evaluation/episode.py
+#         https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/examples/custom_metrics_and_callbacks.py
+
+# ##################################################################################################
+
+class PersuasiveCallbacks(DefaultCallbacks):
+    def on_episode_start(self, worker: RolloutWorker, base_env: BaseEnv,
+                         policies: Dict[str, Policy],
+                         episode: MultiAgentEpisode, **kwargs):
+        episode.custom_metrics = {
+            'episode_average_arrival': []
+        }
+        episode.hist_data = {
+            'info_by_agent': [],
+            'rewards_by_agent': [],
+            'last_action_by_agent': [],
+        }
+
+    def on_episode_end(self, worker: RolloutWorker, base_env: BaseEnv,
+                       policies: Dict[str, Policy], episode: MultiAgentEpisode,
+                       **kwargs):
+        episode.hist_data['info_by_agent'].append(episode._agent_to_last_info)
+        episode.hist_data['rewards_by_agent'].append(episode._agent_reward_history)
+        episode.hist_data['last_action_by_agent'].append(episode._agent_to_last_action)
+        arrival = []
+        for info in episode._agent_to_last_info.values():
+            arrival.append(info['arrival'])
+        episode.custom_metrics['episode_average_arrival'].append(np.mean(arrival))
+
+    # def on_train_result(self, trainer, result: dict, **kwargs):
+    #     print("trainer.train() result: {} -> {} episodes".format(
+    #         trainer, result["episodes_this_iter"]))
