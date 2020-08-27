@@ -36,7 +36,7 @@ def _main():
     ## ========================              PROFILER              ======================== ##
 
     statistics = StatSingleExp(config.input, config.prefix)
-    statistics.sequence_by_agent()
+    statistics.average_arrival_over_timesteps_total()
     logging.info('Done')
 
     ## ========================              PROFILER              ======================== ##

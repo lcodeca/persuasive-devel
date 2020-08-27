@@ -12,7 +12,10 @@ from learning.persuasivelstm import RNNModel
 from learning.persuasiveactiondistribution import PersuasiveActionDistribution
 from learning.persuasivestochasticsampling import PersuasiveStochasticSampling
 
-def persuasive_a3c_conf(tr_steps=1, debug_folder=None, alpha=0.0001, gamma=0.99):
+def persuasive_a3c_conf(rollout_size=10,
+                        debug_folder=None,
+                        alpha=0.0001,
+                        gamma=0.99):
     """
         https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/agents/trainer.py#L44
         https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/agents/a3c/a3c.py#L14
@@ -44,7 +47,10 @@ def persuasive_a3c_conf(tr_steps=1, debug_folder=None, alpha=0.0001, gamma=0.99)
     custom_configuration['remote_worker_envs'] = False
     custom_configuration['seed'] = 42
     custom_configuration['timesteps_per_iteration'] = 1
-    custom_configuration['train_batch_size'] = tr_steps
+    # Training batch size, if applicable. Should be >= rollout_fragment_length.
+    # Samples batches will be concatenated together to a batch of this size,
+    # which is then passed to SGD.
+    custom_configuration['train_batch_size'] = rollout_size
 
     # === Exploration Settings ===
     custom_configuration['explore'] = True
@@ -76,8 +82,18 @@ def persuasive_a3c_conf(tr_steps=1, debug_folder=None, alpha=0.0001, gamma=0.99)
     custom_configuration['callbacks'] = PersuasiveCallbacks
     # custom_configuration['lr'] = alpha
     custom_configuration['min_iter_time_s'] = 5
-    custom_configuration['rollout_fragment_length'] = tr_steps
+    # Divide episodes into fragments of this many steps each during rollouts.
+    # Sample batches of this size are collected from rollout workers and
+    # combined into a larger batch of `train_batch_size` for learning.
+    # For example, given rollout_fragment_length=100 and train_batch_size=1000:
+    #   1. RLlib collects 10 fragments of 100 steps each from rollout workers.
+    #   2. These fragments are concatenated and we perform an epoch of SGD.
+    # When using multiple envs per worker, the fragment size is multiplied by
+    # `num_envs_per_worker`. This is since we are collecting steps from
+    # multiple envs in parallel. For example, if num_envs_per_worker=5, then
+    # rollout workers will return experiences in chunks of 5*100 = 500 steps.
+    # The dataflow here can vary per algorithm. For example, PPO further
+    # divides the train batch into minibatches for multi-epoch SGD.
+    custom_configuration['rollout_fragment_length'] = rollout_size
     custom_configuration['use_gae'] = False
-
-    pprint(custom_configuration)
     return custom_configuration
