@@ -36,7 +36,7 @@ def _main():
     ## ========================              PROFILER              ======================== ##
 
     statistics = StatSingleExp(config.input, config.prefix)
-    statistics.estimations_by_agent()
+    statistics.policy_entropy_over_timesteps_total()
     logging.info('Done')
 
     ## ========================              PROFILER              ======================== ##
