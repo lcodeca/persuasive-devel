@@ -256,7 +256,9 @@ class PersuasiveCallbacks(DefaultCallbacks):
                          policies: Dict[str, Policy],
                          episode: MultiAgentEpisode, **kwargs):
         episode.custom_metrics = {
-            'episode_average_arrival': []
+            'episode_average_departure': [],
+            'episode_average_arrival': [],
+            'episode_average_wait': [],
         }
         episode.hist_data = {
             'info_by_agent': [],
@@ -270,10 +272,22 @@ class PersuasiveCallbacks(DefaultCallbacks):
         episode.hist_data['info_by_agent'].append(episode._agent_to_last_info)
         episode.hist_data['rewards_by_agent'].append(episode._agent_reward_history)
         episode.hist_data['last_action_by_agent'].append(episode._agent_to_last_action)
+        departure = []
         arrival = []
+        wait = []
         for info in episode._agent_to_last_info.values():
+            if np.isnan(info['departure']):
+                continue
+            departure.append(info['departure'])
+            if np.isnan(info['arrival']):
+                continue
             arrival.append(info['arrival'])
+            if np.isnan(info['wait']):
+                continue
+            wait.append(info['wait'])
+        episode.custom_metrics['episode_average_departure'].append(np.mean(departure))
         episode.custom_metrics['episode_average_arrival'].append(np.mean(arrival))
+        episode.custom_metrics['episode_average_wait'].append(np.mean(wait))
 
     # def on_train_result(self, trainer, result: dict, **kwargs):
     #     print("trainer.train() result: {} -> {} episodes".format(

@@ -143,7 +143,10 @@ def _main():
 
     # REMOVE THE EXPLORATION
     policy_conf['explore'] = False
-    # policy_conf['exploration_config']['type'] = 'EpsilonGreedy'
+    policy_conf['train_batch_size'] = 1
+    policy_conf['rollout_fragment_length'] = 1
+    policy_conf['evaluation_interval'] = 0
+    policy_conf['lr'] = 0
 
     # Load default Scenario configuration
     experiment_config = load_json_file(ARGS.config)
