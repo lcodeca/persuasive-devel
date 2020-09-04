@@ -8,8 +8,7 @@
             "public": 1.0,
             "walk": 1.0,
             "bicycle": 1.0,
-            "ptw": 1.0,
-            "on-demand": 1.0
+            "ptw": 1.0
         },
     "seed": 42,
     "init": [0, 0],
