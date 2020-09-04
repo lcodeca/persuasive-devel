@@ -1,0 +1,172 @@
+{
+    "agent_0": {
+        "origin": "-6040",
+        "destination": "2370",
+        "start": 26102,
+        "expected-arrival-time": [
+            32400, 2.0, 4.0
+        ],
+        "modes": {
+            "passenger": 1.0,
+            "public": 1.0
+        },
+        "seed": 594839399,
+        "init": [
+            0, 0
+        ],
+        "ext-stats": true
+    },
+    "agent_1": {
+        "origin": "-6040",
+        "destination": "2370",
+        "start": 25639,
+        "expected-arrival-time": [
+            32400, 2.0, 4.0
+        ],
+        "modes": {
+            "passenger": 1.0,
+            "public": 1.0
+        },
+        "seed": 169937264,
+        "init": [
+            0, 0
+        ],
+        "ext-stats": false
+    },
+    "agent_2": {
+        "origin": "-6040",
+        "destination": "2370",
+        "start": 27983,
+        "expected-arrival-time": [
+            32400, 2.0, 4.0
+        ],
+        "modes": {
+            "passenger": 1.0,
+            "public": 1.0
+        },
+        "seed": 177156103,
+        "init": [
+            0, 0
+        ],
+        "ext-stats": false
+    },
+    "agent_3": {
+        "origin": "-6040",
+        "destination": "2370",
+        "start": 28263,
+        "expected-arrival-time": [
+            32400, 2.0, 4.0
+        ],
+        "modes": {
+            "passenger": 1.0,
+            "public": 1.0
+        },
+        "seed": 438372470,
+        "init": [
+            0, 0
+        ],
+        "ext-stats": false
+    },
+    "agent_4": {
+        "origin": "-6040",
+        "destination": "2370",
+        "start": 27419,
+        "expected-arrival-time": [
+            32400, 2.0, 4.0
+        ],
+        "modes": {
+            "passenger": 1.0,
+            "public": 1.0
+        },
+        "seed": 657610832,
+        "init": [
+            0, 0
+        ],
+        "ext-stats": false
+    },
+    "agent_5": {
+        "origin": "-6040",
+        "destination": "2370",
+        "start": 25221,
+        "expected-arrival-time": [
+            32400, 2.0, 4.0
+        ],
+        "modes": {
+            "passenger": 1.0,
+            "public": 1.0
+        },
+        "seed": 4336566,
+        "init": [
+            0, 0
+        ],
+        "ext-stats": false
+    },
+    "agent_6": {
+        "origin": "-6040",
+        "destination": "2370",
+        "start": 27230,
+        "expected-arrival-time": [
+            32400, 2.0, 4.0
+        ],
+        "modes": {
+            "passenger": 1.0,
+            "public": 1.0
+        },
+        "seed": 924310532,
+        "init": [
+            0, 0
+        ],
+        "ext-stats": false
+    },
+    "agent_7": {
+        "origin": "-6040",
+        "destination": "2370",
+        "start": 25228,
+        "expected-arrival-time": [
+            32400, 2.0, 4.0
+        ],
+        "modes": {
+            "passenger": 1.0,
+            "public": 1.0
+        },
+        "seed": 134298282,
+        "init": [
+            0, 0
+        ],
+        "ext-stats": false
+    },
+    "agent_8": {
+        "origin": "-6040",
+        "destination": "2370",
+        "start": 25682,
+        "expected-arrival-time": [
+            32400, 2.0, 4.0
+        ],
+        "modes": {
+            "passenger": 1.0,
+            "public": 1.0
+        },
+        "seed": 431190855,
+        "init": [
+            0, 0
+        ],
+        "ext-stats": false
+    },
+    "agent_9": {
+        "origin": "-6040",
+        "destination": "2370",
+        "start": 27918,
+        "expected-arrival-time": [
+            32400, 2.0, 4.0
+        ],
+        "modes": {
+            "passenger": 1.0,
+            "public": 1.0
+        },
+        "seed": 835530155,
+        "init": [
+            0, 0
+        ],
+        "ext-stats": false
+    }
+}
