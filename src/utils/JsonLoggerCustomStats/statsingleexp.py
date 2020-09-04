@@ -258,6 +258,8 @@ class StatSingleExp(object):
             rtt_max = np.nanmax(stats['rtt'])
             ett_max = np.nanmax(stats['ett'])
             ett_rtt_max = np.nanmax(np.array([ett_max, rtt_max]))
+            if np.isnan(ett_rtt_max):
+                ett_rtt_max = 1
             ett_rtt_max += ett_rtt_max * 0.1
 
             # Plot each graph
@@ -329,10 +331,10 @@ class StatSingleExp(object):
             axs[4][1].set_xlabel('Episode [#]')
             axs[4][1].grid(True)
 
-            # fig.savefig('{}.{}.svg'.format(self.prefix, agent),
-            #             dpi=300, transparent=False, bbox_inches='tight')
-            fig.savefig('{}.{}.png'.format(self.prefix, agent),
+            fig.savefig('{}.{}.svg'.format(self.prefix, agent),
                         dpi=300, transparent=False, bbox_inches='tight')
+            # fig.savefig('{}.{}.png'.format(self.prefix, agent),
+            #             dpi=300, transparent=False, bbox_inches='tight')
             # plt.show()
             matplotlib.pyplot.close('all')
             # sys.exit()
