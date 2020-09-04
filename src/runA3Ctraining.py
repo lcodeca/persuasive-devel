@@ -2,21 +2,25 @@
 
 """ Persuasive Trainer for RLLIB + SUMO """
 
+import os
+os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
+
 import argparse
 import cProfile
 import io
 import json
 import logging
-import os
 import pstats
 import sys
 import traceback
 
 from pprint import pformat, pprint
 
+import numpy as np
+
 import ray
 
-from ray.tune.logger import UnifiedLogger
+from ray.tune.logger import JsonLogger, UnifiedLogger
 from utils.logger import DBLogger
 
 from configs.a3c_conf import persuasive_a3c_conf
@@ -67,6 +71,7 @@ def argument_parser():
 
 ARGS = argument_parser()
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.FileHandler('learning.log'))
 logger.setLevel(logging.INFO)
 
 ####################################################################################################
@@ -85,40 +90,46 @@ CHECKPOINT_METRICS = [
     'max_arrival_mean', 'max_arrival_min',
 ]
 
+STOPPING_METRICS = [
+    'max_episode_reward_mean', # this is cumulative value
+    'max_policy_reward_min', 'max_policy_reward_mean', # this is a unique value
+    'max_arrival_mean', 'max_arrival_min',
+]
+
 CURRENT_METRICS = {
     'min_policy_loss': {
-        'check': lambda new, old: old is None or new <= old,
+        'check': lambda new, old: old is None or new < old,
         'get': lambda res: res['info']['learner']['unique']['policy_loss'],
         'value': None,
     },
     'min_policy_entropy': {
-        'check': lambda new, old: old is None or new <= old,
+        'check': lambda new, old: old is None or new < old,
         'get': lambda res: res['info']['learner']['unique']['policy_entropy'],
         'value': None,
     },
     'max_policy_reward_min': {
-        'check': lambda new, old: old is None or new >= old,
-        'get': lambda res: res['policy_reward_min']['unique'],
+        'check': lambda new, old: old is None or new > old,
+        'get': lambda res: res['evaluation']['policy_reward_min']['unique'],
         'value': None,
     },
     'max_policy_reward_mean': {
-        'check': lambda new, old: old is None or new >= old,
-        'get': lambda res: res['policy_reward_mean']['unique'],
+        'check': lambda new, old: old is None or new > old,
+        'get': lambda res: res['evaluation']['policy_reward_mean']['unique'],
         'value': None,
     },
     'max_arrival_mean': {
-        'check': lambda new, old: old is None or new >= old,
-        'get': lambda res: res['custom_metrics']['episode_average_arrival_mean'],
+        'check': lambda new, old: old is None or new > old,
+        'get': lambda res: res['evaluation']['custom_metrics']['episode_average_arrival_mean'],
         'value': None,
     },
     'max_arrival_min': {
-        'check': lambda new, old: old is None or new >= old,
-        'get': lambda res: res['custom_metrics']['episode_average_arrival_min'],
+        'check': lambda new, old: old is None or new > old,
+        'get': lambda res: res['evaluation']['custom_metrics']['episode_average_arrival_min'],
         'value': None,
     },
     'max_episode_reward_mean': {
-        'check': lambda new, old: old is None or new >= old,
-        'get': lambda res: res['episode_reward_mean'],
+        'check': lambda new, old: old is None or new > old,
+        'get': lambda res: res['evaluation']['episode_reward_mean'],
         'value': None,
     },
 }
@@ -143,17 +154,20 @@ def results_handler(options):
     best_checkpoint_dir = os.path.join(output_dir, 'best_checkpoints')
     metrics_dir = os.path.join(output_dir, 'metrics')
     debug_dir = os.path.join(output_dir, 'debug')
+    eval_dir = os.path.join(output_dir, 'eval')
     if not os.path.exists(output_dir):
         os.makedirs(metrics_dir)
         os.makedirs(checkpoint_dir)
         for metric in CHECKPOINT_METRICS:
             os.makedirs(os.path.join(best_checkpoint_dir, metric))
         os.makedirs(debug_dir)
+        os.makedirs(eval_dir)
     metrics_dir = os.path.abspath(metrics_dir)
     checkpoint_dir = os.path.abspath(checkpoint_dir)
     best_checkpoint_dir = os.path.abspath(best_checkpoint_dir)
     debug_dir = os.path.abspath(debug_dir)
-    return metrics_dir, checkpoint_dir, best_checkpoint_dir, debug_dir
+    eval_dir = os.path.abspath(eval_dir)
+    return metrics_dir, checkpoint_dir, best_checkpoint_dir, debug_dir, eval_dir
 
 def get_last_checkpoint(checkpoint_dir):
     """ Return the newest available checkpoint, or None. """
@@ -173,12 +187,21 @@ def get_last_checkpoint(checkpoint_dir):
 
 ####################################################################################################
 
+COMPLETE = [
+    'episode_reward_max', 'episode_reward_min', 'episode_reward_mean', 'episode_len_mean',
+    'episodes_this_iter', 'policy_reward_min', 'policy_reward_max', 'policy_reward_mean',
+    'custom_metrics', 'hist_stats', 'sampler_perf', 'off_policy_estimator',
+    'num_healthy_workers', 'timesteps_total', 'timers', 'info', 'done', 'episodes_total',
+    'training_iteration', 'experiment_id', 'date', 'timestamp', 'time_this_iter_s',
+    'time_total_s', 'pid', 'hostname', 'node_ip', 'config', 'time_since_restore',
+    'timesteps_since_restore', 'iterations_since_restore', 'perf',
+]
+
 SELECTION = [
-    'episode_reward_mean', 'episodes_this_iter', 'timesteps_this_iter',
-    'sumo_steps_this_iter', 'environment_steps_this_iter', 'rewards',
-    'episode_gtt_mean', 'episode_gtt_max', 'episode_gtt_min', 'timesteps_total',
-    'episodes_total', 'training_iteration', 'experiment_id', 'date', 'timestamp',
-    'time_this_iter_s', 'time_total_s', 'episode_elapsed_time_mean',
+    'episode_len_mean', 'episodes_this_iter', 'episodes_total',
+    'policy_reward_min', 'policy_reward_max', 'policy_reward_mean',
+    'timesteps_total', 'training_iteration', 'experiment_id', 'date', 'timestamp',
+    'time_since_restore', 'timesteps_since_restore', 'iterations_since_restore',
 ]
 
 def print_selected_results(dictionary, keys):
@@ -217,12 +240,12 @@ def _main():
     print(ARGS)
 
     # Results
-    metrics_dir, checkpoint_dir, best_checkpoint_dir, debug_dir = results_handler(ARGS)
+    metrics_dir, checkpoint_dir, best_checkpoint_dir, debug_dir, eval_dir = results_handler(ARGS)
 
     # Persuasive A3C Algorithm.
     policy_class = persuasivea3c.PersuasiveA3CTFPolicy
     policy_conf = persuasive_a3c_conf(
-        ARGS.rollout_size, debug_dir, ARGS.alpha, ARGS.gamma)
+        ARGS.rollout_size, debug_dir, eval_dir, ARGS.alpha, ARGS.gamma)
 
     # Load default Scenario configuration
     experiment_config = load_json_file(ARGS.config)
@@ -267,7 +290,7 @@ def _main():
         log_dir = os.path.join(os.path.normpath(ARGS.dir), 'logs')
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
-        return UnifiedLogger(config, log_dir) # loggers = None) >> Default loggers
+        return UnifiedLogger(config, log_dir, loggers=[JsonLogger]) # loggers = None) >> Default loggers
 
     def dblogger_logger_creator(config):
         """
@@ -299,22 +322,27 @@ def _main():
     while counter < ARGS.training_iterations:
         # Do one training step.
         result = trainer.train()
-        # pprint(result)
         checkpoint = trainer.save(checkpoint_dir)
         logger.info('Checkpoint saved in %s', checkpoint)
-        counter = result['training_iteration']
+        counter = result['iterations_since_restore']
+        # counter = result['training_iteration']
         # steps += result['info']['num_steps_trained']
         # steps += result['timesteps_this_iter']
         final_result = result
-
+        print_selected_results(result, SELECTION)
+        # pprint(result['evaluation'])
         ############################################################################################
         changes = False
         for metric in CHECKPOINT_METRICS:
-            changes = True
             old = CURRENT_METRICS[metric]['value']
             new = CURRENT_METRICS[metric]['get'](result)
+            # if np.isnan(new):
+            #     pprint(result['evaluation'])
+            #     raise Exception(metric, old, new)
             if CURRENT_METRICS[metric]['check'](new, old):
                 # Save the "best" checkout
+                if metric in STOPPING_METRICS:
+                    changes = True
                 CURRENT_METRICS[metric]['value'] = new
                 current_checkpoint = trainer.save(os.path.join(best_checkpoint_dir, metric))
                 current_info_file = os.path.join(best_checkpoint_dir, metric, 'info.json')
@@ -327,14 +355,19 @@ def _main():
                             metric, new, old, current_checkpoint)
             else:
                 logger.info('UNCHANGED %s ---> Best: %.2f - New: %.2f', metric, old, new)
-        if not changes:
+        if changes:
+            unchanged_window = 0
+        else:
             unchanged_window += 1
-        if unchanged_window >= 10:
-            logger.info('Nothing has changed for the last %d training runs.', unchanged_window)
-            break
+            logger.info(
+                'Nothing has changed for the last %d training runs in the monitored metrics [%s].',
+                unchanged_window, str(STOPPING_METRICS))
+        # if unchanged_window >= 10:
+        #     break
         ############################################################################################
 
-    print_selected_results(final_result, SELECTION)
+    pprint(final_result)
+    # print_selected_results(final_result, SELECTION)
     # print_policy_by_agent(final_result['policies'])
 
 if __name__ == '__main__':
@@ -346,7 +379,7 @@ if __name__ == '__main__':
     ## ========================              PROFILER              ======================== ##
     try:
         _main()
-    except Exception: # traci.exceptions.TraCIException:
+    except Exception: # traci.exceptions.TraCIException: libsumo.libsumo.TraCIException:
         ret = 666
         EXC_TYPE, EXC_VALUE, EXC_TRACEBACK = sys.exc_info()
         traceback.print_exception(EXC_TYPE, EXC_VALUE, EXC_TRACEBACK, file=sys.stdout)
