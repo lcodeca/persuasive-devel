@@ -11,6 +11,7 @@ import io
 import json
 import logging
 import pstats
+import shutil
 import sys
 import traceback
 
@@ -84,16 +85,18 @@ def load_json_file(json_file):
 ####################################################################################################
 
 CHECKPOINT_METRICS = [
-    'max_episode_reward_mean', # this is cumulative value
+    # 'max_episode_reward_mean', # this is cumulative value
     'min_policy_loss', 'min_policy_entropy',
     'max_policy_reward_min', 'max_policy_reward_mean', # this is a unique value
     'max_arrival_mean', 'max_arrival_min',
+    'min_wait_mean', 'min_wait_min',
 ]
 
 STOPPING_METRICS = [
-    'max_episode_reward_mean', # this is cumulative value
+    # 'max_episode_reward_mean', # this is cumulative value
     'max_policy_reward_min', 'max_policy_reward_mean', # this is a unique value
     'max_arrival_mean', 'max_arrival_min',
+    'min_wait_mean', 'min_wait_min',
 ]
 
 CURRENT_METRICS = {
@@ -127,12 +130,28 @@ CURRENT_METRICS = {
         'get': lambda res: res['evaluation']['custom_metrics']['episode_average_arrival_min'],
         'value': None,
     },
-    'max_episode_reward_mean': {
-        'check': lambda new, old: old is None or new > old,
-        'get': lambda res: res['evaluation']['episode_reward_mean'],
+    'min_wait_mean': {
+        'check': lambda new, old: old is None or new < old,
+        'get': lambda res: abs(res['evaluation']['custom_metrics']['episode_average_wait_min']),
         'value': None,
     },
+    'min_wait_min': {
+        'check': lambda new, old: old is None or new < old,
+        'get': lambda res: abs(res['evaluation']['custom_metrics']['episode_average_wait_min']),
+        'value': None,
+    },
+    # 'max_episode_reward_mean': {
+    #     'check': lambda new, old: old is None or new > old,
+    #     'get': lambda res: res['evaluation']['episode_reward_mean'],
+    #     'value': None,
+    # },
 }
+
+def cleanup(checkpoint_dir):
+    """ Remove all the previous checkpoints from the directory. """
+    shutil.rmtree(checkpoint_dir)
+    os.makedirs(checkpoint_dir)
+    return True
 
 def get_last_best_of(checkpoint_dir):
     """ Return the info from the checkpoint directory, or None. """
@@ -344,6 +363,7 @@ def _main():
                 if metric in STOPPING_METRICS:
                     changes = True
                 CURRENT_METRICS[metric]['value'] = new
+                cleanup(os.path.join(best_checkpoint_dir, metric))
                 current_checkpoint = trainer.save(os.path.join(best_checkpoint_dir, metric))
                 current_info_file = os.path.join(best_checkpoint_dir, metric, 'info.json')
                 current_value = {'value': str(new)}
