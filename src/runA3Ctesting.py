@@ -20,8 +20,8 @@ from ray.tune.logger import UnifiedLogger
 from utils.logger import DBLogger
 
 from configs.a3c_conf import persuasive_a3c_conf
-from learning import persuasivea3c
-from environments import persuasivedeepmarlenv
+from learning.a3c import persuasivea3c
+from environments.deeprl import persuasivedeepmarlenv
 
 ####################################################################################################
 
@@ -52,6 +52,7 @@ def argument_parser():
 
 ARGS = argument_parser()
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.FileHandler('runA3Ctesting.log'))
 logger.setLevel(logging.INFO)
 
 ####################################################################################################

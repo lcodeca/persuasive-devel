@@ -5,13 +5,13 @@
 from pprint import pprint
 
 import ray
-from ray.rllib.evaluation.metrics import collect_episodes, summarize_episodes
+from ray.rllib.evaluation.metrics import collect_episodes, collect_metrics, summarize_episodes
 from ray.rllib.models import ModelCatalog
 
-from learning.persuasivea3c import DEFAULT_CONFIG, PersuasiveCallbacks
-from learning.persuasivelstm import RNNModel
-from learning.persuasiveactiondistribution import PersuasiveActionDistribution
-from learning.persuasivestochasticsampling import PersuasiveStochasticSampling
+from learning.a3c.persuasivea3c import DEFAULT_CONFIG, PersuasiveCallbacks
+from learning.a3c.persuasivelstm import RNNModel
+from learning.a3c.persuasiveactiondistribution import PersuasiveActionDistribution
+from learning.a3c.persuasivestochasticsampling import PersuasiveStochasticSampling
 
 def custom_eval_function(trainer, eval_workers):
     """Example of a custom evaluation function.
@@ -21,26 +21,35 @@ def custom_eval_function(trainer, eval_workers):
     Returns:
         metrics (dict): evaluation metrics dict.
     """
-    for i in range(1):
-        print("Custom evaluation round", i)
+
+    print('\n\n\n\n custom_eval_function \n\n\n\n')
+    # We configured 1 local eval workers in the training config.
+    worker = eval_workers.local_worker()
+    # worker = eval_workers.remote_workers()
+    # Reset the worker environment.
+    worker.foreach_env(lambda env: env.reset())
+
+    for i in range(2):
+        print('\n\n\n\n Custom evaluation round {} \n\n\n\n'.format(i))
         # Calling .sample() runs exactly one episode per worker due to how the
         # eval workers are configured.
-        ray.get([w.sample.remote() for w in eval_workers.remote_workers()])
+        ray.get([w.sample() for w in eval_workers.local_workers()])
 
     # Collect the accumulated episodes on the workers, and then summarize the
     # episode stats into a metrics dict.
-    episodes, _ = collect_episodes(
-        remote_workers=eval_workers.remote_workers(), timeout_seconds=99999)
+    # episodes, _ = collect_episodes(
+    #     remote_workers=eval_workers.remote_workers(), timeout_seconds=99999)
     # You can compute metrics from the episodes manually, or use the
     # convenient `summarize_episodes()` utility:
-    metrics = summarize_episodes(episodes)
+    # metrics = summarize_episodes(episodes)
     # Note that the above two statements are the equivalent of:
-    # metrics = collect_metrics(eval_workers.local_worker(),
-    #                           eval_workers.remote_workers())
+    metrics = collect_metrics(eval_workers.local_worker(),
+                              eval_workers.remote_workers())
 
     # You can also put custom values in the metrics dict.
-    metrics["foo"] = 1
+    print('\n\n\n\n')
     pprint(metrics)
+    print('\n\n\n\n')
     return metrics
 
 def persuasive_a3c_conf(rollout_size=10,
@@ -84,13 +93,7 @@ def persuasive_a3c_conf(rollout_size=10,
     # which is then passed to SGD.
     custom_configuration['train_batch_size'] = rollout_size
 
-    # === Exploration Settings ===
-    custom_configuration['explore'] = True
-    # https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/utils/exploration/gaussian_noise.py
-    # custom_configuration['exploration_config']['type'] = 'GaussianNoise' # Impossible to use.
-
-    # https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/utils/exploration/epsilon_greedy.py
-    # custom_configuration['exploration_config']['type'] = 'EpsilonGreedy'
+    # === Exploration Settings ===None'
     # custom_configuration['exploration_config']['initial_epsilon'] = 1.0
     # custom_configuration['exploration_config']['final_epsilon'] = 0.0001,
 
@@ -149,7 +152,7 @@ def persuasive_a3c_conf(rollout_size=10,
 
     # Number of episodes to run per evaluation period. If using multiple
     # evaluation workers, we will run at least this many episodes total.
-    custom_configuration['evaluation_num_episodes'] = 5
+    custom_configuration['evaluation_num_episodes'] = 1
 
     # Internal flag that is set to True for evaluation workers.
     # DEFAUTL: 'in_evaluation': False,
@@ -171,13 +174,13 @@ def persuasive_a3c_conf(rollout_size=10,
     # process. If you increase this, it will increase the Ray resource usage
     # of the trainer since evaluation workers are created separately from
     # rollout workers.
-    custom_configuration['evaluation_num_workers'] = 1
+    custom_configuration['evaluation_num_workers'] = 0
 
     # Customize the evaluation method. This must be a function of signature
     # (trainer: Trainer, eval_workers: WorkerSet) -> metrics: dict. See the
     # Trainer._evaluate() method to see the default implementation. The
     # trainer guarantees all eval workers have the latest policy state before
     # this function is called.
-    custom_configuration['custom_eval_function'] = None
+    custom_configuration['custom_eval_function'] = custom_eval_function
 
     return custom_configuration
