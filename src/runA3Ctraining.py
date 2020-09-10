@@ -25,8 +25,8 @@ from ray.tune.logger import JsonLogger, UnifiedLogger
 from utils.logger import DBLogger
 
 from configs.a3c_conf import persuasive_a3c_conf
-from learning import persuasivea3c
-from environments import persuasivedeepmarlenv
+from learning.a3c import persuasivea3c
+from environments.deeprl import deepmarlenvironment
 
 ####################################################################################################
 
@@ -72,7 +72,7 @@ def argument_parser():
 
 ARGS = argument_parser()
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.FileHandler('learning.log'))
+logger.addHandler(logging.FileHandler('runA3Ctraining.log'))
 logger.setLevel(logging.INFO)
 
 ####################################################################################################
@@ -256,7 +256,7 @@ def print_sas_sequence(sequence):
 def _main():
     """ Training loop """
     # Args
-    print(ARGS)
+    logger.info('Arguments: %s', str(ARGS))
 
     # Results
     metrics_dir, checkpoint_dir, best_checkpoint_dir, debug_dir, eval_dir = results_handler(ARGS)
@@ -274,18 +274,17 @@ def _main():
     ray.init()
 
     # Associate the agents with something
-    agent_init = load_json_file(experiment_config['agents_init_file'])
     env_config = {
         'metrics_dir': metrics_dir,
         'checkpoint_dir': checkpoint_dir,
-        'agent_init': agent_init,
+        'agent_init': load_json_file(experiment_config['agents_init_file_training']),
         'scenario_config': experiment_config['marl_env_config'],
     }
     marl_env = None
     if ARGS.env == 'MARL':
-        ray.tune.registry.register_env('marl_env', persuasivedeepmarlenv.env_creator)
-        marl_env = persuasivedeepmarlenv.PersuasiveDeepMARLEnv(env_config)
-        # marl_env = persuasivedeepmarlenv.PersuasiveDeepMARLEnv.remote(env_config)
+        # ray.tune.registry.register_env('marl_env', deepmarlenvironment.env_creator)
+        marl_env = deepmarlenvironment.PersuasiveDeepMARLEnv(env_config)
+        # marl_env = deepmarlenvironment.PersuasiveDeepMARLEnv.remote(env_config)
     else:
         raise Exception('Unknown environment %s' % ARGS.env)
 
@@ -299,7 +298,15 @@ def _main():
     policy_conf['multiagent']['policies'] = policies
     policy_conf['multiagent']['policy_mapping_fn'] = lambda agent_id: 'unique'
     policy_conf['env_config'] = env_config
-    pprint(policy_conf)
+    policy_conf['evaluation_config']['env_config'] = {
+        'metrics_dir': metrics_dir,
+        'checkpoint_dir': checkpoint_dir,
+        'agent_init': load_json_file(experiment_config['agents_init_file_evaluation']),
+        'scenario_config': experiment_config['marl_env_config'],
+    }
+    marl_env.simulation.end_simulation()
+    del marl_env
+    logger.info('Configuration: \n%s', pformat(policy_conf))
 
     def default_logger_creator(config):
         """
@@ -309,7 +316,7 @@ def _main():
         log_dir = os.path.join(os.path.normpath(ARGS.dir), 'logs')
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
-        return UnifiedLogger(config, log_dir, loggers=[JsonLogger]) # loggers = None) >> Default loggers
+        return UnifiedLogger(config, log_dir, loggers=[JsonLogger])
 
     def dblogger_logger_creator(config):
         """
@@ -322,7 +329,8 @@ def _main():
         return UnifiedLogger(config, log_dir, loggers=[DBLogger])
 
     trainer = persuasivea3c.PersuasiveA3CTrainer(
-        env='marl_env', config=policy_conf, logger_creator=default_logger_creator)
+        env=deepmarlenvironment.PersuasiveDeepMARLEnv, #env='marl_env',
+        config=policy_conf, logger_creator=default_logger_creator)
 
     last_checkpoint = get_last_checkpoint(checkpoint_dir)
     if last_checkpoint is not None:
