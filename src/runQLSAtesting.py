@@ -26,9 +26,9 @@ from utils.logger import DBLogger
 
 from configs import qlearning_conf, ppo_conf, a3c_conf
 
-from environments import marlenvironment, marlenvironmentagentscoop, marlenvironmentlatereward
+from environments.rl import marlenvironment, marlenvironmentagentscoop, marlenvironmentlatereward
 
-import learning.qlearningstandalonetrainer as QLStandAlone
+import learning.ql.qlearningstandalonetrainer as QLStandAlone
 
 ####################################################################################################
 
@@ -61,19 +61,20 @@ def argument_parser():
     return parser.parse_args()
 
 ARGS = argument_parser()
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.FileHandler('runQLSAtraining.log'))
+logger.setLevel(logging.INFO)
 
 ####################################################################################################
 
 def load_json_file(json_file):
     """ Loads a JSON file. """
-    LOGGER.debug('Loading %s.', json_file)
+    logger.debug('Loading %s.', json_file)
     return json.load(open(json_file))
 
 def results_handler(options):
     """ Generate (or retrieve) the results folder for the experiment. """
-    LOGGER.debug('Generate (or retrieve) the results folder for the experiment.')
+    logger.debug('Generate (or retrieve) the results folder for the experiment.')
     output_dir = os.path.normpath(options.dir)
     checkpoint_dir = os.path.join(output_dir, 'checkpoints')
     metrics_dir = os.path.join(output_dir, 'metrics')
@@ -89,13 +90,13 @@ def results_handler(options):
 
 def get_target_checkpoint(checkpoint_dir):
     """ Return target checkpoint, or None. """
-    LOGGER.debug('Return the target checkpoint, or None.')
+    logger.debug('Return the target checkpoint, or None.')
     if not os.path.isdir(checkpoint_dir):
         return None
     for filename in os.listdir(checkpoint_dir):
         if '.' in filename:
             continue
-        LOGGER.info('Checkpoint: %s', os.path.join(checkpoint_dir, filename))
+        logger.info('Checkpoint: %s', os.path.join(checkpoint_dir, filename))
         return os.path.join(checkpoint_dir, filename)
     return None
 
@@ -112,29 +113,29 @@ SELECTION = [
 def print_selected_results(dictionary, keys):
     for key, value in dictionary.items():
         if key in keys:
-            LOGGER.info(' %s: %s', key, pformat(value, depth=None, compact=True))
+            logger.info(' %s: %s', key, pformat(value, depth=None, compact=True))
 
 def print_policy_by_agent(policies):
     for agent, policy in policies.items():
-        LOGGER.debug('[policies] %s: \n%s', agent, pformat(policy.keys(), depth=None, compact=True))
+        logger.debug('[policies] %s: \n%s', agent, pformat(policy.keys(), depth=None, compact=True))
         keys = ['episodes', 'state', 'qtable', 'max-qvalue', 'best-action',
                 'state-action-counter', 'state-action-reward-mean']
         for key, value in policy.items():
             if key in keys:
-                LOGGER.info('-> %s: \n%s', key, pformat(value, depth=None, compact=True))
+                logger.info('-> %s: \n%s', key, pformat(value, depth=None, compact=True))
         if 'stats' in policy and 'sequence' in policy['stats']:
-            LOGGER.info('Sequence of state-action-state in this checkout.')
+            logger.info('Sequence of state-action-state in this checkout.')
             print_sas_sequence(policy['stats']['sequence'])
 
 def print_sas_sequence(sequence):
     for seq, episode in enumerate(sequence):
-        LOGGER.info('Sequence of state-action-state from episode %d.', seq)
+        logger.info('Sequence of state-action-state from episode %d.', seq)
         before = None
         for state0, action, state1, reward in episode:
             if state0 == before:
-                LOGGER.info('A(%s) --> S1(%s) R[%s]', action, state1, reward)
+                logger.info('A(%s) --> S1(%s) R[%s]', action, state1, reward)
             else:
-                LOGGER.info('S0(%s) --> A(%s) --> S1(%s) R[%s]', state0, action, state1, reward)
+                logger.info('S0(%s) --> A(%s) --> S1(%s) R[%s]', state0, action, state1, reward)
             before = state1
 
 ####################################################################################################
@@ -142,7 +143,7 @@ def print_sas_sequence(sequence):
 def _main():
     """ Testing loop """
     # Args
-    print(ARGS)
+    logger.info('Arguments: %s', str(ARGS))
 
     # Results
     metrics_dir, checkpoint_dir, debug_dir = results_handler(ARGS)
@@ -211,6 +212,7 @@ def _main():
         'policy_mapping_fn': lambda agent_id: agent_id,
     }
     policy_conf['env_config'] = env_config
+    logger.info('Configuration: \n%s', pformat(policy_conf))
 
     def default_logger_creator(config):
         """
@@ -249,7 +251,7 @@ def _main():
 
     target_checkpoint = get_target_checkpoint(ARGS.target_checkpoint)
     if target_checkpoint is not None:
-        LOGGER.info('[Trainer:main] Restoring checkpoint: %s', target_checkpoint)
+        logger.info('[Trainer:main] Restoring checkpoint: %s', target_checkpoint)
         trainer.restore(target_checkpoint)
     else:
         raise Exception('Checkpoint {} does not exist.'.format(ARGS.target_checkpoint))
@@ -261,7 +263,7 @@ def _main():
         # Do one step.
         result = trainer.train()
         checkpoint = trainer.save(checkpoint_dir)
-        LOGGER.info('[Trainer:main] Checkpoint saved in %s', checkpoint)
+        logger.info('[Trainer:main] Checkpoint saved in %s', checkpoint)
         # steps += result['info']['num_steps_trained']
         steps += result['timesteps_this_iter'] # is related to 'timesteps_total' that is the same
                                                # as result['info']['num_steps_sampled']
@@ -290,6 +292,6 @@ if __name__ == '__main__':
             profiler.disable()
             results = io.StringIO()
             pstats.Stats(profiler, stream=results).sort_stats('cumulative').print_stats(50)
-            LOGGER.info('Profiler: \n%s', results.getvalue())
+            logger.info('Profiler: \n%s', results.getvalue())
         ## ========================          PROFILER              ======================== ##
         sys.exit(ret)

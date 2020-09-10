@@ -8,7 +8,7 @@ import sys
 
 import numpy as np
 
-from environments.marlenvironment import PersuasiveMultiAgentEnv
+from environments.rl.marlenvironment import PersuasiveMultiAgentEnv
 
 # """ Import SUMO library """
 if 'SUMO_HOME' in os.environ:

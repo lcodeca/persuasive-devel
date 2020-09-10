@@ -20,8 +20,10 @@ from rllibsumoutils.sumoutils import SUMOUtils, sumo_default_config
 # """ Import SUMO library """
 if 'SUMO_HOME' in os.environ:
     sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
-    from traci.exceptions import TraCIException
+    import traci
+    import libsumo
     import traci.constants as tc
+    import sumolib
 else:
     sys.exit("please declare environment variable 'SUMO_HOME'")
 
@@ -30,6 +32,7 @@ else:
 DEBUGGER = False
 logging.basicConfig()
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.FileHandler('{}.log'.format(__name__)))
 logger.setLevel(logging.INFO)
 
 ####################################################################################################
@@ -165,7 +168,7 @@ class SUMOModeAgent(object):
                 routingMode=1)
             if not handler.is_valid_route(mode, route):
                 route = None
-        except TraCIException:
+        except (traci.exceptions.TraCIException, libsumo.libsumo.TraCIException):
             route = None
 
         if route:
@@ -196,7 +199,8 @@ class SUMOModeAgent(object):
                         veh_counter += 1
                     handler.traci_handler.person.appendStage(self.agent_id, stage)
                 return True
-            except TraCIException:
+            except (traci.exceptions.TraCIException, libsumo.libsumo.TraCIException) as exception:
+                logger.error('%s', str(exception))
                 self.chosen_mode = None
                 self.chosen_mode_error = 'TraCIException for mode {}'.format(mode)
                 self.cost = float('NaN')
@@ -284,6 +288,9 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         # SUMO Connector
         self.simulation = None
 
+        # SUMO Network =
+        self.sumo_net = sumolib.net.readNet(config['scenario_config']['misc']['sumo_net_file'])
+
         # Agent initialization
         self.agents_init_list = dict()
         self._config_from_agent_init()
@@ -298,7 +305,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         self.episodes = 0
         self._edges_to_int = dict()
         self._ints_to_edge = dict()
-        edges = self._load_edges_from_file(config['scenario_config']['misc']['sumo_net_file'])
+        edges = self._load_relevant_edges()
         for pos, edge in enumerate(edges):
             self._edges_to_int[edge] = pos
             self._ints_to_edge[pos] = edge
@@ -323,21 +330,13 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
             self.agents[agent] = SUMOModeAgent(agent_config)
         self.waiting_agents.sort()
 
-    def _load_edges_from_file(self, filename):
+    def _load_relevant_edges(self):
         """ Returns a list containing all the edges in the SUMO NET file. """
         edges = list()
-        logger.debug('Load from file %s', filename)
-        with open(filename, 'r') as net:
-            for line in net:
-                if '<edge ' not in line:
-                    continue
-                for token in line.split(' '):
-                    if 'id="' not in token:
-                        continue
-                    if ':' in token: # no internal edges
-                        continue
-                    edges.append(token.split('=')[-1].strip('"'))
-                    break
+        for edge in self.sumo_net.getEdges():
+            if ':' in edge.getID(): # no internal edges
+                continue
+            edges.append(edge.getID())
         logger.debug('Loaded %d edges', len(edges))
         return edges
 
@@ -414,7 +413,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
                     logger.debug('SUMO Route: \n%s', pformat(route))
                 if not self.simulation.is_valid_route(mode, route):
                     route = None
-            except TraCIException:
+            except (traci.exceptions.TraCIException, libsumo.libsumo.TraCIException):
                 route = None
             if DEBUGGER:
                 logger.debug('Filtered route: \n%s', pformat(route))
@@ -512,6 +511,9 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
                 return False
         return True
 
+    def sumo_reset(self):
+        return SUMOSimulationWrapper(self._config['scenario_config']['sumo_config'])
+
     def reset(self):
         """ Resets the env and returns observations from ready agents. """
         self.resetted = True
@@ -524,7 +526,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         # Reset the SUMO simulation
         if self.simulation:
             del self.simulation
-        self.simulation = SUMOSimulationWrapper(self._config['scenario_config']['sumo_config'])
+        self.simulation = self.sumo_reset()
 
         # Reset the agents
         self.waiting_agents = list()
@@ -855,7 +857,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
                     origin, destination, modes=_mode, pType=_ptype, vType=_vtype, routingMode=1)
                 if not self.simulation.is_valid_route(mode, route):
                     route = None
-            except TraCIException:
+            except (traci.exceptions.TraCIException, libsumo.libsumo.TraCIException):
                 route = None
             if route:
                 ett.append((float(self.simulation.cost_from_route(route)), mode))

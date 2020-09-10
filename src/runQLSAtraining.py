@@ -23,11 +23,11 @@ from utils.logger import DBLogger
 
 from configs import qlearning_conf
 
-from environments import marlenvironment, marlenvironmentagentscoop, marlenvironmentlatereward
+from environments.rl import marlenvironment, marlenvironmentagentscoop, marlenvironmentlatereward
 
-import learning.qlearningstandalonetrainer as QLStandAlone
-import learning.qlearningeligibilitytraces as QLETStandAlone
-import learning.pdegreedyqlearningwithet as PDEGQLETStandAlone
+import learning.ql.qlearningstandalonetrainer as QLStandAlone
+import learning.ql.qlearningeligibilitytraces as QLETStandAlone
+import learning.ql.pdegreedyqlearningwithet as PDEGQLETStandAlone
 
 ####################################################################################################
 
@@ -81,6 +81,9 @@ def argument_parser():
     return parser.parse_args()
 
 ARGS = argument_parser()
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.FileHandler('runQLSAtraining.log'))
+logger.setLevel(logging.INFO)
 
 ####################################################################################################
 
@@ -164,7 +167,7 @@ def print_sas_sequence(sequence):
 def _main():
     """ Training loop """
     # Args
-    print(ARGS)
+    logger.info('Arguments: %s', str(ARGS))
 
     # Results
     metrics_dir, checkpoint_dir, debug_dir = results_handler(ARGS)
@@ -256,6 +259,7 @@ def _main():
         'policy_mapping_fn': lambda agent_id: agent_id,
     }
     policy_conf['env_config'] = env_config
+    logger.info('Configuration: \n%s', pformat(policy_conf))
 
     def default_logger_creator(config):
         """

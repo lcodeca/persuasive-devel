@@ -11,10 +11,10 @@ from pprint import pformat
 
 from utils.qtable import QTable
 
-from learning.probegreedyqlearning import (ProbabilityDistributionQLearningTrainer,
-                                           ProbabilityDistributionEGreedyQLearningPolicy)
-from learning.qlearningeligibilitytraces import (QLearningEligibilityTracesTrainer,
-                                                 EGreedyQLearningEligibilityTracesPolicy)
+from learning.ql.probegreedyqlearning import (ProbabilityDistributionQLearningTrainer,
+                                              ProbabilityDistributionEGreedyQLearningPolicy)
+from learning.ql.qlearningeligibilitytraces import (QLearningEligibilityTracesTrainer,
+                                                    EGreedyQLearningEligibilityTracesPolicy)
 
 ####################################################################################################
 
