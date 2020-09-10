@@ -10,7 +10,7 @@ from pprint import pformat
 
 from utils.qtable import QTable
 
-from learning.qlearningstandalonetrainer import QLearningTrainer, EGreedyQLearningPolicy
+from learning.ql.qlearningstandalonetrainer import QLearningTrainer, EGreedyQLearningPolicy
 
 ####################################################################################################
 
