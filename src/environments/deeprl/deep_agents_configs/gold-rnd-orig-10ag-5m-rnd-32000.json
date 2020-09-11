@@ -1,0 +1,292 @@
+{
+  "agent_0": {
+    "origin": [
+      1504.396407060939,
+      1376.4638510832733
+    ],
+    "destination": [
+      2190.42,
+      1797.96
+    ],
+    "start": 29066,
+    "expected-arrival-time": [
+      32400,
+      2.0,
+      5.0
+    ],
+    "modes": {
+      "passenger": 1.0,
+      "public": 1.0,
+      "walk": 1.0,
+      "bicycle": 1.0,
+      "ptw": 1.0
+    },
+    "seed": 45479692,
+    "init": [
+      0,
+      0
+    ],
+    "ext-stats": true
+  },
+  "agent_1": {
+    "origin": [
+      2639.5021867754363,
+      457.23714041290975
+    ],
+    "destination": [
+      2190.42,
+      1797.96
+    ],
+    "start": 31387,
+    "expected-arrival-time": [
+      32400,
+      2.0,
+      5.0
+    ],
+    "modes": {
+      "passenger": 1.0,
+      "public": 1.0,
+      "walk": 1.0,
+      "bicycle": 1.0,
+      "ptw": 1.0
+    },
+    "seed": 850738660,
+    "init": [
+      0,
+      0
+    ],
+    "ext-stats": false
+  },
+  "agent_2": {
+    "origin": [
+      2205.6362443888434,
+      2536.277126665365
+    ],
+    "destination": [
+      2190.42,
+      1797.96
+    ],
+    "start": 29071,
+    "expected-arrival-time": [
+      32400,
+      2.0,
+      5.0
+    ],
+    "modes": {
+      "passenger": 1.0,
+      "public": 1.0,
+      "walk": 1.0,
+      "bicycle": 1.0,
+      "ptw": 1.0
+    },
+    "seed": 245078599,
+    "init": [
+      0,
+      0
+    ],
+    "ext-stats": false
+  },
+  "agent_3": {
+    "origin": [
+      1758.4362824251461,
+      1082.467070294163
+    ],
+    "destination": [
+      2190.42,
+      1797.96
+    ],
+    "start": 31697,
+    "expected-arrival-time": [
+      32400,
+      2.0,
+      5.0
+    ],
+    "modes": {
+      "passenger": 1.0,
+      "public": 1.0,
+      "walk": 1.0,
+      "bicycle": 1.0,
+      "ptw": 1.0
+    },
+    "seed": 260773442,
+    "init": [
+      0,
+      0
+    ],
+    "ext-stats": false
+  },
+  "agent_4": {
+    "origin": [
+      3643.19545975981,
+      1537.5821151866726
+    ],
+    "destination": [
+      2190.42,
+      1797.96
+    ],
+    "start": 28067,
+    "expected-arrival-time": [
+      32400,
+      2.0,
+      5.0
+    ],
+    "modes": {
+      "passenger": 1.0,
+      "public": 1.0,
+      "walk": 1.0,
+      "bicycle": 1.0,
+      "ptw": 1.0
+    },
+    "seed": 573094299,
+    "init": [
+      0,
+      0
+    ],
+    "ext-stats": false
+  },
+  "agent_5": {
+    "origin": [
+      1756.9070770180692,
+      1471.4882892967066
+    ],
+    "destination": [
+      2190.42,
+      1797.96
+    ],
+    "start": 29449,
+    "expected-arrival-time": [
+      32400,
+      2.0,
+      5.0
+    ],
+    "modes": {
+      "passenger": 1.0,
+      "public": 1.0,
+      "walk": 1.0,
+      "bicycle": 1.0,
+      "ptw": 1.0
+    },
+    "seed": 850765901,
+    "init": [
+      0,
+      0
+    ],
+    "ext-stats": false
+  },
+  "agent_6": {
+    "origin": [
+      2959.1130369579946,
+      1765.4034046395477
+    ],
+    "destination": [
+      2190.42,
+      1797.96
+    ],
+    "start": 31430,
+    "expected-arrival-time": [
+      32400,
+      2.0,
+      5.0
+    ],
+    "modes": {
+      "passenger": 1.0,
+      "public": 1.0,
+      "walk": 1.0,
+      "bicycle": 1.0,
+      "ptw": 1.0
+    },
+    "seed": 912989513,
+    "init": [
+      0,
+      0
+    ],
+    "ext-stats": false
+  },
+  "agent_7": {
+    "origin": [
+      1871.2121251227504,
+      1373.2608101447513
+    ],
+    "destination": [
+      2190.42,
+      1797.96
+    ],
+    "start": 29147,
+    "expected-arrival-time": [
+      32400,
+      2.0,
+      5.0
+    ],
+    "modes": {
+      "passenger": 1.0,
+      "public": 1.0,
+      "walk": 1.0,
+      "bicycle": 1.0,
+      "ptw": 1.0
+    },
+    "seed": 471796673,
+    "init": [
+      0,
+      0
+    ],
+    "ext-stats": false
+  },
+  "agent_8": {
+    "origin": [
+      2694.7308157336174,
+      2483.2611716141832
+    ],
+    "destination": [
+      2190.42,
+      1797.96
+    ],
+    "start": 30120,
+    "expected-arrival-time": [
+      32400,
+      2.0,
+      5.0
+    ],
+    "modes": {
+      "passenger": 1.0,
+      "public": 1.0,
+      "walk": 1.0,
+      "bicycle": 1.0,
+      "ptw": 1.0
+    },
+    "seed": 211593745,
+    "init": [
+      0,
+      0
+    ],
+    "ext-stats": false
+  },
+  "agent_9": {
+    "origin": [
+      1248.6597831785011,
+      3125.3420118900035
+    ],
+    "destination": [
+      2190.42,
+      1797.96
+    ],
+    "start": 31888,
+    "expected-arrival-time": [
+      32400,
+      2.0,
+      5.0
+    ],
+    "modes": {
+      "passenger": 1.0,
+      "public": 1.0,
+      "walk": 1.0,
+      "bicycle": 1.0,
+      "ptw": 1.0
+    },
+    "seed": 92822069,
+    "init": [
+      0,
+      0
+    ],
+    "ext-stats": false
+  }
+}

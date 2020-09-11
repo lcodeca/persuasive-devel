@@ -121,8 +121,11 @@ class SUMOAgentGenerator(object):
 
     def _generate_agents(self):
         """ Generate the agents """
-        default = json.load(open(self._config.default))
+        main = json.load(open(self._config.default))
         for agent in tqdm(range(self._config.num)):
+            default = deepcopy(main)
+            if agent == 0:
+                default['ext-stats'] = True
             agent = 'agent_{}'.format(agent)
             if self._config.seed > 0:
                 default['seed'] = np.random.randint(0, self._config.seed + 1)
@@ -137,7 +140,7 @@ class SUMOAgentGenerator(object):
                 default['destination'] = self._config.destination
             else:
                 default['destination'] = self._generate_random_coords_in_area()
-            self._agents[agent] = deepcopy(default)
+            self._agents[agent] = default
             self._all_starts.append(self._agents[agent]['start'])
             self._all_origins.append(self._agents[agent]['origin'])
             self._all_destinations.append(self._agents[agent]['destination'])
@@ -146,14 +149,14 @@ class SUMOAgentGenerator(object):
 
     def _save_to_file(self):
         """ Save the agents in a JSON file. """
-        json.dump(self._agents, open(self._config.out, 'w'))
+        json.dump(self._agents, open(self._config.out, 'w'), indent=2)
 
     def _plot_departure(self):
         fig, axes = plt.subplots(ncols=1, nrows=1, figsize=(15, 10))
         axes.hist(np.array(self._all_starts)/3600, 60, density=True, facecolor='g', alpha=0.75)
         axes.set_title('Starting Time [h]')
         axes.grid(True)
-        plt.show()
+        # plt.show()
         fig.savefig('{}.starts.svg'.format(self._config.out),
                     dpi=300, transparent=False, bbox_inches='tight')
 
@@ -167,7 +170,7 @@ class SUMOAgentGenerator(object):
         axes.plot(*convex_hull.exterior.xy)
         axes.set_aspect('equal', 'box')
         axes.grid()
-        plt.show()
+        # plt.show()
         fig.savefig('{}.scatter.{}.svg'.format(self._config.out, tag),
                     dpi=300, transparent=False, bbox_inches='tight')
 
@@ -180,7 +183,7 @@ class SUMOAgentGenerator(object):
         cb.set_label('counts')
         axes.set_aspect('equal', 'box')
         axes.legend()
-        plt.show()
+        # plt.show()
         fig.savefig('{}.hexbin.{}.svg'.format(self._config.out, tag),
                     dpi=300, transparent=False, bbox_inches='tight')
         # matplotlib.pyplot.close('all')
