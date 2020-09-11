@@ -7,8 +7,8 @@ import logging
 import os
 import re
 
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class DBLoggerStats():
     """ Base class used to retrieve data from the DBLogger directory structure. """
@@ -45,7 +45,7 @@ class DBLoggerStats():
         vals = {}
         with open(fname, 'r') as jsonfile:
             vals = json.load(jsonfile)
-            LOGGER.debug('%s ==> %s', fname, str(vals))
+            logger.debug('%s ==> %s', fname, str(vals))
         return float(vals['agent_reward'])
 
     def get_timesteps_this_iter(self, training):
@@ -54,7 +54,7 @@ class DBLoggerStats():
         vals = {}
         with open(fname, 'r') as jsonfile:
             vals = json.load(jsonfile)
-            LOGGER.debug('%s ==> %s', fname, str(vals))
+            logger.debug('%s ==> %s', fname, str(vals))
         return int(vals['timesteps_this_iter'])
 
     def get_learning_sequence(self, training, episode, agent):
@@ -63,7 +63,7 @@ class DBLoggerStats():
         sequence = {}
         with open(fname, 'r') as jsonfile:
             sequence = json.load(jsonfile)
-            LOGGER.debug('%s ==> %s', fname, str(sequence))
+            logger.debug('%s ==> %s', fname, str(sequence))
         return sequence
 
     def get_last_action(self, training, episode, agent):
@@ -72,7 +72,7 @@ class DBLoggerStats():
         vals = {}
         with open(fname, 'r') as jsonfile:
             vals = json.load(jsonfile)
-            LOGGER.debug('%s ==> %s', fname, str(vals))
+            logger.debug('%s ==> %s', fname, str(vals))
         _, action, _, _ = vals[-1]
         return action
 
@@ -82,7 +82,7 @@ class DBLoggerStats():
         vals = {}
         with open(fname, 'r') as jsonfile:
             vals = json.load(jsonfile)
-            LOGGER.debug('%s ==> %s', fname, str(vals))
+            logger.debug('%s ==> %s', fname, str(vals))
         _, _, _, reward = vals[-1]
         return reward
 
@@ -92,7 +92,7 @@ class DBLoggerStats():
         info = {}
         with open(fname, 'r') as jsonfile:
             info = json.load(jsonfile)
-            LOGGER.debug('%s ==> %s', fname, str(info))
+            logger.debug('%s ==> %s', fname, str(info))
         return info
 
     def get_best_actions(self, training, agent):
@@ -101,7 +101,7 @@ class DBLoggerStats():
         best_actions = {}
         with open(fname, 'r') as jsonfile:
             best_actions = json.load(jsonfile)
-            LOGGER.debug('%s ==> %s', fname, str(best_actions))
+            logger.debug('%s ==> %s', fname, str(best_actions))
         return best_actions
 
     def get_state_action_counter(self, training, agent):
@@ -110,7 +110,7 @@ class DBLoggerStats():
         state_action_counter = {}
         with open(fname, 'r') as jsonfile:
             state_action_counter = json.load(jsonfile)
-            LOGGER.debug('%s ==> %s', fname, str(state_action_counter))
+            logger.debug('%s ==> %s', fname, str(state_action_counter))
         return state_action_counter
 
     def get_qtable(self, training, agent):
@@ -119,7 +119,7 @@ class DBLoggerStats():
         qtable = {}
         with open(fname, 'r') as jsonfile:
             qtable = json.load(jsonfile)
-            LOGGER.debug('%s ==> %s', fname, str(qtable))
+            logger.debug('%s ==> %s', fname, str(qtable))
         return qtable
 
 ####################################################################################################

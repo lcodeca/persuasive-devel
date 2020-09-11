@@ -9,9 +9,11 @@ from pprint import pformat
 
 from numpy.random import RandomState
 
+from utils.logger import set_logging
+
 ####################################################################################################
 
-LOGGER = logging.getLogger(__name__)
+logger = set_logging(__name__)
 
 ####################################################################################################
 
@@ -40,9 +42,9 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
 
     def __init__(self, actions, default=0.0, seed=None):
         dict.__init__(self)
-        LOGGER.debug('actions %s', pformat(actions))
-        LOGGER.debug('default %f', default)
-        LOGGER.debug('seed %s', pformat(seed))
+        logger.debug('actions %s', pformat(actions))
+        logger.debug('default %f', default)
+        logger.debug('seed %s', pformat(seed))
         self._data = dict()
         self._default_value = default
         self._default_actions = set(actions)
@@ -100,15 +102,15 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
         Given that the table must be difined for each state, when a state is requested for the first
         time, it is generated, inserted, and returned on-the-fly.
         """
-        LOGGER.debug('Key %s', pformat(key))
+        logger.debug('Key %s', pformat(key))
         actual_key = self._get_actual_key(key)
         if actual_key not in self._data: # generate if necessary
             self._data[actual_key] = self._generate_default_state()
         return self._data[actual_key]
 
     def __setitem__(self, key, value):
-        LOGGER.debug('Key %s', pformat(key))
-        LOGGER.debug('Value %s', pformat(value))
+        logger.debug('Key %s', pformat(key))
+        logger.debug('Value %s', pformat(value))
         actual_key = self._get_actual_key(key)
         if self._default_actions != set(value.keys()):
             raise KeyError('The only actions allowed in the "value" are:', self._default_actions)
@@ -116,33 +118,33 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
 
     def max(self, key):
         """ [always defined] Returns the max among all the q-values associated with the actions. """
-        LOGGER.debug('Key %s', pformat(key))
+        logger.debug('Key %s', pformat(key))
         actual_key = self._get_actual_key(key)
         if actual_key not in self._data: # generate if necessary
-            LOGGER.debug('State created on the fly.')
+            logger.debug('State created on the fly.')
             self._data[actual_key] = self._generate_default_state()
         max_val = None
-        LOGGER.debug('-----------------------------------------')
+        logger.debug('-----------------------------------------')
         for _, value in self._data[actual_key].items():
-            LOGGER.debug('%s', str(value))
+            logger.debug('%s', str(value))
             if max_val is None:
                 max_val = value
             else:
                 max_val = max(value, max_val)
-        LOGGER.debug('============ %s ============', str(max_val))
+        logger.debug('============ %s ============', str(max_val))
         return max_val
 
     def maxactions(self, key):
         """ [always defined] Returns the set of action associated with the maximum value """
-        LOGGER.debug('Key %s', pformat(key))
+        logger.debug('Key %s', pformat(key))
         actual_key = self._get_actual_key(key)
         if actual_key not in self._data: # generate if necessary
             self._data[actual_key] = self._generate_default_state()
         max_val = None
         max_keys = []
         for key, value in self._data[actual_key].items():
-            LOGGER.debug(' ITEM: %s --> %s', str(key), pformat(value))
-            LOGGER.debug(' Before --> max_val: %s - max_keys: %s', str(max_val), pformat(max_keys))
+            logger.debug(' ITEM: %s --> %s', str(key), pformat(value))
+            logger.debug(' Before --> max_val: %s - max_keys: %s', str(max_val), pformat(max_keys))
             if max_val is None:
                 max_val = value
                 max_keys = [key]
@@ -151,8 +153,8 @@ class QTable(dict): # collections.OrderedDict # collections.defaultdict
             elif max_val < value:
                 max_val = value
                 max_keys = [key]
-            LOGGER.debug(' After --> max_val: %s - max_keys: %s', str(max_val), pformat(max_keys))
-        LOGGER.debug('ARGMAX: max_val: %s - max_keys: %s', str(max_val), pformat(max_keys))
+            logger.debug(' After --> max_val: %s - max_keys: %s', str(max_val), pformat(max_keys))
+        logger.debug('ARGMAX: max_val: %s - max_keys: %s', str(max_val), pformat(max_keys))
         return set(max_keys)
 
     def argmax(self, key):

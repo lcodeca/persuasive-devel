@@ -59,11 +59,11 @@ class StatSingleExp(object):
             for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
                 x_coords.append(complete['timesteps_total'])
-                y_coords.append(np.mean(complete['hist_stats']['policy_unique_reward']))
-                min_y.append(min(complete['hist_stats']['policy_unique_reward']))
-                max_y.append(max(complete['hist_stats']['policy_unique_reward']))
-                median_y.append(np.median(complete['hist_stats']['policy_unique_reward']))
-                std_y.append(np.std(complete['hist_stats']['policy_unique_reward']))
+                y_coords.append(np.nanmean(complete['hist_stats']['policy_unique_reward']))
+                min_y.append(np.nanmin(complete['hist_stats']['policy_unique_reward']))
+                max_y.append(np.nanmax(complete['hist_stats']['policy_unique_reward']))
+                median_y.append(np.nanmedian(complete['hist_stats']['policy_unique_reward']))
+                std_y.append(np.nanstd(complete['hist_stats']['policy_unique_reward']))
 
         fig, ax = plt.subplots(figsize=(15, 10))
         ax.errorbar(x_coords, y_coords, yerr=std_y, capsize=5, label='Mean [std]', fmt='-o')
@@ -99,11 +99,11 @@ class StatSingleExp(object):
                 for episode in complete['hist_stats']['info_by_agent']:
                     for info in episode.values():
                         arrivals.append(info['arrival']/3600)
-                y_coords.append(np.mean(arrivals))
-                min_y.append(min(arrivals))
-                max_y.append(max(arrivals))
-                median_y.append(np.median(arrivals))
-                std_y.append(np.std(arrivals))
+                y_coords.append(np.nanmean(arrivals))
+                min_y.append(np.nanmin(arrivals))
+                max_y.append(np.nanmax(arrivals))
+                median_y.append(np.nanmedian(arrivals))
+                std_y.append(np.nanstd(arrivals))
 
         fig, ax = plt.subplots(figsize=(15, 10))
         ax.errorbar(x_coords, y_coords, yerr=std_y, capsize=5, label='Mean [std]', fmt='-o')
@@ -136,11 +136,11 @@ class StatSingleExp(object):
                 for episode in complete['hist_stats']['rewards_by_agent']:
                     for agent_rewards in episode.values():
                         _actions.append(len(agent_rewards))
-                min_y.append(min(_actions))
-                max_y.append(max(_actions))
-                median_y.append(np.median(_actions))
-                mean_y.append(np.mean(_actions))
-                std_y.append(np.std(_actions))
+                min_y.append(np.nanmin(_actions))
+                max_y.append(np.nanmax(_actions))
+                median_y.append(np.nanmedian(_actions))
+                mean_y.append(np.nanmean(_actions))
+                std_y.append(np.nanstd(_actions))
 
         fig, ax = plt.subplots(figsize=(15, 10))
         ax.errorbar(x_coords, mean_y, yerr=std_y, capsize=5, label='Mean [std]', fmt='-o')
@@ -339,28 +339,36 @@ class StatSingleExp(object):
             matplotlib.pyplot.close('all')
             # sys.exit()
 
-    # def additionals_by_agent(self):
-    #     logger.info('Loading %s..', self.input)
-    #     with open(self.input, 'r') as jsonfile:
-    #         episodes = collections.defaultdict(list)
-    #         for row in jsonfile: # enumerate cannot be used due to the size of the file
-    #             complete = json.loads(row)
-    #             for agent, policy in complete['policies'].items():
-    #                 for info_checkpoint in policy['stats']['info']:
-    #                     for info_episode in info_checkpoint:
-    #                         episodes[agent].append(len(episodes[agent])+1)
-    #                         if 'ext' not in  info_episode:
-    #                             continue
-    #                         for mode, values in info_episode['ext'].items():
-    #                             x_coords = list(range(len(values)))
-    #                             fig, ax = plt.subplots(figsize=(15, 10))
-    #                             ax.plot(x_coords, values, label='ETT')
-    #                             ax.set(xlabel='Learning steps', ylabel='Time [s]',
-    #                                    title='ETT variation during an episode.')
-    #                             ax.grid()
-    #                             fig.savefig(
-    #                                 '{}.{}.{}.ett_over_episode_{}.svg'.format(
-    #                                     self.prefix, agent, mode, len(episodes[agent])),
-    #                                 dpi=300, transparent=False, bbox_inches='tight')
-    #                             # plt.show()
-    #                             matplotlib.pyplot.close('all')
+    def additionals_by_agent(self):
+        logger.info('Computing the detailed info for each agent over the episodes.')
+        with open(self.input, 'r') as jsonfile:
+            episodes = collections.defaultdict(list)
+            for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
+                complete = json.loads(row)
+                # pprint(complete)
+                info_by_episode = complete['hist_stats']['info_by_agent']
+                for episode in info_by_episode:
+                    for agent, info_episode in episode.items():
+                        episodes[agent].append(len(episodes[agent])+1)
+                        if 'ext' not in info_episode:
+                            continue
+                        fig, ax = plt.subplots(3, 2, figsize=(15, 10))
+                        fig.suptitle('ETT variation during episode {}'.format(len(episodes[agent])))
+                        grid = {0: (0, 0), 1: (1, 0), 2: (2, 0), 3: (0, 1), 4: (1, 1), 5: (2, 1)}
+                        for pos, (mode, values) in enumerate(info_episode['ext'].items()):
+                            x_coords = list(range(len(values)))
+                            ax[grid[pos][0]][grid[pos][1]].plot(
+                                x_coords, values, '-o', label='{}'.format(mode))
+                            ax[grid[pos][0]][grid[pos][1]].legend()
+                            ax[grid[pos][0]][grid[pos][1]].grid()
+                        ax[2][0].set(xlabel='Learning steps')
+                        ax[2][1].set(xlabel='Learning steps')
+                        ax[0][0].set(ylabel='ETT[s]')
+                        ax[1][0].set(ylabel='ETT[s]')
+                        ax[2][0].set(ylabel='ETT[s]')
+                        # plt.show()
+                        fig.savefig(
+                            '{}.{}.ett_over_episode_{}.svg'.format(
+                                self.prefix, agent, len(episodes[agent])),
+                            dpi=300, transparent=False, bbox_inches='tight')
+                        matplotlib.pyplot.close('all')

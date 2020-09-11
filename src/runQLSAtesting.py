@@ -22,7 +22,7 @@ from ray.rllib.agents.ppo import ppo
 from ray.rllib.agents.a3c import a3c
 
 from ray.tune.logger import UnifiedLogger
-from utils.logger import DBLogger
+from utils.logger import DBLogger, set_logging
 
 from configs import qlearning_conf, ppo_conf, a3c_conf
 
@@ -61,9 +61,7 @@ def argument_parser():
     return parser.parse_args()
 
 ARGS = argument_parser()
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.FileHandler('runQLSAtraining.log'))
-logger.setLevel(logging.INFO)
+logger = set_logging(__name__)
 
 ####################################################################################################
 

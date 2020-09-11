@@ -19,7 +19,7 @@ from pprint import pformat
 import ray
 
 from ray.tune.logger import UnifiedLogger
-from utils.logger import DBLogger
+from utils.logger import DBLogger, set_logging
 
 from configs import qlearning_conf
 
@@ -31,9 +31,7 @@ import learning.ql.pdegreedyqlearningwithet as PDEGQLETStandAlone
 
 ####################################################################################################
 
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARN)
+logger = set_logging(__name__)
 
 ####################################################################################################
 
@@ -81,9 +79,7 @@ def argument_parser():
     return parser.parse_args()
 
 ARGS = argument_parser()
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.FileHandler('runQLSAtraining.log'))
-logger.setLevel(logging.INFO)
+logger = set_logging(runQLSAtraining)
 
 ####################################################################################################
 

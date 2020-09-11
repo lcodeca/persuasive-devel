@@ -8,6 +8,7 @@ import logging
 from pprint import pformat
 
 from utils.qtable import QTable
+from utils.logger import set_logging
 
 from learning.ql.qlearningstandalonetrainer import QLearningTrainer, EGreedyQLearningPolicy
 
@@ -16,9 +17,7 @@ from learning.ql.qlearningstandalonetrainer import QLearningTrainer, EGreedyQLea
 DEBUGGER = False
 PROFILER = False
 
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARN)
+logger = set_logging(__name__)
 
 ####################################################################################################
 #                                             TRAINER
