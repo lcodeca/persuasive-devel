@@ -152,7 +152,7 @@ def persuasive_a3c_conf(rollout_size=10,
 
     # Number of episodes to run per evaluation period. If using multiple
     # evaluation workers, we will run at least this many episodes total.
-    custom_configuration['evaluation_num_episodes'] = 1
+    custom_configuration['evaluation_num_episodes'] = 5
 
     # Internal flag that is set to True for evaluation workers.
     # DEFAUTL: 'in_evaluation': False,
@@ -174,13 +174,13 @@ def persuasive_a3c_conf(rollout_size=10,
     # process. If you increase this, it will increase the Ray resource usage
     # of the trainer since evaluation workers are created separately from
     # rollout workers.
-    custom_configuration['evaluation_num_workers'] = 0
+    custom_configuration['evaluation_num_workers'] = 1
 
     # Customize the evaluation method. This must be a function of signature
     # (trainer: Trainer, eval_workers: WorkerSet) -> metrics: dict. See the
     # Trainer._evaluate() method to see the default implementation. The
     # trainer guarantees all eval workers have the latest policy state before
     # this function is called.
-    custom_configuration['custom_eval_function'] = custom_eval_function
+    custom_configuration['custom_eval_function'] = None #custom_eval_function
 
     return custom_configuration

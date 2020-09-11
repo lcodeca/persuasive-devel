@@ -17,14 +17,15 @@ from ray.rllib.models.torch.recurrent_net import RecurrentNetwork as TorchRNN
 from ray.rllib.utils.annotations import override
 from ray.rllib.utils.framework import try_import_tf, try_import_torch
 
-tf1, tf, tfv = try_import_tf()
-torch, nn = try_import_torch()
+from utils.logger import set_logging
 
 ####################################################################################################
 
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+tf1, tf, tfv = try_import_tf()
+torch, nn = try_import_torch()
+
+logger = set_logging(__name__)
+
 
 ####################################################################################################
 

@@ -17,7 +17,7 @@ from pprint import pformat, pprint
 import ray
 
 from ray.tune.logger import UnifiedLogger
-from utils.logger import DBLogger
+from utils.logger import DBLogger, set_logging
 
 from configs.a3c_conf import persuasive_a3c_conf
 from learning.a3c import persuasivea3c
@@ -51,9 +51,7 @@ def argument_parser():
     return parser.parse_args()
 
 ARGS = argument_parser()
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.FileHandler('runA3Ctesting.log'))
-logger.setLevel(logging.INFO)
+logger = set_logging(__name__)
 
 ####################################################################################################
 
