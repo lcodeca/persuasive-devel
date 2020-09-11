@@ -19,6 +19,8 @@ from environments.rl.marlenvironment import (
     PersuasiveMultiAgentEnv, SUMOModeAgent, SUMOSimulationWrapper)
 from rllibsumoutils.sumoutils import sumo_default_config
 
+from utils.logger import set_logging
+
 # """ Import SUMO library """
 if 'SUMO_HOME' in os.environ:
     sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
@@ -31,10 +33,7 @@ else:
 ####################################################################################################
 
 DEBUGGER = True
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.FileHandler('{}.log'.format(__name__)))
-logger.setLevel(logging.WARN)
+logger = set_logging(__name__)
 
 ####################################################################################################
 
@@ -52,10 +51,15 @@ class DeepSUMOWrapper(SUMOSimulationWrapper):
             Closes the TraCI connections, then reads and process the tripinfo data.
             It requires 'tripinfo_xml_file' and 'tripinfo_xml_schema' configuration parametes set.
         """
-        try:
-            super().process_tripinfo_file()
-        except Exception as exception:
-            logger.error('%s', str(exception))
+        processed = False
+        counter = 0
+        while not processed and counter < 10:
+            try:
+                super().process_tripinfo_file()
+                processed = True
+            except Exception as exception:
+                logger.error('[%d] %s', os.getpid(), str(exception))
+                counter += 1
 
 ####################################################################################################
 
@@ -78,30 +82,63 @@ DEFAULT_AGENT_CONFING = {
 }
 
 class DeepSUMOAgents(SUMOModeAgent):
-    """ """
+    """ SUMO agent that translate x,y coords to edges to be used in the simulation. """
 
     def __init__(self, config, network):
         """ Initialize the environment. """
         super().__init__(config)
         self.origin_x, self.origin_y = self.origin
-        origins = network.getNeighboringEdges(
-            self.origin_x, self.origin_y, r=500,
+        edges = network.getNeighboringEdges(
+            self.origin_x, self.origin_y, r=1000,
             includeJunctions=False, allowFallback=True)
-        distancesAndEdges = sorted([(dist, edge) for edge, dist in origins])
-        dist, self.origin = distancesAndEdges[0]
-        self.origin = self.origin.getID()
-        logger.debug('Origin %.2f, %.2f is %.2f from edge %s',
-                     self.origin_x, self.origin_y, dist, self.origin)
+        self.origin = None
+        for distance, edge in sorted([(dist, edge) for edge, dist in edges]):
+            if edge.allows('pedestrian'):
+                self.origin = edge.getID()
+                if distance > 500:
+                    logger.warning(
+                        '[%s] Origin %.2f, %.2f is %.2f from edge %s',
+                        self.agent_id, self.origin_x, self.origin_y, distance, self.origin)
+                break
+        if self.origin is None:
+            raise Exception('Origin not foud for agent {}'.format(self.agent_id))
 
         self.destination_x, self.destination_y = self.destination
-        destinations = network.getNeighboringEdges(
-            self.destination_x, self.destination_y, r=500,
+        edges = network.getNeighboringEdges(
+            self.destination_x, self.destination_y, r=1000,
             includeJunctions=False, allowFallback=True)
-        distancesAndEdges = sorted([(dist, edge) for edge, dist in destinations])
-        dist, self.destination = distancesAndEdges[0]
-        self.destination = self.destination.getID()
-        logger.debug('Destination %.2f, %.2f is %.2f from edge %s',
-                     self.destination_x, self.destination_y, dist, self.destination)
+        self.destination = None
+        for distance, edge in sorted([(dist, edge) for edge, dist in edges]):
+            if edge.allows('pedestrian'):
+                self.destination = edge.getID()
+                if distance > 500:
+                    logger.warning(
+                        '[%s] Destination %.2f, %.2f is %.2f from edge %s',
+                        self.agent_id, self.destination_x, self.destination_y, distance,
+                        self.destination)
+                break
+        if self.destination is None:
+            raise Exception('Destination not foud for agent {}'.format(self.agent_id))
+
+    def test_agent(self, handler):
+        feasible_plan = False
+        for mode in self.modes:
+            _mode, _ptype, _vtype = handler.get_mode_parameters(mode)
+            route = None
+            try:
+                route = handler.traci_handler.simulation.findIntermodalRoute(
+                    self.origin, self.destination, modes=_mode, pType=_ptype, vType=_vtype,
+                    routingMode=1)
+                if not handler.is_valid_route(mode, route):
+                    route = None
+            except (traci.exceptions.TraCIException, libsumo.libsumo.TraCIException):
+                route = None
+            if route is not None:
+                feasible_plan = True
+        if not feasible_plan:
+            logging.error('No feasible route for agent %s from %s to %s with modes %s.',
+                          self.agent_id, self.origin, self.destination, str(self.modes))
+        return feasible_plan
 
 ####################################################################################################
 
@@ -155,8 +192,7 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
             'top_right_X': config['scenario_config']['misc']['bounding_box'][2],
             'top_right_Y': config['scenario_config']['misc']['bounding_box'][3],
         }
-        # First SUMO Init
-        self.reset()
+        self.tested_agents = False
 
     def _initialize_agents(self):
         self.agents = dict()
@@ -180,13 +216,20 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
     ################################################################################################
 
     def sumo_reset(self):
-        logger.error('PersuasiveDeepMARLEnv.sumo_reset: PID %s', os.getpid())
+        logger.debug('PersuasiveDeepMARLEnv.sumo_reset: PID %s', os.getpid())
         return DeepSUMOWrapper(self._config['scenario_config']['sumo_config'])
 
     def reset(self):
         """ Resets the env and returns observations from ready agents. """
         initial_obs = super().reset()
         self.episode_snapshot = AgentsHistory()
+        if not self.tested_agents:
+            feasible_plans = 0
+            for agent in self.agents.values():
+                if agent.test_agent(self.simulation):
+                    feasible_plans += 1
+            logger.info('%d/%d agents have a feasible plan.', feasible_plans, len(self.agents))
+            self.tested_agents = True
         return initial_obs
 
     def step(self, action_dict):
@@ -252,6 +295,8 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
     def deep_state_flattener(state):
         # Flattening of the dictionary
         deep = [
+            # state['from'],
+            # state['to'],
             state['origin_x'],
             state['origin_y'],
             state['destination_x'],
@@ -295,6 +340,81 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
         logger.debug('[%s] Observation: %s', agent, str(deep_ret))
         return np.array(deep_ret, dtype=np.int64)
 
+    def old_get_obs_space(self, agent):
+        """ Returns the observation space. """
+        parameters = 0
+        parameters += 1                                 # from
+        parameters += 1                                 # to
+        parameters += 1                                 # time-left
+        parameters += len(self.agents[agent].modes)     # ett
+        parameters += len(self.agents[agent].modes)     # usage
+
+        lows = [
+            0,  # from
+            0,  # to
+            0,  # time-left
+        ]
+        lows.extend([-1] * len(self.agents[agent].modes))    # ett
+        lows.extend([-1] * len(self.agents[agent].modes))    # usage
+
+        highs = [
+            len(self._edges_to_int),                                # from
+            len(self._edges_to_int),                                # to
+            self._config['scenario_config']['misc']['max_time'],    # time-left
+        ]
+        highs.extend(                                               # ett
+            [self._config['scenario_config']['misc']['max_time']] *
+            len(self.agents[agent].modes))
+        highs.extend([10] * len(self.agents[agent].modes))          # usage
+
+        print(
+            parameters,
+            lows, len(lows),
+            highs, len(highs),
+        )
+
+        return gym.spaces.Box(
+            low=np.array(lows), high=np.array(highs), dtype=np.int64)
+        # return gym.spaces.Box(low=lows, high=highs, shape=(parameters,), dtype=np.int64)
+
+    def hybrid_get_obs_space(self, agent):
+        """ Returns the observation space. """
+        parameters = 0
+        parameters += 1                                 # from
+        parameters += 1                                 # to
+        parameters += 1                                 # time-left
+        parameters += len(self.agents[agent].modes)     # ett
+        parameters += len(self.agents[agent].modes)     # usage
+
+        lows = [
+            0,  # from
+            0,  # to
+            0,  # time-left
+        ]
+        lows.extend([-1] * len(self.agents[agent].modes))    # ett
+        lows.extend([-1] * len(self.agents[agent].modes))    # usage
+
+        highs = [
+            len(self._edges_to_int),                                            # from
+            len(self._edges_to_int),                                            # to
+            self.discrete_time(                                                 # time-left
+                self._config['scenario_config']['misc']['max_time']),
+        ]
+        highs.extend(                                                           # ett
+            [self.discrete_time(self._config['scenario_config']['misc']['max_time'])] *
+            len(self.agents[agent].modes))
+        highs.extend([len(self.agents)] * len(self.agents[agent].modes))        # usage
+
+        print(
+            parameters,
+            lows, len(lows),
+            highs, len(highs),
+        )
+
+        return gym.spaces.Box(
+            low=np.array(lows), high=np.array(highs), dtype=np.int64)
+        # return gym.spaces.Box(low=lows, high=highs, shape=(parameters,), dtype=np.int64)
+
     def get_obs_space(self, agent):
         """ Returns the observation space. """
         parameters = 0
@@ -329,7 +449,7 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
             len(self.agents[agent].modes))
         highs.extend([len(self.agents)] * len(self.agents[agent].modes)) # usage
 
-        logger.error('State space: [%d] - %s - %s', parameters, str(lows), str(highs))
+        logger.info('State space: [%d] - %s - %s', parameters, str(lows), str(highs))
         return gym.spaces.Box(
             low=np.array(lows), high=np.array(highs), dtype=np.float64)
 
