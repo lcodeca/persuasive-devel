@@ -18,11 +18,12 @@ from ray.rllib.utils.annotations import override
 from ray.rllib.utils.exploration.stochastic_sampling import StochasticSampling
 from ray.rllib.utils.framework import TensorType
 
+
+from utils.logger import set_logging
+
 ####################################################################################################
 
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger = set_logging(__name__)
 
 ####################################################################################################
 

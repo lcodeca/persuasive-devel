@@ -22,7 +22,7 @@ import numpy as np
 import ray
 
 from ray.tune.logger import JsonLogger, UnifiedLogger
-from utils.logger import DBLogger
+from utils.logger import DBLogger, set_logging
 
 from configs.a3c_conf import persuasive_a3c_conf
 from learning.a3c import persuasivea3c
@@ -71,9 +71,7 @@ def argument_parser():
     return parser.parse_args()
 
 ARGS = argument_parser()
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.FileHandler('runA3Ctraining.log'))
-logger.setLevel(logging.INFO)
+logger = set_logging('runA3Ctraining')
 
 ####################################################################################################
 
@@ -282,7 +280,7 @@ def _main():
     }
     marl_env = None
     if ARGS.env == 'MARL':
-        # ray.tune.registry.register_env('marl_env', deepmarlenvironment.env_creator)
+        ray.tune.registry.register_env('marl_env', deepmarlenvironment.env_creator)
         marl_env = deepmarlenvironment.PersuasiveDeepMARLEnv(env_config)
         # marl_env = deepmarlenvironment.PersuasiveDeepMARLEnv.remote(env_config)
     else:
@@ -304,8 +302,6 @@ def _main():
         'agent_init': load_json_file(experiment_config['agents_init_file_evaluation']),
         'scenario_config': experiment_config['marl_env_config'],
     }
-    marl_env.simulation.end_simulation()
-    del marl_env
     logger.info('Configuration: \n%s', pformat(policy_conf))
 
     def default_logger_creator(config):
@@ -329,7 +325,8 @@ def _main():
         return UnifiedLogger(config, log_dir, loggers=[DBLogger])
 
     trainer = persuasivea3c.PersuasiveA3CTrainer(
-        env=deepmarlenvironment.PersuasiveDeepMARLEnv, #env='marl_env',
+        # env=deepmarlenvironment.PersuasiveDeepMARLEnv,
+        env='marl_env',
         config=policy_conf, logger_creator=default_logger_creator)
 
     last_checkpoint = get_last_checkpoint(checkpoint_dir)
@@ -394,8 +391,8 @@ def _main():
         #     break
         ############################################################################################
 
-    pprint(final_result)
-    # print_selected_results(final_result, SELECTION)
+    # pprint(final_result)
+    print_selected_results(final_result, SELECTION)
     # print_policy_by_agent(final_result['policies'])
 
 if __name__ == '__main__':

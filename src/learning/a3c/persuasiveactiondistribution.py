@@ -16,13 +16,13 @@ from ray.rllib.models.tf.tf_action_dist import TFActionDistribution
 from ray.rllib.utils.annotations import override, DeveloperAPI
 from ray.rllib.utils.framework import try_import_tf
 
+from utils.logger import set_logging
+
 ####################################################################################################
 
 tf1, tf, tfv = try_import_tf()
 
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger = set_logging(__name__)
 
 ####################################################################################################
 

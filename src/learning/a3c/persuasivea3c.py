@@ -34,13 +34,13 @@ from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.evaluation import MultiAgentEpisode, RolloutWorker
 from ray.rllib.agents.callbacks import DefaultCallbacks
 
+from utils.logger import set_logging
+
 ####################################################################################################
 
 tf1, tf, tfv = try_import_tf()
 
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARN)
+logger = set_logging(__name__)
 
 ####################################################################################################
 
