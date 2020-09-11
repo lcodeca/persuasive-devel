@@ -17,6 +17,8 @@ import gym
 from ray.rllib.env import MultiAgentEnv
 from rllibsumoutils.sumoutils import SUMOUtils, sumo_default_config
 
+from utils.logger import set_logging
+
 # """ Import SUMO library """
 if 'SUMO_HOME' in os.environ:
     sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
@@ -30,10 +32,7 @@ else:
 ####################################################################################################
 
 DEBUGGER = False
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.FileHandler('{}.log'.format(__name__)))
-logger.setLevel(logging.INFO)
+logger = set_logging(__name__)
 
 ####################################################################################################
 
@@ -137,14 +136,16 @@ class SUMOModeAgent(object):
         self.chosen_mode_error = None
         self.cost = 0.0
         self.ett = 0.0
+        self.inserted = False
 
     def step(self, action, handler):
-        """
-        Implements the logic of each specific action passed as input.
-        It's going to be called as following:
-        for i, action in action_dict.items():
-            obs[i], rew[i], done[i], info[i] = self.agents[i].step(action)
-        """
+        """ Implements the logic of each specific action passed as input. """
+
+        if self.inserted:
+            logger.error('Agent %s has already been inserted in the simulation. [%s]',
+                         self.agent_id, self.__repr__())
+            return True # This never happens..
+
         mode = None
 
         if action == 0:
@@ -152,6 +153,7 @@ class SUMOModeAgent(object):
             self.waited_steps += 1
             return False
         elif action in self.action_to_mode:
+            self.inserted = True
             mode = self.action_to_mode[action]
         else:
             raise NotImplementedError('Action {} is not implemented.'.format(action))
@@ -200,19 +202,22 @@ class SUMOModeAgent(object):
                     handler.traci_handler.person.appendStage(self.agent_id, stage)
                 return True
             except (traci.exceptions.TraCIException, libsumo.libsumo.TraCIException) as exception:
-                logger.error('%s', str(exception))
+                error = str(exception)
+                if 'already exists' in error:
+                    raise Exception(os.getpid(), error)
                 self.chosen_mode = None
                 self.chosen_mode_error = 'TraCIException for mode {}'.format(mode)
                 self.cost = float('NaN')
                 self.ett = float('NaN')
-                logger.error('Route not usable for %s using mode %s', self.agent_id, mode)
+                logger.warning('Route not usable for %s using mode %s [%s]',
+                               self.agent_id, mode, error)
                 return True # wrong decision, paid badly at the end
 
         self.chosen_mode = None
         self.chosen_mode_error = 'Invalid route using mode {}'.format(mode)
         self.cost = float('NaN')
         self.ett = float('NaN')
-        logger.error('Route not found for %s using mode %s', self.agent_id, mode)
+        logger.warning('Route not found for %s using mode %s', self.agent_id, mode)
         return True # wrong decision, paid badly at the end
 
     def reset(self):
@@ -222,6 +227,7 @@ class SUMOModeAgent(object):
         self.chosen_mode_error = None
         self.cost = 0.0
         self.ett = 0.0
+        self.inserted = False
         return self.agent_id, self.start
 
     def __str__(self):
@@ -516,6 +522,7 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
 
     def reset(self):
         """ Resets the env and returns observations from ready agents. """
+        logger.info('Multi-Agents Environment Reset')
         self.resetted = True
         self.environment_steps = 0
         self.episodes += 1

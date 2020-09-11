@@ -9,6 +9,7 @@ import sys
 import numpy as np
 
 from environments.rl.marlenvironment import PersuasiveMultiAgentEnv
+from utils.logger import set_logging
 
 # """ Import SUMO library """
 if 'SUMO_HOME' in os.environ:
@@ -21,9 +22,7 @@ else:
 ####################################################################################################
 
 DEBUGGER = True
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARN)
+logger = set_logging(__name__)
 
 ####################################################################################################
 
