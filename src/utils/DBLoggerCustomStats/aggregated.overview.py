@@ -19,8 +19,8 @@ from tqdm import tqdm
 
 from dbloggerstats import DBLoggerStats
 
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 SMALL_SIZE = 20
 MEDIUM_SIZE = SMALL_SIZE + 4
@@ -69,14 +69,14 @@ def _main():
     statistics = AggregatedOverview(config.dir_tree, config.data, config.window, config.graph)
     statistics.aggregate_data()
     statistics.generate_plot()
-    LOGGER.info('Done')
+    logger.info('Done')
 
     ## ========================              PROFILER              ======================== ##
     if config.profiler:
         profiler.disable()
         results = io.StringIO()
         pstats.Stats(profiler, stream=results).sort_stats('cumulative').print_stats(50)
-        LOGGER.info('Profiler: \n%s', pformat(results.getvalue()))
+        logger.info('Profiler: \n%s', pformat(results.getvalue()))
     ## ========================              PROFILER              ======================== ##
 
 class AggregatedOverview(DBLoggerStats):
@@ -114,7 +114,7 @@ class AggregatedOverview(DBLoggerStats):
             # aggregation
             self.aggregated_dataset['training-folders'] = list()
 
-        LOGGER.debug('Aggregated data structure: \n%s', pformat(self.aggregated_dataset))
+        logger.debug('Aggregated data structure: \n%s', pformat(self.aggregated_dataset))
 
     def _save_satastructure(self):
         """ Saves the datastructure to file. """
@@ -196,7 +196,7 @@ class AggregatedOverview(DBLoggerStats):
 
             self.aggregated_dataset['training-folders'].append(training_run)
 
-        LOGGER.debug('UPDATED aggregated data structure: \n%s', pformat(self.aggregated_dataset))
+        logger.debug('UPDATED aggregated data structure: \n%s', pformat(self.aggregated_dataset))
 
         # save the new dataset into the dataset file
         self._save_satastructure()

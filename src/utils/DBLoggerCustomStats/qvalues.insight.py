@@ -19,8 +19,8 @@ from tqdm import tqdm
 
 from dbloggerstats import DBLoggerStats
 
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 TINY_SIZE = 10
 SMALL_SIZE = 20
@@ -76,14 +76,14 @@ def _main():
     statistics = QValuesInsight(
         config.dir_tree, config.graph, config.training, config.agent, config.last_run)
     statistics.generate_plots()
-    LOGGER.info('Done')
+    logger.info('Done')
 
     ## ========================              PROFILER              ======================== ##
     if config.profiler:
         profiler.disable()
         results = io.StringIO()
         pstats.Stats(profiler, stream=results).sort_stats('cumulative').print_stats(50)
-        LOGGER.info('Profiler: \n%s', pformat(results.getvalue()))
+        logger.info('Profiler: \n%s', pformat(results.getvalue()))
     ## ========================              PROFILER              ======================== ##
 
 class QValuesInsight(DBLoggerStats):

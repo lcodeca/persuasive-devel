@@ -32,6 +32,7 @@ from ray.rllib.agents.trainer import Trainer, with_common_config
 from ray.rllib.policy import Policy
 
 from utils.qtable import QTable
+from utils.logger import set_logging
 
 # """ Import SUMO library """
 if 'SUMO_HOME' in os.environ:
@@ -45,9 +46,7 @@ else:
 DEBUGGER = False
 PROFILER = False
 
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARN)
+logger = set_logging(__name__)
 
 ####################################################################################################
 #                                             TRAINER

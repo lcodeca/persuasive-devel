@@ -13,8 +13,8 @@ import re
 
 from jinja2 import Template
 
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 def _argument_parser():
     """ Argument parser for the stats parser. """
@@ -46,35 +46,35 @@ def _main():
     try:
         gallery.generate_aggregated()
     except FileNotFoundError as err:
-        LOGGER.error("Impossible to generate gallery: '%s'", str(err))
+        logger.error("Impossible to generate gallery: '%s'", str(err))
 
     try:
         gallery.generate_agents()
     except FileNotFoundError as err:
-        LOGGER.error("Impossible to generate gallery: '%s'", str(err))
+        logger.error("Impossible to generate gallery: '%s'", str(err))
 
     try:
         gallery.generate_policies()
     except FileNotFoundError as err:
-        LOGGER.error("Impossible to generate gallery: '%s'", str(err))
+        logger.error("Impossible to generate gallery: '%s'", str(err))
 
     try:
         gallery.generate_qvalues()
     except FileNotFoundError as err:
-        LOGGER.error("Impossible to generate gallery: '%s'", str(err))
+        logger.error("Impossible to generate gallery: '%s'", str(err))
     try:
         gallery.generate_qvalues_evol()
     except FileNotFoundError as err:
-        LOGGER.error("Impossible to generate gallery: '%s'", str(err))
+        logger.error("Impossible to generate gallery: '%s'", str(err))
 
-    LOGGER.info('Done')
+    logger.info('Done')
 
     ## ========================              PROFILER              ======================== ##
     if config.profiler:
         profiler.disable()
         results = io.StringIO()
         pstats.Stats(profiler, stream=results).sort_stats('cumulative').print_stats(50)
-        LOGGER.info('Profiler: \n%s', pformat(results.getvalue()))
+        logger.info('Profiler: \n%s', pformat(results.getvalue()))
     ## ========================              PROFILER              ======================== ##
 
 class HTMLGallery():

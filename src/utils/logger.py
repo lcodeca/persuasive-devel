@@ -9,8 +9,28 @@ import os
 from ray.tune.logger import Logger, _SafeFallbackEncoder
 from ray.tune.result import TRAINING_ITERATION
 
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.INFO)
+# %(pathname)s Full pathname of the source file where the logging call was issued(if available).
+# %(filename)s Filename portion of pathname.
+# %(module)s Module (name portion of filename).
+# %(funcName)s Name of function containing the logging call.
+# %(lineno)d Source line number where the logging call was issued (if available)
+def set_logging(name):
+    # 2020-09-11 16:52:15,064	INFO trainer.py:605 -- Tip: s
+    logging.basicConfig(
+        level=logging.INFO,
+        format='(PID=%(process)d)[%(asctime)s][%(levelname)s][%(module)s:L%(lineno)d] %(message)s')
+    new_logger = logging.getLogger(name)
+    # file handler
+    fh = logging.FileHandler('{}.log'.format(name))
+    # fh = logging.FileHandler('{}.{}.log'.format(name, os.getpid()))
+    fh.setFormatter(
+        logging.Formatter(
+            '(PID=%(process)d)[%(asctime)s][%(levelname)s][%(module)s:L%(lineno)d] %(message)s'))
+    fh.setLevel(logging.DEBUG)
+    new_logger.addHandler(fh)
+    return new_logger
+
+logger = set_logging(__name__)
 
 class DBLogger(Logger):
     """
@@ -56,7 +76,7 @@ class DBLogger(Logger):
             elif key in misc_keys:
                 misc_values[key] = val
             else:
-                LOGGER.debug('Ignoring key %s', key)
+                logger.debug('Ignoring key %s', key)
 
         # save aggregated values
         aggregated_file = os.path.join(self.current_training_dir, 'aggregated-values.json')
