@@ -6,6 +6,7 @@ import collections
 import json
 import logging
 from pprint import pprint
+import sys
 from tqdm import tqdm
 
 import matplotlib
@@ -36,9 +37,13 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 class StatSingleExp(object):
     """ Process a SINGLE RLLIB logs/result.json file as a time series. """
 
-    def __init__(self, filename, prefix):
+    def __init__(self, filename, prefix, max_agents=None, last=None):
         self.input = filename
         self.prefix = prefix
+        self.max = max_agents
+        self.last = last
+
+        self.agents = None
 
     @staticmethod
     def make_patch_spines_invisible(ax):
@@ -56,14 +61,19 @@ class StatSingleExp(object):
         max_y = []
         std_y = []
         with open(self.input, 'r') as jsonfile:
+            counter = 0
             for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
-                x_coords.append(complete['timesteps_total'])
-                y_coords.append(np.nanmean(complete['hist_stats']['policy_unique_reward']))
-                min_y.append(np.nanmin(complete['hist_stats']['policy_unique_reward']))
-                max_y.append(np.nanmax(complete['hist_stats']['policy_unique_reward']))
-                median_y.append(np.nanmedian(complete['hist_stats']['policy_unique_reward']))
-                std_y.append(np.nanstd(complete['hist_stats']['policy_unique_reward']))
+                if 'policy_unique_reward' in complete['hist_stats']:
+                    x_coords.append(complete['timesteps_total'])
+                    y_coords.append(np.nanmean(complete['hist_stats']['policy_unique_reward']))
+                    min_y.append(np.nanmin(complete['hist_stats']['policy_unique_reward']))
+                    max_y.append(np.nanmax(complete['hist_stats']['policy_unique_reward']))
+                    median_y.append(np.nanmedian(complete['hist_stats']['policy_unique_reward']))
+                    std_y.append(np.nanstd(complete['hist_stats']['policy_unique_reward']))
+                else:
+                    logger.critical('Missing stats in row %d', counter)
+                counter += 1
 
         fig, ax = plt.subplots(figsize=(15, 10))
         ax.errorbar(x_coords, y_coords, yerr=std_y, capsize=5, label='Mean [std]', fmt='-o')
@@ -92,18 +102,23 @@ class StatSingleExp(object):
         max_y = []
         std_y = []
         with open(self.input, 'r') as jsonfile:
+            counter = 0
             for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
-                x_coords.append(complete['timesteps_total'])
-                arrivals = []
-                for episode in complete['hist_stats']['info_by_agent']:
-                    for info in episode.values():
-                        arrivals.append(info['arrival']/3600)
-                y_coords.append(np.nanmean(arrivals))
-                min_y.append(np.nanmin(arrivals))
-                max_y.append(np.nanmax(arrivals))
-                median_y.append(np.nanmedian(arrivals))
-                std_y.append(np.nanstd(arrivals))
+                if 'info_by_agent' in complete['hist_stats']:
+                    x_coords.append(complete['timesteps_total'])
+                    arrivals = []
+                    for episode in complete['hist_stats']['info_by_agent']:
+                        for info in episode.values():
+                            arrivals.append(info['arrival']/3600)
+                    y_coords.append(np.nanmean(arrivals))
+                    min_y.append(np.nanmin(arrivals))
+                    max_y.append(np.nanmax(arrivals))
+                    median_y.append(np.nanmedian(arrivals))
+                    std_y.append(np.nanstd(arrivals))
+                else:
+                    logger.critical('Missing stats in row %d', counter)
+                counter += 1
 
         fig, ax = plt.subplots(figsize=(15, 10))
         ax.errorbar(x_coords, y_coords, yerr=std_y, capsize=5, label='Mean [std]', fmt='-o')
@@ -128,19 +143,24 @@ class StatSingleExp(object):
         std_y = []
         episodes = 0
         with open(self.input, 'r') as jsonfile:
+            counter = 0
             for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
-                episodes += complete['episodes_this_iter']
-                x_coords.append(episodes)
-                _actions = []
-                for episode in complete['hist_stats']['rewards_by_agent']:
-                    for agent_rewards in episode.values():
-                        _actions.append(len(agent_rewards))
-                min_y.append(np.nanmin(_actions))
-                max_y.append(np.nanmax(_actions))
-                median_y.append(np.nanmedian(_actions))
-                mean_y.append(np.nanmean(_actions))
-                std_y.append(np.nanstd(_actions))
+                if 'rewards_by_agent' in complete['hist_stats']:
+                    episodes += complete['episodes_this_iter']
+                    x_coords.append(episodes)
+                    _actions = []
+                    for episode in complete['hist_stats']['rewards_by_agent']:
+                        for agent_rewards in episode.values():
+                            _actions.append(len(agent_rewards))
+                    min_y.append(np.nanmin(_actions))
+                    max_y.append(np.nanmax(_actions))
+                    median_y.append(np.nanmedian(_actions))
+                    mean_y.append(np.nanmean(_actions))
+                    std_y.append(np.nanstd(_actions))
+                else:
+                    logger.critical('Missing stats in row %d', counter)
+                counter += 1
 
         fig, ax = plt.subplots(figsize=(15, 10))
         ax.errorbar(x_coords, mean_y, yerr=std_y, capsize=5, label='Mean [std]', fmt='-o')
@@ -151,6 +171,26 @@ class StatSingleExp(object):
         ax.legend(loc=1, ncol=4, shadow=True)
         ax.grid()
         fig.savefig('{}.actions_over_episodes.svg'.format(self.prefix),
+                    dpi=300, transparent=False, bbox_inches='tight')
+        # plt.show()
+        matplotlib.pyplot.close('all')
+
+    def epsilon_over_timesteps_total(self):
+        logger.info('Computing the exploration epsilon over the timesteps total.')
+        x_coords = []
+        y_coords = []
+        with open(self.input, 'r') as jsonfile:
+            for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
+                complete = json.loads(row)
+                pprint(complete['info'])
+                exit(666)
+                x_coords.append(complete['timesteps_total'])
+                y_coords.append(complete['info']['learner']['unique']['policy_entropy'])
+        fig, ax = plt.subplots(figsize=(15, 10))
+        ax.plot(x_coords, y_coords)
+        ax.set(xlabel='Learning step', ylabel='Entropy', title='Policy Entropy')
+        ax.grid()
+        fig.savefig('{}.policy_entropy_over_learning.svg'.format(self.prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
         # plt.show()
         matplotlib.pyplot.close('all')
@@ -173,7 +213,6 @@ class StatSingleExp(object):
         # plt.show()
         matplotlib.pyplot.close('all')
 
-
     def policy_entropy_over_timesteps_total(self):
         logger.info('Computing the policy entropy over the timesteps total.')
         x_coords = []
@@ -192,66 +231,72 @@ class StatSingleExp(object):
         # plt.show()
         matplotlib.pyplot.close('all')
 
+    def _add_agent(self, agent):
+        self.agents[agent] = {
+            'episode': [],
+            'reward': [],
+            'actions': [],
+            'mode': [],
+            ########################
+            'cost': [],
+            'discretized-cost': [],
+            'rtt': [],
+            'arrival': [],
+            'departure': [],
+            'ett': [],
+            'wait': [],
+            'timeLoss': [],
+            ########################
+            'difference': [],
+        }
+
+    def _try_add_agent(self, agent):
+        logger.debug('Trying to add agent %s, if possible', agent)
+        if agent in self.agents:
+            return False
+        if self.max is None:
+            self._add_agent(agent)
+            return True
+        if len(self.agents) < self.max:
+            self._add_agent(agent)
+            return True
+        return False
+
     def info_by_agent(self):
         logger.info('Computing the detailed info for each agent over the episodes.')
-        agents = {}
+        self.agents = {}
         with open(self.input, 'r') as jsonfile:
+            counter = 0
             for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
-                # pprint(complete)
-                info_by_episode = complete['hist_stats']['info_by_agent']
-                last_action_by_agent = complete['hist_stats']['last_action_by_agent']
-                rewards_by_agent = complete['hist_stats']['rewards_by_agent']
-                for pos, episode in enumerate(info_by_episode):
-                    for agent, info in episode.items():
-                        # {'arrival': 26254.0,
-                        #  'cost': 235.87030648896734,
-                        #  'departure': 25886.0,
-                        #  'discretized-cost': 2,
-                        #  'ett': 235.8703064889596,
-                        #  'ext': {'passenger': [237.20417391808218,
-                        #                        235.87030648896734]},
-                        #  'mode': 'passenger',
-                        #  'rtt': 368.0,
-                        #  'timeLoss': 98.62,
-                        #  'wait': 6146.0}
-                        if agent not in agents:
-                            agents[agent] = {
-                                'episode': [],
-                                'reward': [],
-                                'actions': [],
-                                'mode': [],
-                                ########################
-                                'cost': [],
-                                'discretized-cost': [],
-                                'rtt': [],
-                                'arrival': [],
-                                'departure': [],
-                                'ett': [],
-                                'wait': [],
-                                'timeLoss': [],
-                                ########################
-                                'difference': [],
-                            }
-
-                        agents[agent]['episode'].append(len(agents[agent]['episode']) + 1)
-                        agents[agent]['reward'].append(sum(rewards_by_agent[pos][agent]))
-                        agents[agent]['actions'].append(len(rewards_by_agent[pos][agent]))
-                        agents[agent]['mode'].append(last_action_by_agent[pos][agent])
-                        #############
-                        agents[agent]['cost'].append(info['cost']/60.0)
-                        agents[agent]['discretized-cost'].append(info['discretized-cost'])
-                        agents[agent]['rtt'].append(info['rtt']/60.0)
-                        #############
-                        agents[agent]['arrival'].append(info['arrival']/3600.0)
-                        agents[agent]['departure'].append(info['departure']/3600.0)
-                        agents[agent]['ett'].append(info['ett']/60.0)
-                        agents[agent]['wait'].append(info['wait']/60.0)
-                        agents[agent]['timeLoss'].append(info['timeLoss'])
-                        #############
-                        agents[agent]['difference'].append((info['ett'] - info['rtt'])/60.0)
-
-        for agent, stats in tqdm(agents.items()):
+                try :
+                    info_by_episode = complete['hist_stats']['info_by_agent']
+                    last_action_by_agent = complete['hist_stats']['last_action_by_agent']
+                    rewards_by_agent = complete['hist_stats']['rewards_by_agent']
+                    for pos, episode in enumerate(info_by_episode):
+                        for agent, info in episode.items():
+                            if agent not in self.agents:
+                                continue
+                            self.agents[agent]['episode'].append(len(self.agents[agent]['episode']) + 1)
+                            self.agents[agent]['reward'].append(sum(rewards_by_agent[pos][agent]))
+                            self.agents[agent]['actions'].append(len(rewards_by_agent[pos][agent]))
+                            self.agents[agent]['mode'].append(last_action_by_agent[pos][agent])
+                            #############
+                            self.agents[agent]['cost'].append(info['cost']/60.0)
+                            self.agents[agent]['discretized-cost'].append(info['discretized-cost'])
+                            self.agents[agent]['rtt'].append(info['rtt']/60.0)
+                            #############
+                            self.agents[agent]['arrival'].append(info['arrival']/3600.0)
+                            self.agents[agent]['departure'].append(info['departure']/3600.0)
+                            self.agents[agent]['ett'].append(info['ett']/60.0)
+                            self.agents[agent]['wait'].append(info['wait']/60.0)
+                            self.agents[agent]['timeLoss'].append(info['timeLoss'])
+                            #############
+                            self.agents[agent]['difference'].append((info['ett'] - info['rtt'])/60.0)
+                except KeyError:
+                    logger.critical('Missing stats in row %d', counter)
+                counter += 1
+        for agent, stats in tqdm(self.agents.items()):
             fig, axs = plt.subplots(5, 2, sharex=True, figsize=(20, 20), constrained_layout=True)
             fig.suptitle('{}'.format(agent))
 
@@ -341,34 +386,107 @@ class StatSingleExp(object):
 
     def additionals_by_agent(self):
         logger.info('Computing the detailed info for each agent over the episodes.')
+        if self.last:
+            self.last_additionals_by_agent()
+        else:
+            self.all_additionals_by_agent()
+
+    def _try_insert_agent(self, agent):
+        logger.debug('Trying to add agent %s, if possible', agent)
+        if agent in self.agents:
+            return False
+        if self.max is None:
+            self.agents.append(agent)
+            return True
+        if len(self.agents) < self.max:
+            self.agents.append(agent)
+            return True
+        return False
+
+    def all_additionals_by_agent(self):
+        logger.info('Computing the detailed info for each agent over the episodes.')
         with open(self.input, 'r') as jsonfile:
-            episodes = collections.defaultdict(list)
+            self.agents = []
+            episodes = collections.defaultdict(int)
+            counter = 0
             for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
-                # pprint(complete)
-                info_by_episode = complete['hist_stats']['info_by_agent']
-                for episode in info_by_episode:
-                    for agent, info_episode in episode.items():
-                        episodes[agent].append(len(episodes[agent])+1)
-                        if 'ext' not in info_episode:
-                            continue
-                        fig, ax = plt.subplots(3, 2, figsize=(15, 10))
-                        fig.suptitle('ETT variation during episode {}'.format(len(episodes[agent])))
-                        grid = {0: (0, 0), 1: (1, 0), 2: (2, 0), 3: (0, 1), 4: (1, 1), 5: (2, 1)}
-                        for pos, (mode, values) in enumerate(info_episode['ext'].items()):
-                            x_coords = list(range(len(values)))
-                            ax[grid[pos][0]][grid[pos][1]].plot(
-                                x_coords, values, '-o', label='{}'.format(mode))
-                            ax[grid[pos][0]][grid[pos][1]].legend()
-                            ax[grid[pos][0]][grid[pos][1]].grid()
-                        ax[2][0].set(xlabel='Learning steps')
-                        ax[2][1].set(xlabel='Learning steps')
-                        ax[0][0].set(ylabel='ETT[s]')
-                        ax[1][0].set(ylabel='ETT[s]')
-                        ax[2][0].set(ylabel='ETT[s]')
-                        # plt.show()
-                        fig.savefig(
-                            '{}.{}.ett_over_episode_{}.svg'.format(
-                                self.prefix, agent, len(episodes[agent])),
-                            dpi=300, transparent=False, bbox_inches='tight')
-                        matplotlib.pyplot.close('all')
+                try:
+                    info_by_episode = complete['hist_stats']['info_by_agent']
+                    for episode in info_by_episode:
+                        for agent, info_episode in episode.items():
+                            if 'ext' not in info_episode:
+                                continue
+                            self._try_insert_agent(agent)
+                            if agent not in self.agents:
+                                continue
+                            episodes[agent] += 1
+                            fig, ax = plt.subplots(3, 2, figsize=(15, 10))
+                            fig.suptitle('ETT variation during episode {}'.format(episodes[agent]))
+                            grid = {0: (0, 0), 1: (1, 0), 2: (2, 0), 3: (0, 1), 4: (1, 1), 5: (2, 1)}
+                            for pos, (mode, values) in enumerate(info_episode['ext'].items()):
+                                x_coords = list(range(len(values)))
+                                ax[grid[pos][0]][grid[pos][1]].plot(
+                                    x_coords, values, '-o', label='{}'.format(mode))
+                                ax[grid[pos][0]][grid[pos][1]].legend()
+                                ax[grid[pos][0]][grid[pos][1]].grid()
+                            ax[2][0].set(xlabel='Learning steps')
+                            ax[2][1].set(xlabel='Learning steps')
+                            ax[0][0].set(ylabel='ETT[s]')
+                            ax[1][0].set(ylabel='ETT[s]')
+                            ax[2][0].set(ylabel='ETT[s]')
+                            # plt.show()
+                            fig.savefig(
+                                '{}.{}.ett_over_episode_{}.svg'.format(
+                                    self.prefix, agent, episodes[agent]),
+                                dpi=300, transparent=False, bbox_inches='tight')
+                            matplotlib.pyplot.close('all')
+                except KeyError:
+                    logger.critical('Missing stats in row %d', counter)
+                counter += 1
+
+    def last_additionals_by_agent(self):
+        logger.info('Computing the detailed info for each agent over the episodes.')
+        with open(self.input, 'r') as jsonfile:
+            self.agents = []
+            episodes = collections.defaultdict(int)
+            infos = collections.defaultdict(dict)
+            counter = 0
+            for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
+                complete = json.loads(row)
+                try :
+                    info_by_episode = complete['hist_stats']['info_by_agent']
+                    for episode in info_by_episode:
+                        for agent, info_episode in episode.items():
+                            if 'ext' not in info_episode:
+                                continue
+                            self._try_insert_agent(agent)
+                            if agent not in self.agents:
+                                continue
+                            infos[agent] = info_episode['ext']
+                            episodes[agent] += 1
+                except KeyError:
+                    logger.critical('Missing stats in row %d', counter)
+                counter += 1
+
+        for agent in tqdm(self.agents):
+            fig, ax = plt.subplots(3, 2, figsize=(15, 10))
+            fig.suptitle('ETT variation during episode {}'.format(episodes[agent]))
+            grid = {0: (0, 0), 1: (1, 0), 2: (2, 0), 3: (0, 1), 4: (1, 1), 5: (2, 1)}
+            for pos, (mode, values) in enumerate(infos[agent].items()):
+                x_coords = list(range(len(values)))
+                ax[grid[pos][0]][grid[pos][1]].plot(
+                    x_coords, values, '-o', label='{}'.format(mode))
+                ax[grid[pos][0]][grid[pos][1]].legend()
+                ax[grid[pos][0]][grid[pos][1]].grid()
+            ax[2][0].set(xlabel='Learning steps')
+            ax[2][1].set(xlabel='Learning steps')
+            ax[0][0].set(ylabel='ETT[s]')
+            ax[1][0].set(ylabel='ETT[s]')
+            ax[2][0].set(ylabel='ETT[s]')
+            # plt.show()
+            fig.savefig(
+                '{}.{}.ett_over_episode_{}.svg'.format(
+                    self.prefix, agent, episodes[agent]),
+                dpi=300, transparent=False, bbox_inches='tight')
+            matplotlib.pyplot.close('all')
