@@ -11,7 +11,6 @@ from ray.rllib.models import ModelCatalog
 from learning.a3c.persuasivea3c import DEFAULT_CONFIG, PersuasiveCallbacks
 from learning.a3c.persuasivelstm import RNNModel
 from learning.a3c.persuasiveactiondistribution import PersuasiveActionDistribution
-from learning.a3c.persuasivestochasticsampling import PersuasiveStochasticSampling
 
 def custom_eval_function(trainer, eval_workers):
     """Example of a custom evaluation function.
@@ -53,6 +52,7 @@ def custom_eval_function(trainer, eval_workers):
     return metrics
 
 def persuasive_a3c_conf(rollout_size=10,
+                        agents=100,
                         debug_folder=None,
                         eval_folder=None,
                         alpha=0.0001,
@@ -69,14 +69,11 @@ def persuasive_a3c_conf(rollout_size=10,
 
     custom_configuration = DEFAULT_CONFIG
 
-    custom_configuration['batch_mode'] = 'complete_episodes'
     custom_configuration['collect_metrics_timeout'] = 86400 # a day
     custom_configuration['framework'] = 'tf'
-    # custom_configuration['gamma'] = gamma
     custom_configuration['ignore_worker_failures'] = True
     custom_configuration['log_level'] = 'WARN'
     custom_configuration['monitor'] = True
-    custom_configuration['no_done_at_end'] = False
     custom_configuration['num_cpus_for_driver'] = 1
     custom_configuration['num_cpus_per_worker'] = 1
     custom_configuration['num_envs_per_worker'] = 1
@@ -88,46 +85,12 @@ def persuasive_a3c_conf(rollout_size=10,
     custom_configuration['remote_worker_envs'] = False
     custom_configuration['seed'] = 42
     custom_configuration['timesteps_per_iteration'] = 1
-    # Training batch size, if applicable. Should be >= rollout_fragment_length.
-    # Samples batches will be concatenated together to a batch of this size,
-    # which is then passed to SGD.
-    custom_configuration['train_batch_size'] = rollout_size
 
-    # === Exploration Settings ===None'
-    # custom_configuration['exploration_config']['initial_epsilon'] = 1.0
-    # custom_configuration['exploration_config']['final_epsilon'] = 0.0001,
-
-    # https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/utils/exploration/stochastic_sampling.py
-    custom_configuration['exploration_config']['type'] = 'StochasticSampling'
-
-    # https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/utils/exploration/parameter_noise.py
-    # custom_configuration['exploration_config']['type'] = 'ParameterNoise'
-
-    # custom_configuration['exploration_config']['type'] = PersuasiveStochasticSampling
-
-    # == MODEL - DEFAULT ==
-    # custom_configuration['model']['fcnet_hiddens'] = [64, 64]
-
-    # == MODEL - LSTM ==
-    # custom_configuration['model']['lstm_cell_size'] = 64
-    # custom_configuration['model']['max_seq_len'] = 20
-    # custom_configuration['model']['state_shape'] = [64, 64]
-    custom_configuration['model']['use_lstm'] = True
-
-    # == MODEL - CUSTOM ==
-    custom_configuration['model']['custom_model'] = 'custom_rrn'
-
-    # See:
-    #  https://docs.ray.io/en/releases-0.8.7/rllib-models.html#custom-action-distributions
-    # custom_configuration['model']['custom_action_dist'] = 'custom_action_distribution'
-    # custom_configuration['model']['custom_action_dist_par'] = {
-    #     'probabilities': [0.9, 0.1],
-    # }
-
-    # == Persuasive A3C ==
-    custom_configuration['callbacks'] = PersuasiveCallbacks
-    # custom_configuration['lr'] = alpha
-    custom_configuration['min_iter_time_s'] = 5
+    # === Environment Settings ===
+    custom_configuration['batch_mode'] = 'complete_episodes'
+    custom_configuration['gamma'] = gamma
+    custom_configuration['lr'] = alpha
+    custom_configuration['no_done_at_end'] = False
     # Divide episodes into fragments of this many steps each during rollouts.
     # Sample batches of this size are collected from rollout workers and
     # combined into a larger batch of `train_batch_size` for learning.
@@ -141,14 +104,91 @@ def persuasive_a3c_conf(rollout_size=10,
     # The dataflow here can vary per algorithm. For example, PPO further
     # divides the train batch into minibatches for multi-epoch SGD.
     custom_configuration['rollout_fragment_length'] = rollout_size
-    custom_configuration['use_gae'] = False
+    # Training batch size, if applicable. Should be >= rollout_fragment_length.
+    # Samples batches will be concatenated together to a batch of this size,
+    # which is then passed to SGD.
+    custom_configuration['train_batch_size'] = rollout_size * agents
+
+    # === Exploration Settings ===
+    # https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/utils/exploration/stochastic_sampling.py
+    # custom_configuration['exploration_config']['type'] = 'StochasticSampling'
+
+    # https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/utils/exploration/epsilon_greedy.py
+    custom_configuration['exploration_config']['type'] = 'EpsilonGreedy'
+    custom_configuration['exploration_config']['initial_epsilon'] = 1.0
+    custom_configuration['exploration_config']['final_epsilon'] = 0.0001
+
+    # ==================== MODEL - DEFAULT ====================
+    # custom_configuration['model']['fcnet_hiddens'] = [64, 64]
+    # === Built-in options ===
+    # Filter config. List of [out_channels, kernel, stride] for each filter
+    # custom_configuration['model']['conv_filters'] = None
+    # Nonlinearity for built-in convnet
+    # custom_configuration['model']['conv_activation'] = "relu"
+    # Nonlinearity for fully connected net (tanh, relu)
+    # custom_configuration['model']['fcnet_activation'] = "tanh"
+    # Number of hidden layers for fully connected net
+    # custom_configuration['model']['fcnet_hiddens'] = [64, 64]
+    # For DiagGaussian action distributions, make the second half of the model
+    # outputs floating bias variables instead of state-dependent. This only
+    # has an effect is using the default fully connected net.
+    # custom_configuration['model']['free_log_std'] = False
+    # Whether to skip the final linear layer used to resize the hidden layer
+    # outputs to size `num_outputs`. If True, then the last hidden layer
+    # should already match num_outputs.
+    # custom_configuration['model']['no_final_linear'] = False
+    # Whether layers should be shared for the value function.
+    # custom_configuration['model']['vf_share_layers'] = True
+
+    # == LSTM ==
+    # Whether to wrap the model with an LSTM.
+    # custom_configuration['model']['use_lstm'] = False
+    # Max seq len for training the LSTM, defaults to 20.
+    # custom_configuration['model']['max_seq_len'] = 20
+    # Size of the LSTM cell.
+    # custom_configuration['model']['lstm_cell_size'] = 64
+    # Whether to feed a_{t-1}, r_{t-1} to LSTM.
+    # custom_configuration['model']['lstm_use_prev_action_reward'] = False
+    # When using modelv1 models with a modelv2 algorithm, you may have to
+    # define the state shape here (e.g., [256, 256]).
+    # custom_configuration['model']['state_shape'] = None # [64, 64]
+
+    # == Atari ==
+    # Whether to enable framestack for Atari envs
+    # custom_configuration['model']['framestack'] = True
+    # Final resized frame dimension
+    # custom_configuration['model']['dim'] = 84
+    # (deprecated) Converts ATARI frame to 1 Channel Grayscale image
+    # custom_configuration['model']['grayscale'] = False
+    # (deprecated) Changes frame to range from [-1, 1] if true
+    # custom_configuration['model']['zero_mean'] = True
+
+    # === Options for custom models ===
+    # Name of a custom model to use
+    custom_configuration['model']['custom_model'] = 'custom_rrn'
+    # Extra options to pass to the custom classes.
+    # These will be available in the Model's
+    custom_configuration['model']['custom_model_config'] = {}
+    # Name of a custom action distribution to use.
+    # See: https://docs.ray.io/en/releases-0.8.7/rllib-models.html#custom-action-distributions
+    custom_configuration['model']['custom_action_dist'] = 'custom_action_distribution'
+
+    # == OPTIMIZER ==
+    # Arguments to pass to the policy optimizer. These vary by optimizer.
+    # custom_configuration['optimizer'] = {}
+
+    # == Persuasive A3C ==
+    custom_configuration['callbacks'] = PersuasiveCallbacks
+    custom_configuration['min_iter_time_s'] = 5
+
+    custom_configuration['use_gae'] = True
 
     # === Evaluation Settings ===
     # Evaluate with every `evaluation_interval` training iterations.
     # The evaluation stats will be reported under the "evaluation" metric key.
     # Note that evaluation is currently not parallelized, and that for Ape-X
     # metrics are already only reported for the lowest epsilon workers.
-    custom_configuration['evaluation_interval'] = 1
+    custom_configuration['evaluation_interval'] = 5
 
     # Number of episodes to run per evaluation period. If using multiple
     # evaluation workers, we will run at least this many episodes total.
@@ -162,12 +202,12 @@ def persuasive_a3c_conf(rollout_size=10,
     # IMPORTANT NOTE: Policy gradient algorithms are able to find the optimal
     # policy, even if this is a stochastic one. Setting 'explore=False' here
     # will result in the evaluation workers not using this optimal policy!
+    custom_configuration['evaluation_config']['explore'] = False
     custom_configuration['evaluation_config']['lr'] = 0
     custom_configuration['evaluation_config']['num_gpus_per_worker'] = 0
     custom_configuration['evaluation_config']['num_gpus'] = 0
     custom_configuration['evaluation_config']['output'] = eval_folder
     # custom_configuration['evaluation_config']['env_config'] = {...},
-    # custom_configuration['evaluation_config']['explore'] = False
 
     # Number of parallel workers to use for evaluation. Note that this is set
     # to zero by default, which means evaluation will be run in the trainer
