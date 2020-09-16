@@ -17,7 +17,7 @@ import ray
 
 from environments.rl.marlenvironment import (
     PersuasiveMultiAgentEnv, SUMOModeAgent, SUMOSimulationWrapper)
-from rllibsumoutils.sumoutils import sumo_default_config
+from rllibsumoutils.sumoutils import sumo_default_config, SUMOUtils
 
 from utils.logger import set_logging
 
@@ -44,7 +44,95 @@ def env_creator(config):
 
 ####################################################################################################
 
-class DeepSUMOWrapper(SUMOSimulationWrapper):
+class DeepSUMOWrapper(SUMOUtils):
+
+    def _initialize_simulation(self):
+        """ Specific simulation initialization. """
+        try:
+            super()._initialize_simulation()
+        except NotImplementedError:
+            pass
+
+    def _initialize_metrics(self):
+        """ Specific metrics initialization """
+        try:
+            super()._initialize_metrics()
+        except NotImplementedError:
+            pass
+        self.agents_depart = dict()
+        self.agents_arrival = dict()
+        self.arrived_queue = list()
+
+    def _default_step_action(self, agents):
+        """ Specific code to be executed in every simulation step """
+        _dones, _agents = None, None
+        try:
+            _dones, _agents = agents
+        except Exception as exception:
+            logger.error('%s', str(agents))
+            raise exception
+        dones, agents = _dones, _agents
+        try:
+            super()._default_step_action(agents)
+        except NotImplementedError:
+            pass
+        now = self.traci_handler.simulation.getTime() # seconds
+        logger.debug('[%.2f] Agents: %s', now, str(sorted(agents)))
+        people = self.traci_handler.person.getIDList()
+        logger.debug('[%.2f] People: %s', now, str(sorted(people)))
+        left = set()
+        for agent in agents:
+            if agent in people:
+                if agent not in self.agents_depart:
+                    self.agents_depart[agent] = now
+                    logger.debug('[%.2f] Agent %s has departed.', now, agent)
+            else:
+                if agent in self.agents_depart and agent not in self.agents_arrival:
+                    self.agents_arrival[agent] = now
+                    logger.debug('[%.2f] Agent %s has arrived.', now, agent)
+                    self.arrived_queue.append(agent)
+                if dones:
+                    left.add(agent)
+        logger.debug('[%.2f] Left: %d - %s', now, len(left), sorted(left))
+        logger.debug('[%.2f] Agents: %d', now, len(agents))
+        if dones:
+            if len(agents) == len(left):
+                # all the agents left the simulation
+                logger.info('[%.2f] All the AGENTS left the SUMO simulation.', now)
+                self.end_simulation()
+        return True
+
+    def end_simulation(self):
+        """ Forces the simulation to stop. """
+        if self.is_ongoing_sim():
+            logger.info('[%.2f] Closing TraCI %s',
+                        self.traci_handler.simulation.getTime(), self._sumo_label)
+            self._manually_stopped = True
+            self.traci_handler.close()
+        else:
+            logger.warning('TraCI %s is already closed.', self._sumo_label)
+
+    def get_depart(self, entity, default=float('NaN')):
+        """ Override the TRIPINFO function. """
+        if entity in self.agents_depart:
+            return self.agents_depart[entity]
+        return default
+
+    def get_arrival(self, entity, default=float('NaN')):
+        """ Override the TRIPINFO function. """
+        if entity in self.agents_arrival:
+            return self.agents_arrival[entity]
+        return default
+
+    def get_duration(self, entity, default=float('NaN')):
+        """ Override the TRIPINFO function. """
+        if entity in self.agents_arrival and entity in self.agents_depart:
+            return self.get_arrival(entity) - self.get_depart(entity)
+        return default
+
+    def get_penalty_time(self):
+        """ Return the penalty max time. """
+        return self._config['misc']['max_time']
 
     def process_tripinfo_file(self):
         """
@@ -193,6 +281,7 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
             'top_right_Y': config['scenario_config']['misc']['bounding_box'][3],
         }
         self.tested_agents = False
+        self.not_rewarded = set(self.agents.keys())
 
     def _initialize_agents(self):
         self.agents = dict()
@@ -203,7 +292,7 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
         self.waiting_agents.sort()
 
     def agents_to_usage_active(self, choices):
-        """ """
+        """ Monitor active agents."""
         # filter only the agents still in the simulation // this should be optimized
         people = set(self.simulation.traci_handler.person.getIDList())
         active = 0
@@ -216,13 +305,14 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
     ################################################################################################
 
     def sumo_reset(self):
-        logger.debug('PersuasiveDeepMARLEnv.sumo_reset: PID %s', os.getpid())
+        logger.critical('PersuasiveDeepMARLEnv.sumo_reset: PID %s', os.getpid())
         return DeepSUMOWrapper(self._config['scenario_config']['sumo_config'])
 
     def reset(self):
         """ Resets the env and returns observations from ready agents. """
         initial_obs = super().reset()
         self.episode_snapshot = AgentsHistory()
+        self.not_rewarded = set(self.agents.keys())
         if not self.tested_agents:
             feasible_plans = 0
             for agent in self.agents.values():
@@ -232,11 +322,66 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
             self.tested_agents = True
         return initial_obs
 
+    def compute_info_for_agent(self, agent):
+        """ Gather and return a dictionary containing the info associated with the given agent. """
+        info = {
+            'arrival': self.simulation.get_arrival(agent),
+            'cost': self.agents[agent].cost,
+            'departure': self.simulation.get_depart(agent),
+            'discretized-cost': self.discrete_time(self.agents[agent].cost),
+            'ett': self.agents[agent].ett,
+            'mode': self.agents[agent].chosen_mode,
+            'rtt': self.simulation.get_duration(agent),
+            'wait': self.agents[agent].arrival - self.simulation.get_arrival(agent)
+        }
+        logger.debug('Info for agent %s: \n%s', agent, pformat(info))
+        return info
+
+    def finalize_agent(self, agent):
+        """ Gather all the required ifo and aggregate the rewards for the agents. """
+        self.not_rewarded.remove(agent)
+        state = self.craft_final_state(agent)
+        reward = self.get_reward(agent)
+        info = self.compute_info_for_agent(agent)
+        logger.debug('Observations: %s', str(state))
+        logger.debug('Rewards: %s', str(reward))
+        logger.debug('Info: %s', str(info))
+        return state, reward, info
+
     def step(self, action_dict):
         """
         Returns observations from ready agents.
+
+        The returns are dicts mapping from agent_id strings to values. The
+        number of agents in the env can vary over time.
+
+        Returns
+        -------
+            obs (dict): New observations for each ready agent.
+            rewards (dict): Reward values for each ready agent. If the
+                episode is just started, the value will be None.
+            dones (dict): Done values for each ready agent. The special key
+                "__all__" (required) is used to indicate env termination.
+            infos (dict): Optional info values for each agent id.
         """
-        now = self.simulation.get_current_time()
+        self.resetted = False
+        self.environment_steps += 1
+        logger.debug('========================> Episode: %d - Step: %d <==========================',
+                     self.episodes, self.environment_steps)
+
+        obs, rewards, dones, infos = {}, {}, {}, {}
+
+        shuffled_agents = sorted(action_dict.keys()) # it may seem not smar to sort something that
+                                                     # may need to be shuffled afterwards, but it
+                                                     # is a matter of consistency instead of using
+                                                     # whatever insertion order was used in the dict
+        if self._config['scenario_config']['agent_rnd_order']:
+            ## randomize the agent order to minimize SUMO's insertion queues impact
+            logger.debug('Shuffling the order of the agents.')
+            self.rndgen.shuffle(shuffled_agents) # in-place shuffle
+
+        # Saves the episodes snapshots
+        current_time = self.simulation.get_current_time()
         for agent, action in action_dict.items():
             if action == 0:
                 # waiting
@@ -244,12 +389,104 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
             self.episode_snapshot.add_decision(
                 self.agents[agent].origin,
                 self.agents[agent].destination,
-                self.agents[agent].action_to_mode[action],
-                now, agent)
+                self.agents[agent].action_to_mode[action], current_time, agent)
         logger.debug('========================================================')
         logger.debug('Snapshot: \n%s', str(self.episode_snapshot))
         logger.debug('========================================================')
-        return super().step(action_dict)
+
+        # Take action
+        for agent in shuffled_agents:
+            done = self.agents[agent].step(action_dict[agent], self.simulation)
+            if done:
+                self.dones.add(agent)
+                self.active.remove(agent)
+        dones['__all__'] = len(self.dones) == len(self.agents)
+
+        logger.debug('Before SUMO')
+        ongoing_simulation = self.simulation.step(
+            until_end=dones['__all__'],
+            agents=(dones['__all__'], set(self.agents.keys())))
+        logger.debug('After SUMO')
+
+        # Compute rewards for the agents that are arrived to their destination.
+        for agent in self.simulation.arrived_queue:
+            logger.debug('Finalizing agent %s', agent)
+            _state, _reward, _info = self.finalize_agent(agent)
+            obs[agent] = _state
+            rewards[agent] = _reward
+            dones[agent] = True
+            infos[agent] = _info
+        self.simulation.arrived_queue = []
+
+        waited_too_long = False
+        if ongoing_simulation:
+            ## add waiting agent to the pool of active agents
+            current_time = self.simulation.get_current_time()
+            logger.debug('Activating agents...')
+            self._move_agents(current_time)
+
+            # compute the new observation for the WAITING agents
+            logger.debug('Computing obseravions for the WAITING agents.')
+            agents_to_remove = set()
+            for agent in self.active:
+                logger.debug('[%2f] %s --> %d', current_time, agent, self.agents[agent].arrival)
+                if current_time > self.agents[agent].arrival:
+                    waited_too_long = True
+                    logger.warning('Agent %s waited for too long.', str(agent))
+                    self.agents[agent].chosen_mode_error = (
+                        'Waiting too long [{}]'.format(current_time))
+                    self.agents[agent].ett = float('NaN')
+                    self.agents[agent].cost = float('NaN')
+                    self.dones.add(agent)
+                    agents_to_remove.add(agent)
+                    _state, _reward, _info = self.finalize_agent(agent)
+                    obs[agent] = _state
+                    rewards[agent] = _reward
+                    dones[agent] = True
+                    infos[agent] = _info
+                else:
+                    rewards[agent] = 0
+                    obs[agent] = self.get_observation(agent)
+                    dones[agent] = False
+                    infos[agent] = {}
+            for agent in agents_to_remove:
+                self.active.remove(agent)
+
+        # in case all the reamining agents WAITED TOO LONG
+        dones['__all__'] = len(self.dones) == len(self.agents)
+        if waited_too_long and dones['__all__']:
+            logger.info('All the agent are DONE. Finalizing episode...')
+            ongoing_simulation = self.simulation.step(
+                until_end=dones['__all__'],
+                agents=(dones['__all__'], set(self.agents.keys())))
+            for agent in self.simulation.arrived_queue:
+                logger.debug('Finalizing agent %s', agent)
+                _state, _reward, _info = self.finalize_agent(agent)
+                obs[agent] = _state
+                rewards[agent] = _reward
+                dones[agent] = True
+                infos[agent] = _info
+            self.simulation.arrived_queue = []
+
+        if not ongoing_simulation:
+            logger.debug('Missing REWARD for [%d] %s',
+                         len(self.not_rewarded), str(sorted(self.not_rewarded)))
+            for agent in self.not_rewarded.copy():
+                logger.debug('Finalizing agent %s', agent)
+                _state, _reward, _info = self.finalize_agent(agent)
+                obs[agent] = _state
+                rewards[agent] = _reward
+                dones[agent] = True
+                infos[agent] = _info
+            logger.debug('Missing REWARD for [%d] %s',
+                         len(self.not_rewarded), str(sorted(self.not_rewarded)))
+
+        logger.debug('Observations: %s', str(obs))
+        logger.debug('Rewards: %s', str(rewards))
+        logger.debug('Dones: %s', str(dones))
+        logger.debug('Info: %s', str(infos))
+        logger.debug('============================================================================')
+        return obs, rewards, dones, infos
 
     ################################################################################################
 
