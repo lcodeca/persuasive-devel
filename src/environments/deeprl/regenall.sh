@@ -25,3 +25,6 @@ bash deepgen-single.sh 5m 10 32000 single-orig
 bash deepgen-single.sh 5m 100 32000 single-orig
 bash deepgen-single.sh 5m 500 32000 single-orig
 bash deepgen-single.sh 5m 1000 32000 single-orig
+
+bash deepgen.sh 5m 2000 28800 rnd-orig-eval
+bash deepgen.sh 5m 2000 32000 rnd-orig
