@@ -19,10 +19,10 @@ def set_logging(name):
     logging.basicConfig(
         level=logging.INFO,
         format='(PID=%(process)d)[%(asctime)s][%(levelname)s][%(module)s:L%(lineno)d] %(message)s')
-    new_logger = logging.getLogger(name)
+    new_logger = logging.getLogger() # name
     # file handler
-    fh = logging.FileHandler('{}.log'.format(name))
-    # fh = logging.FileHandler('{}.{}.log'.format(name, os.getpid()))
+    # fh = logging.FileHandler('{}.log'.format(name))
+    fh = logging.FileHandler('{}.{}.log'.format(name, os.getpid()))
     fh.setFormatter(
         logging.Formatter(
             '(PID=%(process)d)[%(asctime)s][%(levelname)s][%(module)s:L%(lineno)d] %(message)s'))
