@@ -3,7 +3,7 @@
 """ Persuasive Trainer for RLLIB + SUMO """
 
 import os
-os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
+# os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
 
 import argparse
 import cProfile
@@ -259,17 +259,12 @@ def _main():
     # Results
     metrics_dir, checkpoint_dir, best_checkpoint_dir, debug_dir, eval_dir = results_handler(ARGS)
 
-    # Persuasive A3C Algorithm.
-    policy_class = persuasivea3c.PersuasiveA3CTFPolicy
-    policy_conf = persuasive_a3c_conf(
-        ARGS.rollout_size, debug_dir, eval_dir, ARGS.alpha, ARGS.gamma)
+    # Initialize the simulation.
+    # ray.init(num_cpus=10, memory=52428800, object_store_memory=78643200) ## minimum values
+    ray.init()
 
     # Load default Scenario configuration
     experiment_config = load_json_file(ARGS.config)
-
-    # Initialize the simulation.
-    # ray.init(memory=52428800, object_store_memory=78643200) ## minimum values
-    ray.init()
 
     # Associate the agents with something
     env_config = {
@@ -286,13 +281,20 @@ def _main():
     else:
         raise Exception('Unknown environment %s' % ARGS.env)
 
+    # Persuasive A3C Algorithm.
+    policy_class = persuasivea3c.PersuasiveA3CTFPolicy
+    policy_conf = persuasive_a3c_conf(
+        rollout_size=ARGS.rollout_size, agents=len(marl_env.get_agents()),
+        debug_folder=debug_dir, eval_folder=eval_dir,
+        alpha=ARGS.alpha, gamma=ARGS.gamma)
     # Gen config
-    policies = {}
     agent = marl_env.get_agents()[0]
-    policies['unique'] = (policy_class,
-                          marl_env.get_obs_space(agent),
-                          marl_env.get_action_space(agent),
-                          {})
+    policies = {
+        'unique': (policy_class,
+                   marl_env.get_obs_space(agent),
+                   marl_env.get_action_space(agent),
+                   {})
+    }
     policy_conf['multiagent']['policies'] = policies
     policy_conf['multiagent']['policy_mapping_fn'] = lambda agent_id: 'unique'
     policy_conf['env_config'] = env_config
@@ -354,8 +356,11 @@ def _main():
         # steps += result['timesteps_this_iter']
         final_result = result
         print_selected_results(result, SELECTION)
-        # pprint(result['evaluation'])
+
         ############################################################################################
+        if 'evaluation' not in result:
+            continue
+        # pprint(result['evaluation'])
         changes = False
         for metric in CHECKPOINT_METRICS:
             old = CURRENT_METRICS[metric]['value']
