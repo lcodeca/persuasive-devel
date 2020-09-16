@@ -117,7 +117,6 @@ class JSONExplorer(object):
             'departure': [],
             'ett': [],
             'wait': [],
-            'timeLoss': [],
             ########################
             'difference': [],
         }
@@ -155,7 +154,6 @@ class JSONExplorer(object):
                 self.agents[agent]['departure'].append(report['infos']['departure']/3600.0)
                 self.agents[agent]['ett'].append(report['infos']['ett']/60.0)
                 self.agents[agent]['wait'].append(report['infos']['wait']/60.0)
-                self.agents[agent]['timeLoss'].append(report['infos']['timeLoss'])
                 #############
                 self.agents[agent]['difference'].append(
                     (report['infos']['ett'] - report['infos']['rtt'])/60.0)
