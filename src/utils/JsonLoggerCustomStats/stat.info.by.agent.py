@@ -20,6 +20,8 @@ def _argument_parser():
     parser.add_argument(
         '--prefix', default='stats', help='Output prefix for the processed data.')
     parser.add_argument(
+        '--max', default=None, type=int, help='Maximum number of agents to process.')
+    parser.add_argument(
         '--profiler', dest='profiler', action='store_true', help='Enable cProfile.')
     parser.set_defaults(profiler=False)
     return parser.parse_args()
@@ -35,7 +37,7 @@ def _main():
         profiler.enable()
     ## ========================              PROFILER              ======================== ##
 
-    statistics = StatSingleExp(config.input, config.prefix)
+    statistics = StatSingleExp(config.input, config.prefix, config.max)
     statistics.info_by_agent()
     logging.info('Done')
 

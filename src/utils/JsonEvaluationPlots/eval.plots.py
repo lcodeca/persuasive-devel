@@ -46,9 +46,11 @@ def _argument_parser():
     parser = argparse.ArgumentParser(
         description='RLLIB & SUMO Statistics parser.')
     parser.add_argument(
-        '--input', required=True, type=str, help='Input JSON file.')
+        '--input', required=True, type=str, help='Input JSON file or directory.')
     parser.add_argument(
         '--prefix', default='stats', help='Output prefix for the processed data.')
+    parser.add_argument(
+        '--max', default=None, type=int, help='Maximum number of agents to process.')
     parser.add_argument(
         '--profiler', dest='profiler', action='store_true', help='Enable cProfile.')
     parser.set_defaults(profiler=False)
@@ -59,11 +61,17 @@ def _argument_parser():
 class JSONExplorer(object):
     """ Process a JSON worker file from RLLIB. """
 
-    def __init__(self, filename, prefix):
+    def __init__(self, filename, prefix, max_agents):
         self.input = filename
         self.prefix = prefix
+        self.max = max_agents
         self.results = []
-        self.walk_directory()
+        self.agents = {}
+
+        if os.path.isfile(self.input):
+            self.process_json_file(self.input)
+        else:
+            self.walk_directory()
         self.plot_info_by_agent()
 
     def walk_directory(self):
@@ -95,49 +103,64 @@ class JSONExplorer(object):
                         agents[agent_id[pos]]['mode'] = actions[pos]
                 self.results.append(agents)
 
+    def _add_agent(self, agent):
+        self.agents[agent] = {
+            'episode': [],
+            'reward': [],
+            'actions': [],
+            'mode': [],
+            ########################
+            'cost': [],
+            'discretized-cost': [],
+            'rtt': [],
+            'arrival': [],
+            'departure': [],
+            'ett': [],
+            'wait': [],
+            'timeLoss': [],
+            ########################
+            'difference': [],
+        }
+
+    def _try_add_agent(self, agent):
+        logger.debug('Trying to add agent %s, if possible', agent)
+        if agent in self.agents:
+            return False
+        if self.max is None:
+            self._add_agent(agent)
+            return True
+        if len(self.agents) < self.max:
+            self._add_agent(agent)
+            return True
+        return False
+
     def plot_info_by_agent(self):
         logger.info('Computing the detailed info for each agent over the episodes.')
-        agents = {}
         for episode in tqdm(self.results):
             for agent, report in episode.items():
-                if agent not in agents:
-                    agents[agent] = {
-                        'episode': [],
-                        'reward': [],
-                        'actions': [],
-                        'mode': [],
-                        ########################
-                        'cost': [],
-                        'discretized-cost': [],
-                        'rtt': [],
-                        'arrival': [],
-                        'departure': [],
-                        'ett': [],
-                        'wait': [],
-                        'timeLoss': [],
-                        ########################
-                        'difference': [],
-                    }
+                self._try_add_agent(agent)
+                if agent not in self.agents:
+                    continue
 
-                agents[agent]['episode'].append(len(agents[agent]['episode']) + 1)
-                agents[agent]['reward'].append(report['reward'])
-                agents[agent]['actions'].append(report['actions'])
-                agents[agent]['mode'].append(report['mode'])
+                self.agents[agent]['episode'].append(len(self.agents[agent]['episode']) + 1)
+                self.agents[agent]['reward'].append(report['reward'])
+                self.agents[agent]['actions'].append(report['actions'])
+                self.agents[agent]['mode'].append(report['mode'])
                 #############
-                agents[agent]['cost'].append(report['infos']['cost']/60.0)
-                agents[agent]['discretized-cost'].append(report['infos']['discretized-cost'])
-                agents[agent]['rtt'].append(report['infos']['rtt']/60.0)
+                self.agents[agent]['cost'].append(report['infos']['cost']/60.0)
+                self.agents[agent]['discretized-cost'].append(report['infos']['discretized-cost'])
+                self.agents[agent]['rtt'].append(report['infos']['rtt']/60.0)
                 #############
-                agents[agent]['arrival'].append(report['infos']['arrival']/3600.0)
-                agents[agent]['departure'].append(report['infos']['departure']/3600.0)
-                agents[agent]['ett'].append(report['infos']['ett']/60.0)
-                agents[agent]['wait'].append(report['infos']['wait']/60.0)
-                agents[agent]['timeLoss'].append(report['infos']['timeLoss'])
+                self.agents[agent]['arrival'].append(report['infos']['arrival']/3600.0)
+                self.agents[agent]['departure'].append(report['infos']['departure']/3600.0)
+                self.agents[agent]['ett'].append(report['infos']['ett']/60.0)
+                self.agents[agent]['wait'].append(report['infos']['wait']/60.0)
+                self.agents[agent]['timeLoss'].append(report['infos']['timeLoss'])
                 #############
-                agents[agent]['difference'].append(
+                self.agents[agent]['difference'].append(
                     (report['infos']['ett'] - report['infos']['rtt'])/60.0)
 
-        for agent, stats in tqdm(agents.items()):
+        for agent, stats in tqdm(self.agents.items()):
             fig, axs = plt.subplots(5, 2, sharex=True, figsize=(20, 20), constrained_layout=True)
             fig.suptitle('{}'.format(agent))
 
@@ -247,7 +270,7 @@ def _main():
         profiler.enable()
     ## ========================              PROFILER              ======================== ##
 
-    statistics = JSONExplorer(config.input, config.prefix)
+    statistics = JSONExplorer(config.input, config.prefix, config.max)
     logging.info('Done')
 
     ## ========================              PROFILER              ======================== ##
