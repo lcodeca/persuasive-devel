@@ -37,12 +37,12 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 class StatSingleExp(object):
     """ Process a SINGLE RLLIB logs/result.json file as a time series. """
 
-    def __init__(self, filename, prefix, max_agents=None, last=None):
+    def __init__(self, filename, prefix, max_agents=None, last=None, evaluation=False):
         self.input = filename
         self.prefix = prefix
         self.max = max_agents
         self.last = last
-
+        self.evaluation = evaluation
         self.agents = None
 
     @staticmethod
@@ -51,6 +51,17 @@ class StatSingleExp(object):
         ax.patch.set_visible(False)
         for sp in ax.spines.values():
             sp.set_visible(False)
+
+    def recursive_print(self, dictionary):
+        print(dictionary.keys())
+        input('Press any key...')
+        for key, value in dictionary.items():
+            if isinstance(value, dict):
+                print(key)
+                self.recursive_print(value)
+            else:
+                print(value, key)
+                input('Press any key...')
 
     def reward_over_timesteps_total(self):
         logger.info('Computing the reward over the timesteps total.')
@@ -64,6 +75,14 @@ class StatSingleExp(object):
             counter = 0
             for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
+                if self.evaluation:
+                    if 'evaluation' in complete:
+                        tmp = complete['evaluation']
+                        tmp['timesteps_total'] = complete['timesteps_total']
+                        complete = tmp
+                    else:
+                        # evaluation stats requested but not present in the results
+                        continue
                 if 'policy_unique_reward' in complete['hist_stats']:
                     x_coords.append(complete['timesteps_total'])
                     y_coords.append(np.nanmean(complete['hist_stats']['policy_unique_reward']))
@@ -105,6 +124,14 @@ class StatSingleExp(object):
             counter = 0
             for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
+                if self.evaluation:
+                    if 'evaluation' in complete:
+                        tmp = complete['evaluation']
+                        tmp['timesteps_total'] = complete['timesteps_total']
+                        complete = tmp
+                    else:
+                        # evaluation stats requested but not present in the results
+                        continue
                 if 'info_by_agent' in complete['hist_stats']:
                     x_coords.append(complete['timesteps_total'])
                     arrivals = []
@@ -146,6 +173,12 @@ class StatSingleExp(object):
             counter = 0
             for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
+                if self.evaluation:
+                    if 'evaluation' in complete:
+                        complete = complete['evaluation']
+                    else:
+                        # evaluation stats requested but not present in the results
+                        continue
                 if 'rewards_by_agent' in complete['hist_stats']:
                     episodes += complete['episodes_this_iter']
                     x_coords.append(episodes)
@@ -175,22 +208,44 @@ class StatSingleExp(object):
         # plt.show()
         matplotlib.pyplot.close('all')
 
-    def epsilon_over_timesteps_total(self):
-        logger.info('Computing the exploration epsilon over the timesteps total.')
+    def qvalues_over_timesteps_total(self):
+        logger.info('Computing the qvalues over the timesteps total.')
+        x_coords = []
+        y_coords = []
+        min_y = []
+        max_y = []
+        with open(self.input, 'r') as jsonfile:
+            for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
+                complete = json.loads(row)
+                x_coords.append(complete['timesteps_total'])
+                y_coords.append(complete['info']['learner']['unique']['mean_q'])
+                min_y.append(complete['info']['learner']['unique']['min_q'])
+                max_y.append(complete['info']['learner']['unique']['max_q'])
+        fig, ax = plt.subplots(figsize=(15, 10))
+        ax.plot(x_coords, y_coords, label='Mean')
+        ax.plot(x_coords, min_y, label='Min')
+        ax.plot(x_coords, max_y, label='Max')
+        ax.set(xlabel='Learning step', ylabel='Q-Values', title='Q-Values')
+        ax.grid()
+        fig.savefig('{}.qvalues_over_learning.svg'.format(self.prefix),
+                    dpi=300, transparent=False, bbox_inches='tight')
+        # plt.show()
+        matplotlib.pyplot.close('all')
+
+    def td_error_over_timesteps_total(self):
+        logger.info('Computing the TD error over the timesteps total.')
         x_coords = []
         y_coords = []
         with open(self.input, 'r') as jsonfile:
             for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
-                pprint(complete['info'])
-                exit(666)
                 x_coords.append(complete['timesteps_total'])
-                y_coords.append(complete['info']['learner']['unique']['policy_entropy'])
+                y_coords.append(complete['info']['learner']['unique']['mean_td_error'])
         fig, ax = plt.subplots(figsize=(15, 10))
         ax.plot(x_coords, y_coords)
-        ax.set(xlabel='Learning step', ylabel='Entropy', title='Policy Entropy')
+        ax.set(xlabel='Learning step', ylabel='Loss', title='Mean TD Error')
         ax.grid()
-        fig.savefig('{}.policy_entropy_over_learning.svg'.format(self.prefix),
+        fig.savefig('{}.td_error_over_learning.svg'.format(self.prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
         # plt.show()
         matplotlib.pyplot.close('all')
@@ -202,6 +257,12 @@ class StatSingleExp(object):
         with open(self.input, 'r') as jsonfile:
             for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
+                if self.evaluation:
+                    if 'evaluation' in complete:
+                        complete = complete['evaluation']
+                    else:
+                        # evaluation stats requested but not present in the results
+                        continue
                 x_coords.append(complete['timesteps_total'])
                 y_coords.append(complete['info']['learner']['unique']['policy_loss'])
         fig, ax = plt.subplots(figsize=(15, 10))
@@ -220,6 +281,12 @@ class StatSingleExp(object):
         with open(self.input, 'r') as jsonfile:
             for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
+                if self.evaluation:
+                    if 'evaluation' in complete:
+                        complete = complete['evaluation']
+                    else:
+                        # evaluation stats requested but not present in the results
+                        continue
                 x_coords.append(complete['timesteps_total'])
                 y_coords.append(complete['info']['learner']['unique']['policy_entropy'])
         fig, ax = plt.subplots(figsize=(15, 10))
@@ -245,7 +312,6 @@ class StatSingleExp(object):
             'departure': [],
             'ett': [],
             'wait': [],
-            'timeLoss': [],
             ########################
             'difference': [],
         }
@@ -269,15 +335,23 @@ class StatSingleExp(object):
             counter = 0
             for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
-                try :
+                if self.evaluation:
+                    if 'evaluation' in complete:
+                        complete = complete['evaluation']
+                    else:
+                        # evaluation stats requested but not present in the results
+                        continue
+                try:
                     info_by_episode = complete['hist_stats']['info_by_agent']
                     last_action_by_agent = complete['hist_stats']['last_action_by_agent']
                     rewards_by_agent = complete['hist_stats']['rewards_by_agent']
                     for pos, episode in enumerate(info_by_episode):
                         for agent, info in episode.items():
+                            self._try_add_agent(agent)
                             if agent not in self.agents:
                                 continue
-                            self.agents[agent]['episode'].append(len(self.agents[agent]['episode']) + 1)
+                            self.agents[agent]['episode'].append(
+                                len(self.agents[agent]['episode']) + 1)
                             self.agents[agent]['reward'].append(sum(rewards_by_agent[pos][agent]))
                             self.agents[agent]['actions'].append(len(rewards_by_agent[pos][agent]))
                             self.agents[agent]['mode'].append(last_action_by_agent[pos][agent])
@@ -290,12 +364,13 @@ class StatSingleExp(object):
                             self.agents[agent]['departure'].append(info['departure']/3600.0)
                             self.agents[agent]['ett'].append(info['ett']/60.0)
                             self.agents[agent]['wait'].append(info['wait']/60.0)
-                            self.agents[agent]['timeLoss'].append(info['timeLoss'])
                             #############
-                            self.agents[agent]['difference'].append((info['ett'] - info['rtt'])/60.0)
+                            self.agents[agent]['difference'].append(
+                                (info['ett'] - info['rtt'])/60.0)
                 except KeyError:
                     logger.critical('Missing stats in row %d', counter)
                 counter += 1
+
         for agent, stats in tqdm(self.agents.items()):
             fig, axs = plt.subplots(5, 2, sharex=True, figsize=(20, 20), constrained_layout=True)
             fig.suptitle('{}'.format(agent))
@@ -411,6 +486,12 @@ class StatSingleExp(object):
             counter = 0
             for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
+                if self.evaluation:
+                    if 'evaluation' in complete:
+                        complete = complete['evaluation']
+                    else:
+                        # evaluation stats requested but not present in the results
+                        continue
                 try:
                     info_by_episode = complete['hist_stats']['info_by_agent']
                     for episode in info_by_episode:
@@ -454,12 +535,19 @@ class StatSingleExp(object):
             counter = 0
             for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
                 complete = json.loads(row)
-                try :
+                if self.evaluation:
+                    if 'evaluation' in complete:
+                        complete = complete['evaluation']
+                    else:
+                        # evaluation stats requested but not present in the results
+                        continue
+                try:
                     info_by_episode = complete['hist_stats']['info_by_agent']
                     for episode in info_by_episode:
                         for agent, info_episode in episode.items():
                             if 'ext' not in info_episode:
                                 continue
+                            pprint(info_episode)
                             self._try_insert_agent(agent)
                             if agent not in self.agents:
                                 continue
@@ -490,3 +578,23 @@ class StatSingleExp(object):
                     self.prefix, agent, episodes[agent]),
                 dpi=300, transparent=False, bbox_inches='tight')
             matplotlib.pyplot.close('all')
+
+    # def epsilon_over_timesteps_total(self):
+    #     logger.info('Computing the exploration epsilon over the timesteps total.')
+    #     x_coords = []
+    #     y_coords = []
+    #     with open(self.input, 'r') as jsonfile:
+    #         for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
+    #             complete = json.loads(row)
+    #             pprint(complete['info'])
+    #             exit(666)
+    #             x_coords.append(complete['timesteps_total'])
+    #             y_coords.append(complete['info']['learner']['unique']['policy_entropy'])
+    #     fig, ax = plt.subplots(figsize=(15, 10))
+    #     ax.plot(x_coords, y_coords)
+    #     ax.set(xlabel='Learning step', ylabel='Entropy', title='Policy Entropy')
+    #     ax.grid()
+    #     fig.savefig('{}.policy_entropy_over_learning.svg'.format(self.prefix),
+    #                 dpi=300, transparent=False, bbox_inches='tight')
+    #     # plt.show()
+    #     matplotlib.pyplot.close('all')
