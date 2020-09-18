@@ -2,6 +2,7 @@
 
 """ Initial Agents Cooperation MARL Environment based on PersuasiveMultiAgentEnv """
 
+from enum import Enum
 import logging
 import os
 import sys
@@ -62,44 +63,32 @@ class DeepSUMOWrapper(SUMOUtils):
         self.agents_depart = dict()
         self.agents_arrival = dict()
         self.arrived_queue = list()
+        self.subs = dict()
 
     def _default_step_action(self, agents):
         """ Specific code to be executed in every simulation step """
-        _dones, _agents = None, None
-        try:
-            _dones, _agents = agents
-        except Exception as exception:
-            logger.error('%s', str(agents))
-            raise exception
-        dones, agents = _dones, _agents
+        dones = agents # we are not passing the agents,
+                       # but a boolean that say if all agents are done
         try:
             super()._default_step_action(agents)
         except NotImplementedError:
             pass
         now = self.traci_handler.simulation.getTime() # seconds
-        logger.debug('[%.2f] Agents: %s', now, str(sorted(agents)))
-        people = self.traci_handler.person.getIDList()
-        logger.debug('[%.2f] People: %s', now, str(sorted(people)))
-        left = set()
-        for agent in agents:
-            if agent in people:
-                if agent not in self.agents_depart:
-                    self.agents_depart[agent] = now
-                    logger.debug('[%.2f] Agent %s has departed.', now, agent)
-            else:
-                if agent in self.agents_depart and agent not in self.agents_arrival:
-                    self.agents_arrival[agent] = now
-                    logger.debug('[%.2f] Agent %s has arrived.', now, agent)
-                    self.arrived_queue.append(agent)
-                if dones:
-                    left.add(agent)
-        logger.debug('[%.2f] Left: %d - %s', now, len(left), sorted(left))
-        logger.debug('[%.2f] Agents: %d', now, len(agents))
-        if dones:
-            if len(agents) == len(left):
-                # all the agents left the simulation
-                logger.info('[%.2f] All the AGENTS left the SUMO simulation.', now)
-                self.end_simulation()
+        self.subs = self.traci_handler.person.getAllSubscriptionResults()
+        logger.debug('[%.2f] Subs: [%d] %s', now, len(self.subs), str(self.subs.keys()))
+        for agent in self.subs:
+            if agent not in self.agents_depart:
+                self.agents_depart[agent] = now
+                logger.debug('[%.2f] Agent %s has departed.', now, agent)
+        for agent in self.agents_depart:
+            if agent not in self.subs and agent not in self.agents_arrival:
+                self.agents_arrival[agent] = now
+                logger.debug('[%.2f] Agent %s has arrived.', now, agent)
+                self.arrived_queue.append(agent)
+        if dones and not self.subs:
+            # all the agents left the simulation
+            logger.info('[%.2f] All the AGENTS left the SUMO simulation.', now)
+            self.end_simulation()
         return True
 
     def end_simulation(self):
@@ -228,6 +217,96 @@ class DeepSUMOAgents(SUMOModeAgent):
                           self.agent_id, self.origin, self.destination, str(self.modes))
         return feasible_plan
 
+    class OUTCOME(Enum):
+        INSERTED = 0
+        WRONG_DECISION = 1
+        WAITING = 2
+        ERROR = 3
+
+    def step(self, action, handler):
+        """ Implements the logic of each specific action passed as input. """
+
+        if self.inserted:
+            logger.error('Agent %s has already been inserted in the simulation. [%s]',
+                         self.agent_id, self.__repr__())
+            return self.OUTCOME.ERROR # This never happens..
+
+        mode = None
+
+        if action == 0:
+            ### WAIT, nothing to do here.
+            self.waited_steps += 1
+            return self.OUTCOME.WAITING
+        elif action in self.action_to_mode:
+            self.inserted = True
+            mode = self.action_to_mode[action]
+        else:
+            raise NotImplementedError('Action {} is not implemented.'.format(action))
+
+        self.chosen_mode = mode
+
+        # compute the route using findIntermodalRoute
+        _mode, _ptype, _vtype = handler.get_mode_parameters(mode)
+        logger.debug('Selected mode: %s. [mode %s, ptype %s, vtype %s]',
+                     mode, _mode, _ptype, _vtype)
+        try:
+            route = handler.traci_handler.simulation.findIntermodalRoute(
+                self.origin, self.destination, modes=_mode, pType=_ptype, vType=_vtype,
+                routingMode=1)
+            if not handler.is_valid_route(mode, route):
+                route = None
+        except (traci.exceptions.TraCIException, libsumo.libsumo.TraCIException):
+            route = None
+
+        if route:
+            try:
+                # generate the person trip
+                logger.debug('Adding person %s', str(self.agent_id))
+                # add(self, personID, edgeID, pos, depart=-3, typeID='DEFAULT_PEDTYPE')
+                handler.traci_handler.person.add(self.agent_id, self.origin, 0.0)
+                veh_counter = 0
+                for stage in route:
+                    self.cost += stage.cost
+                    self.ett += stage.travelTime
+                    # appendStage(self, personID, stage)
+                    if DEBUGGER:
+                        logger.debug('%s', pformat(stage))
+                    if stage.type == tc.STAGE_DRIVING and stage.vType in self.modes_w_vehicles:
+                        vehicle_name = '{}_{}_tr'.format(self.agent_id, veh_counter)
+                        route_name = '{}_rou'.format(vehicle_name)
+                        # route.add(self, routeID, edges)
+                        handler.traci_handler.route.add(route_name, stage.edges)
+                        # vehicle.add(self, vehID, routeID, typeID='DEFAULT_VEHTYPE', depart=None,
+                        #       departLane='first', departPos='base', departSpeed='0',
+                        #       arrivalLane='current', arrivalPos='max', arrivalSpeed='current',
+                        #       fromTaz='', toTaz='', line='', personCapacity=0, personNumber=0)
+                        handler.traci_handler.vehicle.add(
+                            vehicle_name, route_name, typeID=stage.vType, depart='triggered')
+                        stage.line = vehicle_name
+                        veh_counter += 1
+                    handler.traci_handler.person.appendStage(self.agent_id, stage)
+                    handler.traci_handler.person.subscribe(self.agent_id,
+                                                           (tc.VAR_ROAD_ID, tc.VAR_LANEPOSITION))
+                return self.OUTCOME.INSERTED
+            except (traci.exceptions.TraCIException, libsumo.libsumo.TraCIException) as exception:
+                error = str(exception)
+                if 'already exists' in error:
+                    raise Exception(os.getpid(), error)
+                self.chosen_mode = None
+                self.chosen_mode_error = 'TraCIException for mode {}'.format(mode)
+                self.cost = float('NaN')
+                self.ett = float('NaN')
+                logger.warning('Route not usable for %s using mode %s [%s]',
+                               self.agent_id, mode, error)
+                return self.OUTCOME.WRONG_DECISION # wrong decision, paid badly at the end
+
+        self.chosen_mode = None
+        self.chosen_mode_error = 'Invalid route using mode {}'.format(mode)
+        self.cost = float('NaN')
+        self.ett = float('NaN')
+        logger.warning('Route not found for %s using mode %s', self.agent_id, mode)
+        return self.OUTCOME.WRONG_DECISION # wrong decision, paid badly at the end
+
 ####################################################################################################
 
 class AgentsHistory(object):
@@ -293,11 +372,9 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
 
     def agents_to_usage_active(self, choices):
         """ Monitor active agents."""
-        # filter only the agents still in the simulation // this should be optimized
-        people = set(self.simulation.traci_handler.person.getIDList())
         active = 0
         for _, agent in choices:
-            if agent in people:
+            if agent in self.simulation.subs:
                 active += 1
         logger.debug('Usage: %d', active)
         return active
@@ -305,7 +382,7 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
     ################################################################################################
 
     def sumo_reset(self):
-        logger.critical('PersuasiveDeepMARLEnv.sumo_reset: PID %s', os.getpid())
+        logger.info('PersuasiveDeepMARLEnv.sumo_reset: PID %s', os.getpid())
         return DeepSUMOWrapper(self._config['scenario_config']['sumo_config'])
 
     def reset(self):
@@ -343,6 +420,8 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
         state = self.craft_final_state(agent)
         reward = self.get_reward(agent)
         info = self.compute_info_for_agent(agent)
+        if agent in self.ext_stats:
+            info['ext'] = self.ext_stats[agent]
         logger.debug('Observations: %s', str(state))
         logger.debug('Rewards: %s', str(reward))
         logger.debug('Info: %s', str(info))
@@ -368,6 +447,7 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
         self.environment_steps += 1
         logger.debug('========================> Episode: %d - Step: %d <==========================',
                      self.episodes, self.environment_steps)
+        logger.debug('Actions: \n%s', pformat(action_dict))
 
         obs, rewards, dones, infos = {}, {}, {}, {}
 
@@ -395,17 +475,33 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
         logger.debug('========================================================')
 
         # Take action
+        wrong_decision = set()
         for agent in shuffled_agents:
-            done = self.agents[agent].step(action_dict[agent], self.simulation)
-            if done:
+            res = self.agents[agent].step(action_dict[agent], self.simulation)
+            logger.debug('Agent %s returned %s', agent, pformat(res))
+            if res == self.agents[agent].OUTCOME.INSERTED:
+                logger.debug('Agent %s: INSERTED', agent)
                 self.dones.add(agent)
                 self.active.remove(agent)
+            elif res == self.agents[agent].OUTCOME.WRONG_DECISION:
+                logger.debug('Agent %s: WRONG_DECISION', agent)
+                wrong_decision.add(agent)
+                self.dones.add(agent)
+                self.active.remove(agent)
+            elif res == self.agents[agent].OUTCOME.WAITING:
+                logger.debug('Agent %s: WAITING', agent)
+            elif res == self.agents[agent].OUTCOME.ERROR:
+                logger.debug('Agent %s: ERROR', agent)
+                self.dones.add(agent)
+                self.active.remove(agent)
+                raise Exception(
+                    'Agent {} has already been inserted in the simulation.'.format(agent))
+
         dones['__all__'] = len(self.dones) == len(self.agents)
 
         logger.debug('Before SUMO')
         ongoing_simulation = self.simulation.step(
-            until_end=dones['__all__'],
-            agents=(dones['__all__'], set(self.agents.keys())))
+            until_end=dones['__all__'], agents=dones['__all__'])
         logger.debug('After SUMO')
 
         # Compute rewards for the agents that are arrived to their destination.
@@ -418,17 +514,26 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
             infos[agent] = _info
         self.simulation.arrived_queue = []
 
+        # Punish all the agents that made a wrong decision
+        for agent in wrong_decision:
+            logger.debug('Punishing agent %s', agent)
+            _state, _reward, _info = self.finalize_agent(agent)
+            obs[agent] = _state
+            rewards[agent] = _reward
+            dones[agent] = True
+            infos[agent] = _info
+
         waited_too_long = False
         if ongoing_simulation:
-            ## add waiting agent to the pool of active agents
             current_time = self.simulation.get_current_time()
+
+            ## add waiting agent to the pool of active agents
             logger.debug('Activating agents...')
             self._move_agents(current_time)
 
             # compute the new observation for the WAITING agents
             logger.debug('Computing obseravions for the WAITING agents.')
-            agents_to_remove = set()
-            for agent in self.active:
+            for agent in self.active.copy():
                 logger.debug('[%2f] %s --> %d', current_time, agent, self.agents[agent].arrival)
                 if current_time > self.agents[agent].arrival:
                     waited_too_long = True
@@ -438,7 +543,7 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
                     self.agents[agent].ett = float('NaN')
                     self.agents[agent].cost = float('NaN')
                     self.dones.add(agent)
-                    agents_to_remove.add(agent)
+                    self.active.remove(agent)
                     _state, _reward, _info = self.finalize_agent(agent)
                     obs[agent] = _state
                     rewards[agent] = _reward
@@ -449,16 +554,13 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
                     obs[agent] = self.get_observation(agent)
                     dones[agent] = False
                     infos[agent] = {}
-            for agent in agents_to_remove:
-                self.active.remove(agent)
 
         # in case all the reamining agents WAITED TOO LONG
         dones['__all__'] = len(self.dones) == len(self.agents)
         if waited_too_long and dones['__all__']:
             logger.info('All the agent are DONE. Finalizing episode...')
             ongoing_simulation = self.simulation.step(
-                until_end=dones['__all__'],
-                agents=(dones['__all__'], set(self.agents.keys())))
+                until_end=dones['__all__'], agents=dones['__all__'])
             for agent in self.simulation.arrived_queue:
                 logger.debug('Finalizing agent %s', agent)
                 _state, _reward, _info = self.finalize_agent(agent)
@@ -468,7 +570,7 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
                 infos[agent] = _info
             self.simulation.arrived_queue = []
 
-        if not ongoing_simulation:
+        if not ongoing_simulation and not self.not_rewarded:
             logger.debug('Missing REWARD for [%d] %s',
                          len(self.not_rewarded), str(sorted(self.not_rewarded)))
             for agent in self.not_rewarded.copy():
@@ -478,8 +580,14 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
                 rewards[agent] = _reward
                 dones[agent] = True
                 infos[agent] = _info
-            logger.debug('Missing REWARD for [%d] %s',
-                         len(self.not_rewarded), str(sorted(self.not_rewarded)))
+
+        logger.debug('**********************************************************')
+        logger.debug('==> self.dones: [%d] %s', len(self.dones), str(self.dones))
+        logger.debug('==> self.active: [%d] %s', len(self.active), str(self.active))
+        logger.debug('==> self.not_rewarded: [%d] %s', len(self.not_rewarded), str(self.not_rewarded))
+        logger.debug('==> self.simulation.arrived_queue: [%d] %s', len(self.simulation.arrived_queue), str(self.simulation.arrived_queue))
+        logger.debug('==> wrong_decision: [%d] %s', len(wrong_decision), str(wrong_decision))
+        logger.debug('**********************************************************')
 
         logger.debug('Observations: %s', str(obs))
         logger.debug('Rewards: %s', str(rewards))
