@@ -20,15 +20,6 @@ def _argument_parser():
     parser.add_argument(
         '--prefix', default='stats', help='Output prefix for the processed data.')
     parser.add_argument(
-        '--max', default=None, type=int, help='Maximum number of agents to process.')
-    parser.add_argument(
-        '--last', dest='last', action='store_true',
-        help='Compute only for the last episode.')
-    parser.set_defaults(last=False)
-    parser.add_argument(
-        '--evaluation', dest='evaluation', action='store_true', help='Evaluation data.')
-    parser.set_defaults(evaluation=False)
-    parser.add_argument(
         '--profiler', dest='profiler', action='store_true', help='Enable cProfile.')
     parser.set_defaults(profiler=False)
     return parser.parse_args()
@@ -44,9 +35,8 @@ def _main():
         profiler.enable()
     ## ========================              PROFILER              ======================== ##
 
-    statistics = StatSingleExp(config.input, config.prefix, max_agents=config.max, last=config.last,
-                               evaluation=config.evaluation)
-    statistics.additionals_by_agent()
+    statistics = StatSingleExp(config.input, config.prefix)
+    statistics.td_error_over_timesteps_total()
     logging.info('Done')
 
     ## ========================              PROFILER              ======================== ##

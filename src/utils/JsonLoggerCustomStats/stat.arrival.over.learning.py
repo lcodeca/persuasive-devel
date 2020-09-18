@@ -20,6 +20,9 @@ def _argument_parser():
     parser.add_argument(
         '--prefix', default='stats', help='Output prefix for the processed data.')
     parser.add_argument(
+        '--evaluation', dest='evaluation', action='store_true', help='Evaluation data.')
+    parser.set_defaults(evaluation=False)
+    parser.add_argument(
         '--profiler', dest='profiler', action='store_true', help='Enable cProfile.')
     parser.set_defaults(profiler=False)
     return parser.parse_args()
@@ -35,7 +38,7 @@ def _main():
         profiler.enable()
     ## ========================              PROFILER              ======================== ##
 
-    statistics = StatSingleExp(config.input, config.prefix)
+    statistics = StatSingleExp(config.input, config.prefix, evaluation=config.evaluation)
     statistics.average_arrival_over_timesteps_total()
     logging.info('Done')
 
