@@ -547,7 +547,6 @@ class StatSingleExp(object):
                         for agent, info_episode in episode.items():
                             if 'ext' not in info_episode:
                                 continue
-                            pprint(info_episode)
                             self._try_insert_agent(agent)
                             if agent not in self.agents:
                                 continue
