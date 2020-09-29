@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 
-""" Persuasive Trainer for RLLIB + SUMO """
+"""
+Persuasive Trainer for RLLIB + SUMO
+
+See:
+ - https://docs.ray.io/en/releases-0.8.7/rllib-algorithms.html?deep-q-networks-dqn-rainbow-parametric-dqn#deep-q-networks-dqn-rainbow-parametric-dqn
+ - https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/agents/dqn/dqn.py
+ - https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/agents/dqn/dqn_tf_policy.py
+"""
 
 import os
 # os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())

@@ -119,18 +119,46 @@ def persuasive_dqn_conf(rollout_size=10,
 
 
     # === Exploration Settings ===
-    # https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/utils/exploration/epsilon_greedy.py
-    custom_configuration['exploration_config']['type'] = 'EpsilonGreedy'
-    custom_configuration['exploration_config']['initial_epsilon'] = 1.0
-    custom_configuration['exploration_config']['final_epsilon'] = 0.02
-    custom_configuration['exploration_config']['epsilon_timesteps'] = 10000
+    custom_configuration['exploration_config'] = {}
+
+    # # https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/utils/exploration/epsilon_greedy.py
+    # custom_configuration['exploration_config']['type'] = 'EpsilonGreedy'
+    # custom_configuration['exploration_config']['initial_epsilon'] = 1.0
+    # custom_configuration['exploration_config']['final_epsilon'] = 0.02
+    # custom_configuration['exploration_config']['epsilon_timesteps'] = 10000
+
+    # https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/utils/exploration/soft_q.py
+    custom_configuration['exploration_config']['type'] = 'SoftQ'
+    custom_configuration['exploration_config']['temperature'] = 1.0 # Default
+
     # Name of a custom action distribution to use.
     # See: https://docs.ray.io/en/releases-0.8.7/rllib-models.html#custom-action-distributions
-    custom_configuration['model']['custom_action_dist'] = 'custom_action_distribution'
+    # custom_configuration['model']['custom_action_dist'] = 'custom_action_distribution'
 
     # === DQN Model Settings ===
     # Update the target network every `target_network_update_freq` steps.
-    custom_configuration['target_network_update_freq'] = agents # every agent should have done at least 1 action
+    # custom_configuration['target_network_update_freq'] = rollout_size
+    custom_configuration['target_network_update_freq'] = agents
+                                                    # every agent should have done at least 1 action
+    custom_configuration['n_step'] = 10
+
+    # Number of atoms for representing the distribution of return. When
+    # this is greater than 1, distributional Q-learning is used.
+    # the discrete supports are bounded by v_min and v_max
+    custom_configuration['num_atoms'] = 1
+    custom_configuration['v_min'] = -10.0
+    custom_configuration['v_max'] = 10.0
+    # Whether to use noisy network
+    custom_configuration['noisy'] = False
+    # control the initial value of noisy nets
+    custom_configuration['sigma0'] = 0.5
+    # Whether to use dueling dqn
+    custom_configuration['dueling'] = False # True
+    # Dense-layer setup for each the advantage branch and the value branch
+    # in a dueling architecture.
+    custom_configuration['hiddens'] = [256]
+    # Whether to use double dqn
+    custom_configuration['double_q'] = False # True
 
     # === Replay buffer ===
     # Size of the replay buffer. Note that if async_updates is set, then
