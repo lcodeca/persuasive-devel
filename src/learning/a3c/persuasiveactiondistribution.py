@@ -3,9 +3,9 @@
 """
     Persuasive implementation of a custom action distribution.
     See:
-    - https://docs.ray.io/en/releases-0.8.7/rllib-models.html#custom-action-distributions
-    - https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/models/action_dist.py
-    - https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/models/tf/tf_action_dist.py
+    - https://docs.ray.io/en/releases-1.0.0/rllib-models.html#custom-action-distributions
+    - https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/models/action_dist.py
+    - https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/models/tf/tf_action_dist.py
 """
 
 import logging
