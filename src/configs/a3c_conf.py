@@ -58,9 +58,9 @@ def persuasive_a3c_conf(rollout_size=10,
                         alpha=0.0001,
                         gamma=0.99):
     """
-        https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/agents/trainer.py#L44
-        https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/agents/a3c/a3c.py#L14
-        https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/models/catalog.py#L37
+        https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/agents/trainer.py#L44
+        https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/agents/a3c/a3c.py#L14
+        https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/models/catalog.py#L37
     """
 
     ModelCatalog.register_custom_model('custom_rrn', RNNModel)
@@ -110,10 +110,10 @@ def persuasive_a3c_conf(rollout_size=10,
     custom_configuration['train_batch_size'] = rollout_size * agents
 
     # === Exploration Settings ===
-    # https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/utils/exploration/stochastic_sampling.py
+    # https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/utils/exploration/stochastic_sampling.py
     # custom_configuration['exploration_config']['type'] = 'StochasticSampling'
 
-    # https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/utils/exploration/epsilon_greedy.py
+    # https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/utils/exploration/epsilon_greedy.py
     custom_configuration['exploration_config']['type'] = 'EpsilonGreedy'
     custom_configuration['exploration_config']['initial_epsilon'] = 1.0
     custom_configuration['exploration_config']['final_epsilon'] = 0.0001
@@ -170,7 +170,7 @@ def persuasive_a3c_conf(rollout_size=10,
     # These will be available in the Model's
     custom_configuration['model']['custom_model_config'] = {}
     # Name of a custom action distribution to use.
-    # See: https://docs.ray.io/en/releases-0.8.7/rllib-models.html#custom-action-distributions
+    # See: https://docs.ray.io/en/releases-1.0.0/rllib-models.html#custom-action-distributions
     custom_configuration['model']['custom_action_dist'] = 'custom_action_distribution'
 
     # == OPTIMIZER ==

@@ -4,9 +4,9 @@
 Persuasive Trainer for RLLIB + SUMO
 
 See:
- - https://docs.ray.io/en/releases-0.8.7/rllib-algorithms.html?deep-q-networks-dqn-rainbow-parametric-dqn#deep-q-networks-dqn-rainbow-parametric-dqn
- - https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/agents/dqn/dqn.py
- - https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/agents/dqn/dqn_tf_policy.py
+ - https://docs.ray.io/en/releases-1.0.0/rllib-algorithms.html?deep-q-networks-dqn-rainbow-parametric-dqn#deep-q-networks-dqn-rainbow-parametric-dqn
+ - https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/agents/dqn/dqn.py
+ - https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/agents/dqn/dqn_tf_policy.py
 """
 
 import os

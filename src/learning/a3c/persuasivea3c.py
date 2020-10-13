@@ -44,7 +44,7 @@ logger = set_logging(__name__)
 
 ####################################################################################################
 
-# Straignt from https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/agents/a3c/a3c.py#L14
+# Straignt from https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/agents/a3c/a3c.py#L14
 DEFAULT_CONFIG = with_common_config({
     # Should use a critic as a baseline (otherwise don't use value baseline;
     # required for using GAE).
@@ -78,7 +78,7 @@ DEFAULT_CONFIG = with_common_config({
 # Persuasive implementation of A3C Tensorflow-based Policy
 # See:
 #         https://ray.readthedocs.io/en/latest/rllib-concepts.html#policies
-#         https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/agents/a3c/a3c_tf_policy.py
+#         https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/agents/a3c/a3c_tf_policy.py
 
 # ##################################################################################################
 
@@ -203,7 +203,7 @@ PersuasiveA3CTFPolicy = build_tf_policy(
 #     Persuasive implementation of A3C Tensorflow-based Trainer
 #     See:
 #         https://ray.readthedocs.io/en/latest/rllib-concepts.html#trainers
-#         https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/agents/a3c/a3c.py
+#         https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/agents/a3c/a3c.py
 
 # ##################################################################################################
 
@@ -245,9 +245,9 @@ PersuasiveA3CTrainer = build_trainer(
 #     Persuasive callbacks implementation
 #     See:
 #         https://docs.ray.io/en/latest/rllib-training.html#callbacks-and-custom-metrics
-#         https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/agents/callbacks.py
-#         https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/evaluation/episode.py
-#         https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/examples/custom_metrics_and_callbacks.py
+#         https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/agents/callbacks.py
+#         https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/evaluation/episode.py
+#         https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/examples/custom_metrics_and_callbacks.py
 
 # ##################################################################################################
 

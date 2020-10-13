@@ -3,7 +3,7 @@
 """
     Persuasive implementation of a LSTM Recurrent Neural Network.
     See:
-    - https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/examples/models/rnn_model.py
+    - https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/examples/models/rnn_model.py
 """
 
 import logging

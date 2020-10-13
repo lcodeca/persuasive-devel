@@ -3,7 +3,7 @@
 """
     Persuasive implementation of Stochastic Sampling.
     See:
-    - https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/utils/exploration/soft_q.py
+    - https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/utils/exploration/soft_q.py
 """
 
 import logging

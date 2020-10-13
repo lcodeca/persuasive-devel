@@ -59,9 +59,9 @@ def persuasive_dqn_conf(rollout_size=10,
                         alpha=5e-4,
                         gamma=0.99):
     """
-        https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/agents/trainer.py#L44
-        https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/agents/dqn/dqn.py#L21
-        https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/models/catalog.py#L37
+        https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/agents/trainer.py#L44
+        https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/agents/dqn/dqn.py#L21
+        https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/models/catalog.py#L37
     """
 
     # ModelCatalog.register_custom_model('custom_rrn', RNNModel)
@@ -121,18 +121,18 @@ def persuasive_dqn_conf(rollout_size=10,
     # === Exploration Settings ===
     custom_configuration['exploration_config'] = {}
 
-    # # https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/utils/exploration/epsilon_greedy.py
+    # # https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/utils/exploration/epsilon_greedy.py
     # custom_configuration['exploration_config']['type'] = 'EpsilonGreedy'
     # custom_configuration['exploration_config']['initial_epsilon'] = 1.0
     # custom_configuration['exploration_config']['final_epsilon'] = 0.02
     # custom_configuration['exploration_config']['epsilon_timesteps'] = 10000
 
-    # https://github.com/ray-project/ray/blob/releases/0.8.7/rllib/utils/exploration/soft_q.py
+    # https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/utils/exploration/soft_q.py
     custom_configuration['exploration_config']['type'] = 'SoftQ'
     custom_configuration['exploration_config']['temperature'] = 1.0 # Default
 
     # Name of a custom action distribution to use.
-    # See: https://docs.ray.io/en/releases-0.8.7/rllib-models.html#custom-action-distributions
+    # See: https://docs.ray.io/en/releases-1.0.0/rllib-models.html#custom-action-distributions
     # custom_configuration['model']['custom_action_dist'] = 'custom_action_distribution'
 
     # === DQN Model Settings ===
