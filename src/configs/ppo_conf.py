@@ -45,7 +45,7 @@ def persuasive_ppo_conf(rollout_size=10,
     # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    custom_configuration['num_workers'] = 5
+    custom_configuration['num_workers'] = 6
     custom_configuration['num_gpus_per_worker'] = 0
     # Prevent iterations from going lower than this time span
     # custom_configuration['min_iter_time_s'] = 1
@@ -158,7 +158,7 @@ def persuasive_ppo_conf(rollout_size=10,
     # process. If you increase this, it will increase the Ray resource usage
     # of the trainer since evaluation workers are created separately from
     # rollout workers.
-    custom_configuration['evaluation_num_workers'] = 5
+    custom_configuration['evaluation_num_workers'] = 2
     # Customize the evaluation method. This must be a function of signature
     # (trainer: Trainer, eval_workers: WorkerSet) -> metrics: dict. See the
     # Trainer._evaluate() method to see the default implementation. The
