@@ -106,10 +106,10 @@ class StatSingleExp(object):
                     dpi=300, transparent=False, bbox_inches='tight')
         #plt.show()
         # ZOOM IT
-        ax.set_ylim(-20000, 0)
-        # plt.show()
-        fig.savefig('{}.bounded_reward_over_learning.svg'.format(self.prefix),
-                    dpi=300, transparent=False, bbox_inches='tight')
+        # ax.set_ylim(-20000, 0)
+        # # plt.show()
+        # fig.savefig('{}.bounded_reward_over_learning.svg'.format(self.prefix),
+        #             dpi=300, transparent=False, bbox_inches='tight')
         matplotlib.pyplot.close('all')
 
     def average_arrival_over_timesteps_total(self):
@@ -274,6 +274,30 @@ class StatSingleExp(object):
         # plt.show()
         matplotlib.pyplot.close('all')
 
+    def total_loss_over_timesteps_total(self):
+        logger.info('Computing the total loss over the timesteps total.')
+        x_coords = []
+        y_coords = []
+        with open(self.input, 'r') as jsonfile:
+            for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
+                complete = json.loads(row)
+                if self.evaluation:
+                    if 'evaluation' in complete:
+                        complete = complete['evaluation']
+                    else:
+                        # evaluation stats requested but not present in the results
+                        continue
+                x_coords.append(complete['timesteps_total'])
+                y_coords.append(complete['info']['learner']['unique']['total_loss'])
+        fig, ax = plt.subplots(figsize=(15, 10))
+        ax.plot(x_coords, y_coords)
+        ax.set(xlabel='Learning step', ylabel='Loss', title='Total Loss')
+        ax.grid()
+        fig.savefig('{}.total_loss_over_learning.svg'.format(self.prefix),
+                    dpi=300, transparent=False, bbox_inches='tight')
+        # plt.show()
+        matplotlib.pyplot.close('all')
+
     def policy_entropy_over_timesteps_total(self):
         logger.info('Computing the policy entropy over the timesteps total.')
         x_coords = []
@@ -288,7 +312,7 @@ class StatSingleExp(object):
                         # evaluation stats requested but not present in the results
                         continue
                 x_coords.append(complete['timesteps_total'])
-                y_coords.append(complete['info']['learner']['unique']['policy_entropy'])
+                y_coords.append(complete['info']['learner']['unique']['entropy'])
         fig, ax = plt.subplots(figsize=(15, 10))
         ax.plot(x_coords, y_coords)
         ax.set(xlabel='Learning step', ylabel='Entropy', title='Policy Entropy')

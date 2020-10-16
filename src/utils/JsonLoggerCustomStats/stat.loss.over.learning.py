@@ -37,6 +37,7 @@ def _main():
 
     statistics = StatSingleExp(config.input, config.prefix)
     statistics.policy_loss_over_timesteps_total()
+    statistics.total_loss_over_timesteps_total()
     logging.info('Done')
 
     ## ========================              PROFILER              ======================== ##
