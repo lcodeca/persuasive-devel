@@ -372,6 +372,7 @@ def _main():
             # the evaluation metrica are not saved in 'results.json'
             json.dump(result, fstream, cls=NPEncoder)
             fstream.write('\n')
+            print('METRIC SAVED!!!!!!!!!!!!!!')
         ############################################################################################
         if 'evaluation' not in result:
             continue

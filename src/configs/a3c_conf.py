@@ -8,9 +8,11 @@ import ray
 from ray.rllib.evaluation.metrics import collect_episodes, collect_metrics, summarize_episodes
 from ray.rllib.models import ModelCatalog
 
-from learning.a3c.persuasivea3c import DEFAULT_CONFIG, PersuasiveCallbacks
-from learning.a3c.persuasivelstm import RNNModel
-from learning.a3c.persuasiveactiondistribution import PersuasiveActionDistribution
+from learning.callbacks import PersuasiveCallbacks
+from learning.persuasiveactiondistribution import PersuasiveActionDistribution
+from learning.persuasivelstm import RNNModel
+
+from learning.a3c.persuasivea3c import DEFAULT_CONFIG
 
 def custom_eval_function(trainer, eval_workers):
     """Example of a custom evaluation function.

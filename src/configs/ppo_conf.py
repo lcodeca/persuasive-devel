@@ -8,8 +8,8 @@ import ray
 import ray.rllib.agents.ppo as ppo
 from ray.rllib.models import ModelCatalog
 
-from learning.a3c.persuasivea3c import PersuasiveCallbacks
-from learning.a3c.persuasiveactiondistribution import PersuasiveActionDistribution
+from learning.callbacks import PersuasiveCallbacks
+from learning.persuasiveactiondistribution import PersuasiveActionDistribution
 
 def persuasive_ppo_conf(rollout_size=10,
                         agents=100,

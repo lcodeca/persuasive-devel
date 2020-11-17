@@ -10,8 +10,8 @@ from ray.rllib.models import ModelCatalog
 
 import ray.rllib.agents.dqn as dqn
 
-from learning.a3c.persuasivea3c import PersuasiveCallbacks
-from learning.a3c.persuasiveactiondistribution import PersuasiveActionDistribution
+from learning.callbacks import PersuasiveCallbacks
+from learning.persuasiveactiondistribution import PersuasiveActionDistribution
 
 def custom_eval_function(trainer, eval_workers):
     """Example of a custom evaluation function.
