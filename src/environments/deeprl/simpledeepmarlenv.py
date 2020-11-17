@@ -101,6 +101,33 @@ class SimplePersuasiveDeepMARLEnv(PersuasiveDeepMARLEnv):
 
     ################################################################################################
 
+    @staticmethod
+    def deep_state_flattener(state):
+        """ Flattening of the dictionary """
+        deep = [
+            state['origin_x'],
+            state['origin_y'],
+            state['destination_x'],
+            state['destination_y'],
+            state['time-left']
+        ]
+        deep.extend(state['ett'])
+        deep.extend(state['usage'])
+        deep.append(state['future_demand'])
+        return deepcopy(deep)
+
+    def craft_final_state(self, agent):
+        final_state = collections.OrderedDict()
+        final_state['origin_x'] = self.agents[agent].origin_x
+        final_state['origin_y'] = self.agents[agent].origin_y
+        final_state['destination_x'] = self.agents[agent].destination_x
+        final_state['destination_y'] = self.agents[agent].destination_y
+        final_state['time-left'] = self.discrete_time(0)
+        final_state['ett'] = np.array([-1 for _ in self.agents[agent].modes])
+        final_state['usage'] = np.array([-1 for _ in self.agents[agent].modes])
+        final_state['future_demand'] = 0
+        return self.deep_state_flattener(final_state)
+
     def get_observation(self, agent):
         """ Returns the observation of a given agent. """
 
@@ -157,10 +184,56 @@ class SimplePersuasiveDeepMARLEnv(PersuasiveDeepMARLEnv):
             usage.append(self.agents_to_usage_active(agents_choice))
         ret['usage'] = usage
 
+        ##### Future demand
+        ret['future_demand'] = len(self.agents) - len(self.dones)
+
         # Flattening of the dictionary
         deep_ret = self.deep_state_flattener(ret)
         logger.debug('[%s] Observation: %s', agent, str(deep_ret))
         return np.array(deep_ret, dtype=np.int64)
+
+    def get_obs_space(self, agent):
+        """ Returns the observation space. """
+        parameters = 0
+        parameters += 1                                 # from x coord
+        parameters += 1                                 # from y coord
+        parameters += 1                                 # to x coord
+        parameters += 1                                 # to y coord
+        parameters += 1                                 # time-left
+        parameters += len(self.agents[agent].modes)     # ett
+        parameters += len(self.agents[agent].modes)     # usage
+        parameters += 1                                 # future demand
+
+        lows = [
+            self.bounding_box['bottom_left_X'],  # from x coord
+            self.bounding_box['bottom_left_Y'],  # from y coord
+            self.bounding_box['bottom_left_X'],  # to x coord
+            self.bounding_box['bottom_left_Y'],  # to y coord
+            0,  # time-left
+        ]
+        lows.extend([-1] * len(self.agents[agent].modes))    # ett
+        lows.extend([-1] * len(self.agents[agent].modes))    # usage
+        lows.append(0) # future demand
+
+        highs = [
+            self.bounding_box['top_right_X'],  # from x coord
+            self.bounding_box['top_right_Y'],  # from y coord
+            self.bounding_box['top_right_X'],  # to x coord
+            self.bounding_box['top_right_Y'],  # to y coord
+            self.discrete_time(
+                self._config['scenario_config']['misc']['max_time']),   # time-left in min
+        ]
+        highs.extend(                                                           # ett
+            [self.discrete_time(self._config['scenario_config']['misc']['max_time'])] *
+            len(self.agents[agent].modes))
+        highs.extend([len(self.agents)] * len(self.agents[agent].modes)) # usage
+        highs.append(len(self.agents)) # future demand
+
+        logger.info('State space: [%d] - %s - %s', parameters, str(lows), str(highs))
+        return gym.spaces.Box(
+            low=np.array(lows), high=np.array(highs), dtype=np.float64)
+
+    ################################################################################################
 
     ################################################################################################
 
