@@ -26,7 +26,6 @@ torch, nn = try_import_torch()
 
 logger = set_logging(__name__)
 
-
 ####################################################################################################
 
 class RNNModel(RecurrentNetwork):
