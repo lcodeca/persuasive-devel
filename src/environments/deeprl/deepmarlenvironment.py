@@ -285,8 +285,8 @@ class DeepSUMOAgents(SUMOModeAgent):
                         stage.line = vehicle_name
                         veh_counter += 1
                     handler.traci_handler.person.appendStage(self.agent_id, stage)
-                    handler.traci_handler.person.subscribe(self.agent_id,
-                                                           (tc.VAR_ROAD_ID, tc.VAR_LANEPOSITION))
+                handler.traci_handler.person.subscribe(self.agent_id,
+                                                       (tc.VAR_ROAD_ID, tc.VAR_LANEPOSITION))
                 return self.OUTCOME.INSERTED
             except (traci.exceptions.TraCIException, libsumo.libsumo.TraCIException) as exception:
                 error = str(exception)
@@ -638,7 +638,7 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
 
     @staticmethod
     def deep_state_flattener(state):
-        # Flattening of the dictionary
+        """ Flattening of the dictionary """
         deep = [
             # state['from'],
             # state['to'],
