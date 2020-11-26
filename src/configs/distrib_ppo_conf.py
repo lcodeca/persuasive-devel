@@ -42,11 +42,10 @@ def persuasive_ppo_conf(rollout_size=10,
     custom_configuration['seed'] = 42
 
     # === Parallelism ===
-    # Number of workers for collecting samples with.  = deepcopy(policy_conf)
-        # trainer.setup(dThis only makes sense
+    # Number of workers for collecting samples with. This only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    custom_configuration['num_workers'] = 2
+    custom_configuration['num_workers'] = 4
     custom_configuration['num_gpus_per_worker'] = 0
     # Prevent iterations from going lower than this time span
     # custom_configuration['min_iter_time_s'] = 1
@@ -88,13 +87,13 @@ def persuasive_ppo_conf(rollout_size=10,
     # Initial coefficient for KL divergence.
     custom_configuration['kl_coeff'] = 0.2
     # Size of batches collected from each worker.
-    custom_configuration['rollout_fragment_length'] = 100 #10
+    custom_configuration['rollout_fragment_length'] = 200
     # Number of timesteps collected for each SGD round. This defines the size
     # of each SGD epoch.
-    custom_configuration['train_batch_size'] = 1000 #100
+    custom_configuration['train_batch_size'] = 4000
     # Total SGD batch size across all devices for SGD. This defines the
     # minibatch size within each epoch.
-    custom_configuration['sgd_minibatch_size'] = 128 #64
+    custom_configuration['sgd_minibatch_size'] = 128
     # Whether to shuffle sequences in the batch when training (recommended).
     custom_configuration['shuffle_sequences'] = True
     # Number of SGD iterations in each outer loop (i.e., number of epochs to
@@ -148,7 +147,7 @@ def persuasive_ppo_conf(rollout_size=10,
     # IMPORTANT NOTE: Policy gradient algorithms are able to find the optimal
     # policy, even if this is a stochastic one. Setting 'explore=False' here
     # will result in the evaluation workers not using this optimal policy!
-    custom_configuration['evaluation_config']['explore'] = True
+    custom_configuration['evaluation_config']['explore'] = False
     custom_configuration['evaluation_config']['lr'] = 0
     custom_configuration['evaluation_config']['num_gpus_per_worker'] = 0
     custom_configuration['evaluation_config']['num_gpus'] = 0
@@ -159,7 +158,7 @@ def persuasive_ppo_conf(rollout_size=10,
     # process. If you increase this, it will increase the Ray resource usage
     # of the trainer since evaluation workers are created separately from
     # rollout workers.
-    custom_configuration['evaluation_num_workers'] = 1
+    custom_configuration['evaluation_num_workers'] = 2
     # Customize the evaluation method. This must be a function of signature
     # (trainer: Trainer, eval_workers: WorkerSet) -> metrics: dict. See the
     # Trainer._evaluate() method to see the default implementation. The
