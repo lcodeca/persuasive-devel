@@ -57,6 +57,10 @@ def _argument_parser():
     """ Argument parser for the stats parser. """
     parser = argparse.ArgumentParser(description='RLLIB & SUMO Statistics parser.')
     parser.add_argument('--results', required=True, type=str, help='RESULTS, JSON file.')
+    parser.add_argument('--init-learn', required=True, type=str,
+                        help='AGENT INIT during learning, JSON file.')
+    parser.add_argument('--init-eval', required=True, type=str,
+                        help='AGENT INIT during evaluation, JSON file.')
     parser.add_argument('--prefix', default='stats', help='Output prefix for the processed data.')
     parser.add_argument('--max', default=None, type=int, help='Maximum number of runs.')
     parser.add_argument('--profiler', dest='profiler', action='store_true', help='Enable cProfile.')
@@ -66,7 +70,11 @@ def _argument_parser():
 class Policy(object):
     """ Process a SINGLE RLLIB logs/result.json file as a time series. """
 
-    def __init__(self, results, prefix, max_runs):
+    def __init__(self, agents_learn, agents_eval, results, prefix, max_runs):
+        with open(agents_learn, 'r') as jsonfile:
+            self.agents_init_learning = json.load(jsonfile)
+        with open(agents_eval, 'r') as jsonfile:
+            self.agents_init_evaluation = json.load(jsonfile)
         self.max_runs = max_runs
         self.results_file = results
         self.prefix = prefix
@@ -91,8 +99,8 @@ class Policy(object):
                 print(value, key)
                 input('Press any key...')
 
-    def _perc(self, num, agents):
-        return round(num / agents * 100.0, 1)
+    def _perc(self, num):
+        return round(num/len(self.agents_init_learning)*100.0, 1)
 
     def historical_policies(self):
         counter = 1
@@ -119,19 +127,22 @@ class Policy(object):
                 ################################################################
 
                 complete = json.loads(row)
+
+                ############ LEARNIN
+                axs[0].bar(9.0, len(self.agents_init_learning),
+                           width=0.05, color='r', align='center')
+                axs[0].bar(8.75, len(self.agents_init_learning),
+                           width=0.02, color='g', align='center')
+                axs[0].set_xlim(6.0, 10.0)
+                axs[0].set_ylim(-1, len(self.agents_init_learning))
+                axs[0].set_xlabel('Time [h]')
+                axs[0].set_ylabel('Agents [#]')
+
                 info_by_episode = complete['hist_stats']['info_by_agent']
                 last_action_by_agent = complete['hist_stats']['last_action_by_agent']
                 # rewards_by_agent = complete['hist_stats']['rewards_by_agent']
                 pos = random.randrange(len(info_by_episode))
                 episode = info_by_episode[pos]
-
-                ############ LEARNIN
-                axs[0].bar(9.0, len(episode), width=0.05, color='r', align='center')
-                axs[0].bar(8.75, len(episode), width=0.02, color='g', align='center')
-                axs[0].set_xlim(6.0, 10.0)
-                axs[0].set_ylim(-1, len(episode)+1)
-                axs[0].set_xlabel('Time [h]')
-                axs[0].set_ylabel('Agents [#]')
 
                 mode_usage = collections.defaultdict(int)
                 on_time = 0
@@ -141,7 +152,7 @@ class Policy(object):
                 for agent, info in episode.items():
                     try:
                         y_agent = int(agent.split('_')[1])
-                        start = info['init']['start']/3600
+                        start = self.agents_init_learning[agent]['start']/3600
                         mode = last_action_by_agent[pos][agent]
                         arrival = info['arrival']/3600.0
                         departure = info['departure']/3600.0
@@ -169,36 +180,32 @@ class Policy(object):
                 title += 'early {} - on time {} - late {} - missing {} \n'.format(
                     too_early, on_time, too_late, missing)
                 title += 'early {}% - on time {}% - late {}% - missing {}% \n'.format(
-                    self._perc(too_early, len(episode)), self._perc(on_time, len(episode)),
-                    self._perc(too_late, len(episode)), self._perc(missing, len(episode)))
+                    self._perc(too_early), self._perc(on_time), self._perc(too_late),
+                    self._perc(missing))
                 axs[0].set_title(title)
                 labels = [
                     mpatches.Patch(
-                        color='black', label='Wait \n({}%)'.format(
-                            self._perc(mode_usage[0], len(episode)))),
+                        color='black', label='Wait \n({}%)'.format(self._perc(mode_usage[0]))),
                     mpatches.Patch(
-                        color='red', label='Car \n({}%)'.format(
-                            self._perc(mode_usage[1], len(episode)))),
+                        color='red', label='Car \n({}%)'.format(self._perc(mode_usage[1]))),
                     mpatches.Patch(
-                        color='green', label='PT \n({}%)'.format(
-                            self._perc(mode_usage[2], len(episode)))),
+                        color='green', label='PT \n({}%)'.format(self._perc(mode_usage[2]))),
                     mpatches.Patch(
-                        color='orange', label='Walk \n({}%)'.format(
-                            self._perc(mode_usage[3], len(episode)))),
+                        color='orange', label='Walk \n({}%)'.format(self._perc(mode_usage[3]))),
                     mpatches.Patch(
-                        color='blue', label='Bicycle \n({}%)'.format(
-                            self._perc(mode_usage[4], len(episode)))),
+                        color='blue', label='Bicycle \n({}%)'.format(self._perc(mode_usage[4]))),
                     mpatches.Patch(
-                        color='purple', label='PTW \n({}%)'.format(
-                            self._perc(mode_usage[5], len(episode)))),
+                        color='purple', label='PTW \n({}%)'.format(self._perc(mode_usage[5]))),
                 ]
                 axs[0].legend(handles=labels, loc='upper left')
 
                 ############ EVALUATION
-                axs[1].bar(9.0, len(episode), width=0.05, color='r', align='center')
-                axs[1].bar(8.75, len(episode), width=0.02, color='g', align='center')
+                axs[1].bar(9.0, len(self.agents_init_evaluation),
+                           width=0.05, color='r', align='center')
+                axs[1].bar(8.75, len(self.agents_init_learning),
+                           width=0.02, color='g', align='center')
                 axs[1].set_xlim(6.0, 10.0)
-                axs[1].set_ylim(-1, len(episode))
+                axs[1].set_ylim(-1, len(self.agents_init_evaluation))
                 axs[1].set_xlabel('Time [h]')
                 axs[1].set_ylabel('Agents [#]')
 
@@ -217,7 +224,7 @@ class Policy(object):
                     for agent, info in episode.items():
                         try:
                             y_agent = int(agent.split('_')[1])
-                            start = info['init']['start']/3600
+                            start = self.agents_init_evaluation[agent]['start']/3600
                             mode = last_action_by_agent[pos][agent]
                             arrival = info['arrival']/3600.0
                             departure = info['departure']/3600.0
@@ -247,28 +254,22 @@ class Policy(object):
                 title += 'early {} - on time {} - late {} - missing {} \n'.format(
                     too_early, on_time, too_late, missing)
                 title += 'early {}% - on time {}% - late {}% - missing {}% \n'.format(
-                    self._perc(too_early, len(episode)), self._perc(on_time, len(episode)),
-                    self._perc(too_late, len(episode)), self._perc(missing, len(episode)))
+                    self._perc(too_early), self._perc(on_time), self._perc(too_late),
+                    self._perc(missing))
                 axs[1].set_title(title)
                 labels = [
                     mpatches.Patch(
-                        color='black', label='Wait\n({}%)'.format(
-                            self._perc(mode_usage[0], len(episode)))),
+                        color='black', label='Wait\n({}%)'.format(self._perc(mode_usage[0]))),
                     mpatches.Patch(
-                        color='red', label='Car \n({}%)'.format(
-                            self._perc(mode_usage[1], len(episode)))),
+                        color='red', label='Car \n({}%)'.format(self._perc(mode_usage[1]))),
                     mpatches.Patch(
-                        color='green', label='PT \n({}%)'.format(
-                            self._perc(mode_usage[2], len(episode)))),
+                        color='green', label='PT \n({}%)'.format(self._perc(mode_usage[2]))),
                     mpatches.Patch(
-                        color='orange', label='Walk \n({}%)'.format(
-                            self._perc(mode_usage[3], len(episode)))),
+                        color='orange', label='Walk \n({}%)'.format(self._perc(mode_usage[3]))),
                     mpatches.Patch(
-                        color='blue', label='Bicycle \n({}%)'.format(
-                            self._perc(mode_usage[4], len(episode)))),
+                        color='blue', label='Bicycle \n({}%)'.format(self._perc(mode_usage[4]))),
                     mpatches.Patch(
-                        color='purple', label='PTW \n({}%)'.format(
-                            self._perc(mode_usage[5], len(episode)))),
+                        color='purple', label='PTW \n({}%)'.format(self._perc(mode_usage[5]))),
                 ]
                 axs[1].legend(handles=labels, loc='upper left')
 
@@ -299,7 +300,8 @@ def _main():
         profiler.enable()
     ## ========================              PROFILER              ======================== ##
 
-    statistics = Policy(config.results, config.prefix, config.max)
+    statistics = Policy(
+        config.init_learn, config.init_eval, config.results, config.prefix, config.max)
     statistics.historical_policies()
     logging.info('Done')
 

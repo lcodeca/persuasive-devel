@@ -63,6 +63,32 @@ class StatSingleExp(object):
                 print(value, key)
                 input('Press any key...')
 
+    def perf_over_timesteps_total(self):
+        logger.info('Computing the system performances over the timesteps total.')
+        perfs = collections.defaultdict(list)
+        with open(self.input, 'r') as jsonfile:
+            for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
+                complete = json.loads(row)
+                for metric, value in complete['perf'].items():
+                    perfs[metric].append((complete['timesteps_total'], value))
+
+        fig, ax = plt.subplots(figsize=(15, 10))
+        for metric, values in perfs.items():
+            xval = []
+            yval = []
+            for timestep, val in values:
+                xval.append(timestep)
+                yval.append(val)
+            ax.plot(xval, yval, label=metric)
+        ax.set(xlabel='Timesteps', ylabel='Load [%]', title='System Performances')
+        ax.legend(loc='best', shadow=True)
+        ax.grid()
+        fig.savefig('{}.sysperf_over_learning.svg'.format(self.prefix),
+                    dpi=300, transparent=False, bbox_inches='tight')
+        #plt.show()
+        matplotlib.pyplot.close('all')
+
+
     def reward_over_timesteps_total(self):
         logger.info('Computing the reward over the timesteps total.')
         x_coords = []
@@ -100,7 +126,7 @@ class StatSingleExp(object):
         ax.plot(x_coords, max_y, label='Max')
         ax.plot(x_coords, median_y, label='Median')
         ax.set(xlabel='Learning step', ylabel='Reward', title='Reward over time')
-        ax.legend(loc=1, ncol=4, shadow=True)
+        ax.legend(loc='best', ncol=4, shadow=True)
         ax.grid()
         fig.savefig('{}.reward_over_learning.svg'.format(self.prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
@@ -110,6 +136,122 @@ class StatSingleExp(object):
         # # plt.show()
         # fig.savefig('{}.bounded_reward_over_learning.svg'.format(self.prefix),
         #             dpi=300, transparent=False, bbox_inches='tight')
+        matplotlib.pyplot.close('all')
+
+    def total_reward_over_timesteps_total(self):
+        logger.info('Computing the reward over the timesteps total.')
+        x_coords = []
+        y_coords = []
+        min_y = []
+        max_y = []
+        with open(self.input, 'r') as jsonfile:
+            counter = 0
+            for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
+                complete = json.loads(row)
+                if self.evaluation:
+                    if 'evaluation' in complete:
+                        tmp = complete['evaluation']
+                        tmp['timesteps_total'] = complete['timesteps_total']
+                        complete = tmp
+                    else:
+                        # evaluation stats requested but not present in the results
+                        continue
+
+                x_coords.append(complete['timesteps_total'])
+                y_coords.append(complete['episode_reward_mean'])
+                min_y.append(complete['episode_reward_min'])
+                max_y.append(complete['episode_reward_max'])
+                counter += 1
+
+        fig, ax = plt.subplots(figsize=(15, 10))
+        ax.errorbar(x_coords, y_coords, capsize=5, label='Mean', fmt='-o')
+        ax.plot(x_coords, min_y, label='Min')
+        ax.plot(x_coords, max_y, label='Max')
+        ax.set(xlabel='Learning step', ylabel='Reward', title='Reward over time')
+        ax.legend(loc='best', ncol=4, shadow=True)
+        ax.grid()
+        fig.savefig('{}.total_reward_over_learning.svg'.format(self.prefix),
+                    dpi=300, transparent=False, bbox_inches='tight')
+        #plt.show()
+        # ZOOM IT
+        # ax.set_ylim(-20000, 0)
+        # # plt.show()
+        # fig.savefig('{}.bounded_reward_over_learning.svg'.format(self.prefix),
+        #             dpi=300, transparent=False, bbox_inches='tight')
+        matplotlib.pyplot.close('all')
+
+    def missing_agents_over_timesteps_total(self):
+        logger.info('Computing the missing agents over the timesteps total.')
+        x_coords = []
+        y_coords = []
+        min_y = []
+        max_y = []
+        with open(self.input, 'r') as jsonfile:
+            counter = 0
+            for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
+                complete = json.loads(row)
+                if self.evaluation:
+                    if 'evaluation' in complete:
+                        tmp = complete['evaluation']
+                        tmp['timesteps_total'] = complete['timesteps_total']
+                        complete = tmp
+                    else:
+                        # evaluation stats requested but not present in the results
+                        continue
+
+                x_coords.append(complete['timesteps_total'])
+                y_coords.append(complete['custom_metrics']['episode_missing_agents_mean'])
+                min_y.append(complete['custom_metrics']['episode_missing_agents_min'])
+                max_y.append(complete['custom_metrics']['episode_missing_agents_max'])
+                counter += 1
+
+        fig, ax = plt.subplots(figsize=(15, 10))
+        ax.errorbar(x_coords, y_coords, capsize=5, label='Mean', fmt='-o')
+        ax.plot(x_coords, min_y, label='Min')
+        ax.plot(x_coords, max_y, label='Max')
+        ax.set(xlabel='Learning step', ylabel='Missing Agents', title='Missing Agents Over Time')
+        ax.legend(loc='best', ncol=4, shadow=True)
+        ax.grid()
+        fig.savefig('{}.missing_agents_over_learning.svg'.format(self.prefix),
+                    dpi=300, transparent=False, bbox_inches='tight')
+        #plt.show()
+        matplotlib.pyplot.close('all')
+
+    def on_time_agents_over_timesteps_total(self):
+        logger.info('Computing the on-time agents over the timesteps total.')
+        x_coords = []
+        y_coords = []
+        min_y = []
+        max_y = []
+        with open(self.input, 'r') as jsonfile:
+            counter = 0
+            for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
+                complete = json.loads(row)
+                if self.evaluation:
+                    if 'evaluation' in complete:
+                        tmp = complete['evaluation']
+                        tmp['timesteps_total'] = complete['timesteps_total']
+                        complete = tmp
+                    else:
+                        # evaluation stats requested but not present in the results
+                        continue
+
+                x_coords.append(complete['timesteps_total'])
+                y_coords.append(complete['custom_metrics']['episode_on_time_agents_mean'])
+                min_y.append(complete['custom_metrics']['episode_on_time_agents_min'])
+                max_y.append(complete['custom_metrics']['episode_on_time_agents_max'])
+                counter += 1
+
+        fig, ax = plt.subplots(figsize=(15, 10))
+        ax.errorbar(x_coords, y_coords, capsize=5, label='Mean', fmt='-o')
+        ax.plot(x_coords, min_y, label='Min')
+        ax.plot(x_coords, max_y, label='Max')
+        ax.set(xlabel='Learning step', ylabel='On-time Agents', title='On-time Agents Over Time')
+        ax.legend(loc='best', ncol=4, shadow=True)
+        ax.grid()
+        fig.savefig('{}.on_time_agents_over_learning.svg'.format(self.prefix),
+                    dpi=300, transparent=False, bbox_inches='tight')
+        #plt.show()
         matplotlib.pyplot.close('all')
 
     def average_arrival_over_timesteps_total(self):
@@ -153,7 +295,7 @@ class StatSingleExp(object):
         ax.plot(x_coords, max_y, label='Max')
         ax.plot(x_coords, median_y, label='Median')
         ax.set(xlabel='Learning step', ylabel='Time [h]', title='Arrival at destination over time.')
-        ax.legend(loc=1, ncol=4, shadow=True)
+        ax.legend(loc='best', ncol=4, shadow=True)
         ax.grid()
         fig.savefig('{}.average_arrival_over_learning.svg'.format(self.prefix),
                     dpi=300, transparent=False, bbox_inches='tight')
@@ -201,7 +343,7 @@ class StatSingleExp(object):
         ax.plot(x_coords, max_y, label='Max')
         ax.plot(x_coords, median_y, label='Median')
         ax.set(xlabel='Episodes', ylabel='Actions', title='Actions per episode')
-        ax.legend(loc=1, ncol=4, shadow=True)
+        ax.legend(loc='best', ncol=4, shadow=True)
         ax.grid()
         fig.savefig('{}.actions_over_episodes.svg'.format(self.prefix),
                     dpi=300, transparent=False, bbox_inches='tight')

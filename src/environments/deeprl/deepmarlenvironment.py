@@ -164,21 +164,6 @@ class DeepSUMOAgents(SUMOModeAgent):
     def __init__(self, config, network):
         """ Initialize the environment. """
         super().__init__(config)
-        self.origin_x, self.origin_y = self.origin
-        edges = network.getNeighboringEdges(
-            self.origin_x, self.origin_y, r=1000,
-            includeJunctions=False, allowFallback=True)
-        self.origin = None
-        for distance, edge in sorted([(dist, edge) for edge, dist in edges]):
-            if edge.allows('pedestrian'):
-                self.origin = edge.getID()
-                if distance > 500:
-                    logger.warning(
-                        '[%s] Origin %.2f, %.2f is %.2f from edge %s',
-                        self.agent_id, self.origin_x, self.origin_y, distance, self.origin)
-                break
-        if self.origin is None:
-            raise Exception('Origin not foud for agent {}'.format(self.agent_id))
 
         self.destination_x, self.destination_y = self.destination
         edges = network.getNeighboringEdges(
@@ -196,6 +181,24 @@ class DeepSUMOAgents(SUMOModeAgent):
                 break
         if self.destination is None:
             raise Exception('Destination not foud for agent {}'.format(self.agent_id))
+
+        self.origin_x, self.origin_y = self.origin
+        edges = network.getNeighboringEdges(
+            self.origin_x, self.origin_y, r=1000,
+            includeJunctions=False, allowFallback=True)
+        self.origin = None
+        for distance, edge in sorted([(dist, edge) for edge, dist in edges]):
+            if edge.allows('pedestrian'):
+                self.origin = edge.getID()
+                if self.origin == self.destination:
+                    continue
+                if distance > 500:
+                    logger.warning(
+                        '[%s] Origin %.2f, %.2f is %.2f from edge %s',
+                        self.agent_id, self.origin_x, self.origin_y, distance, self.origin)
+                break
+        if self.origin is None:
+            raise Exception('Origin not foud for agent {}'.format(self.agent_id))
 
     def test_agent(self, handler):
         feasible_plan = False
