@@ -36,7 +36,7 @@ def persuasive_ppo_conf(rollout_size=10,
     custom_configuration['num_cpus_for_driver'] = 1
     custom_configuration['num_cpus_per_worker'] = 1
     custom_configuration['num_envs_per_worker'] = 1
-    custom_configuration['output'] = debug_folder
+    # custom_configuration['output'] = debug_folder
     # custom_configuration['remote_env_batch_wait_ms'] = 1000
     # custom_configuration['remote_worker_envs'] = False
     custom_configuration['seed'] = 42
@@ -152,7 +152,7 @@ def persuasive_ppo_conf(rollout_size=10,
     custom_configuration['evaluation_config']['lr'] = 0
     custom_configuration['evaluation_config']['num_gpus_per_worker'] = 0
     custom_configuration['evaluation_config']['num_gpus'] = 0
-    custom_configuration['evaluation_config']['output'] = eval_folder
+    # custom_configuration['evaluation_config']['output'] = eval_folder
     # custom_configuration['evaluation_config']['env_config'] = {...},
     # Number of parallel workers to use for evaluation. Note that this is set
     # to zero by default, which means evaluation will be run in the trainer
