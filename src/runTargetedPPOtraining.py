@@ -346,12 +346,11 @@ def _main():
         log_dir = os.path.join(os.path.normpath(ARGS.dir), 'logs')
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
-        return UnifiedLogger(config, log_dir) #, loggers=[JsonLogger]
+        return UnifiedLogger(config, log_dir, loggers=[JsonLogger])
 
     trainer = ppo.PPOTrainer(
         # env=deepmarlenvironment.PersuasiveDeepMARLEnv,
-        env='marl_env',
-        config=policy_conf, logger_creator=default_logger_creator)
+        env='marl_env', config=policy_conf) # logger_creator=default_logger_creator)
 
     last_checkpoint = get_last_checkpoint(checkpoint_dir)
     if last_checkpoint is not None:
@@ -378,10 +377,12 @@ def _main():
         # steps += result['timesteps_this_iter']
         final_result = result
         print_selected_results(result, SELECTION)
-        with open(os.path.join(metrics_dir, 'metrics.json'), 'a') as fstream:
+        metric_file = os.path.join(metrics_dir,
+                                   'metrics_{}.json'.format(result['training_iteration']))
+        with open(metric_file, 'w') as fstream:
             # the evaluation metrica are not saved in 'results.json'
             json.dump(result, fstream, cls=NPEncoder)
-            fstream.write('\n')
+            # fstream.write('\n')
             print('############################# METRIC SAVED #############################')
         ############################################################################################
         if 'evaluation' not in result:
