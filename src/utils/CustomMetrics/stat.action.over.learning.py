@@ -67,7 +67,7 @@ def _main():
         profiler.enable()
     ## ========================              PROFILER              ======================== ##
 
-    Arrival(config.input_dir, config.output_dir).generate()
+    Actions(config.input_dir, config.output_dir).generate()
     logging.info('Done')
 
     ## ========================              PROFILER              ======================== ##
@@ -80,30 +80,30 @@ def _main():
 
 ####################################################################################################
 
-class Arrival(GenericGraphMaker):
+class Actions(GenericGraphMaker):
 
     def __init__(self, input_dir, output_dir):
         _default = {
             'learning': {
                 'timesteps_total': [],
-                'arrival_min': [],
-                'arrival_mean': [],
-                'arrival_median': [],
-                'arrival_std': [],
-                'arrival_max':[],
+                'actions_min': [],
+                'actions_mean': [],
+                'actions_median': [],
+                'actions_std': [],
+                'actions_max':[],
             },
             'evaluation': {
                 'timesteps_total': [],
-                'arrival_min': [],
-                'arrival_mean': [],
-                'arrival_median': [],
-                'arrival_std': [],
-                'arrival_max':[],
+                'actions_min': [],
+                'actions_mean': [],
+                'actions_median': [],
+                'actions_std': [],
+                'actions_max':[],
             },
         }
         super().__init__(
             input_dir, output_dir,
-            filename='arrival.json',
+            filename='actions.json',
             default=_default)
 
     def _find_last_metric(self):
@@ -118,67 +118,66 @@ class Arrival(GenericGraphMaker):
                 # LEARNING
                 self._aggregated_dataset['learning']['timesteps_total'].append(
                     complete['timesteps_total'])
-                arrivals = []
-                for episode in complete['hist_stats']['info_by_agent']:
-                    for info in episode.values():
-                        arrivals.append(info['arrival']/3600)
-                self._aggregated_dataset['learning']['arrival_min'].append(
-                    np.nanmin(arrivals))
-                self._aggregated_dataset['learning']['arrival_median'].append(
-                    np.nanmedian(arrivals))
-                self._aggregated_dataset['learning']['arrival_mean'].append(
-                    np.nanmean(arrivals))
-                self._aggregated_dataset['learning']['arrival_std'].append(
-                    np.nanstd(arrivals))
-                self._aggregated_dataset['learning']['arrival_max'].append(
-                    np.nanmax(arrivals))
+                actions = []
+                for episode in complete['hist_stats']['rewards_by_agent']:
+                    for agent_rewards in episode.values():
+                        actions.append(len(agent_rewards))
+                self._aggregated_dataset['learning']['actions_min'].append(
+                    np.nanmin(actions))
+                self._aggregated_dataset['learning']['actions_median'].append(
+                    np.nanmedian(actions))
+                self._aggregated_dataset['learning']['actions_mean'].append(
+                    np.nanmean(actions))
+                self._aggregated_dataset['learning']['actions_std'].append(
+                    np.nanstd(actions))
+                self._aggregated_dataset['learning']['actions_max'].append(
+                    np.nanmax(actions))
 
                 # EVALUATION
                 if 'evaluation' in complete:
                     complete['evaluation']['timesteps_total'] = complete['timesteps_total']
                     complete = complete['evaluation']
 
-                    arrivals = []
-                    for episode in complete['hist_stats']['info_by_agent']:
-                        for info in episode.values():
-                            arrivals.append(info['arrival']/3600)
+                    actions = []
+                    for episode in complete['hist_stats']['rewards_by_agent']:
+                        for agent_rewards in episode.values():
+                            actions.append(len(agent_rewards))
 
                     self._aggregated_dataset['evaluation']['timesteps_total'].append(
                         complete['timesteps_total'])
-                    self._aggregated_dataset['evaluation']['arrival_min'].append(
-                        np.nanmin(arrivals))
-                    self._aggregated_dataset['evaluation']['arrival_median'].append(
-                        np.nanmedian(arrivals))
-                    self._aggregated_dataset['evaluation']['arrival_mean'].append(
-                        np.nanmean(arrivals))
-                    self._aggregated_dataset['evaluation']['arrival_std'].append(
-                        np.nanstd(arrivals))
-                    self._aggregated_dataset['evaluation']['arrival_max'].append(
-                        np.nanmax(arrivals))
+                    self._aggregated_dataset['evaluation']['actions_min'].append(
+                        np.nanmin(actions))
+                    self._aggregated_dataset['evaluation']['actions_median'].append(
+                        np.nanmedian(actions))
+                    self._aggregated_dataset['evaluation']['actions_mean'].append(
+                        np.nanmean(actions))
+                    self._aggregated_dataset['evaluation']['actions_std'].append(
+                        np.nanstd(actions))
+                    self._aggregated_dataset['evaluation']['actions_max'].append(
+                        np.nanmax(actions))
 
     def _generate_graphs(self):
         # LEARNING
         fig, ax = plt.subplots(figsize=(15, 10))
         ax.errorbar(
             self._aggregated_dataset['learning']['timesteps_total'],
-            self._aggregated_dataset['learning']['arrival_mean'],
-            yerr=self._aggregated_dataset['learning']['arrival_std'],
+            self._aggregated_dataset['learning']['actions_mean'],
+            yerr=self._aggregated_dataset['learning']['actions_std'],
             capsize=5, label='Mean [std]', fmt='-o')
         ax.plot(
             self._aggregated_dataset['learning']['timesteps_total'],
-            self._aggregated_dataset['learning']['arrival_min'], label='Min')
+            self._aggregated_dataset['learning']['actions_min'], label='Min')
         ax.plot(
             self._aggregated_dataset['learning']['timesteps_total'],
-            self._aggregated_dataset['learning']['arrival_max'], label='Max')
+            self._aggregated_dataset['learning']['actions_max'], label='Max')
         ax.plot(
             self._aggregated_dataset['learning']['timesteps_total'],
-            self._aggregated_dataset['learning']['arrival_median'], label='Median')
+            self._aggregated_dataset['learning']['actions_median'], label='Median')
         ax.set(
-            xlabel='Learning step', ylabel='Time [h]',
-            title='[L] Arrival at destination over time.')
+            xlabel='Learning step', ylabel='Actions [#]', title='[L] Actions over time.')
         ax.legend(loc='best', ncol=4, shadow=True)
         ax.grid()
-        fig.savefig('{}/learning.average_arrival_over_learning.svg'.format(self._output_dir),
+        fig.savefig('{}/learning.average_actions_over_learning.svg'.format(self._output_dir),
                     dpi=300, transparent=False, bbox_inches='tight')
         #plt.show()
         matplotlib.pyplot.close('all')
@@ -187,76 +186,75 @@ class Arrival(GenericGraphMaker):
         fig, ax = plt.subplots(figsize=(15, 10))
         ax.errorbar(
             self._aggregated_dataset['evaluation']['timesteps_total'],
-            self._aggregated_dataset['evaluation']['arrival_mean'],
-            yerr=self._aggregated_dataset['evaluation']['arrival_std'],
+            self._aggregated_dataset['evaluation']['actions_mean'],
+            yerr=self._aggregated_dataset['evaluation']['actions_std'],
             capsize=5, label='Mean [std]', fmt='-o')
         ax.plot(
             self._aggregated_dataset['evaluation']['timesteps_total'],
-            self._aggregated_dataset['evaluation']['arrival_min'], label='Min')
+            self._aggregated_dataset['evaluation']['actions_min'], label='Min')
         ax.plot(
             self._aggregated_dataset['evaluation']['timesteps_total'],
-            self._aggregated_dataset['evaluation']['arrival_max'], label='Max')
+            self._aggregated_dataset['evaluation']['actions_max'], label='Max')
         ax.plot(
             self._aggregated_dataset['evaluation']['timesteps_total'],
-            self._aggregated_dataset['evaluation']['arrival_median'], label='Median')
+            self._aggregated_dataset['evaluation']['actions_median'], label='Median')
         ax.set(
-            xlabel='Learning step', ylabel='Time [h]',
-            title='[E] Arrival at destination over time.')
+            xlabel='Learning step', ylabel='Actions [#]', title='[E] Actions over time.')
         ax.legend(loc='best', ncol=4, shadow=True)
         ax.grid()
-        fig.savefig('{}/evaluation.average_arrival_over_learning.svg'.format(self._output_dir),
+        fig.savefig('{}/evaluation.average_actions_over_learning.svg'.format(self._output_dir),
                     dpi=300, transparent=False, bbox_inches='tight')
         #plt.show()
         matplotlib.pyplot.close('all')
 
 ####################################################################################################
 
-    # def average_arrival_over_timesteps_total(self):
-    #     logger.info('Computing the average arrival time over the timesteps total.')
+    # def average_actions_over_episodes_total(self):
+    #     logger.info('Computing the average number of actions over the episodes.')
     #     x_coords = []
-    #     y_coords = []
+    #     mean_y = []
     #     median_y = []
     #     min_y = []
     #     max_y = []
     #     std_y = []
+    #     episodes = 0
     #     with open(self.input, 'r') as jsonfile:
     #         counter = 0
     #         for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
     #             complete = json.loads(row)
     #             if self.evaluation:
     #                 if 'evaluation' in complete:
-    #                     tmp = complete['evaluation']
-    #                     tmp['timesteps_total'] = complete['timesteps_total']
-    #                     complete = tmp
+    #                     complete = complete['evaluation']
     #                 else:
     #                     # evaluation stats requested but not present in the results
     #                     continue
-    #             if 'info_by_agent' in complete['hist_stats']:
-    #                 x_coords.append(complete['timesteps_total'])
-    #                 arrivals = []
-    #                 for episode in complete['hist_stats']['info_by_agent']:
-    #                     for info in episode.values():
-    #                         arrivals.append(info['arrival']/3600)
-    #                 y_coords.append(np.nanmean(arrivals))
-    #                 min_y.append(np.nanmin(arrivals))
-    #                 max_y.append(np.nanmax(arrivals))
-    #                 median_y.append(np.nanmedian(arrivals))
-    #                 std_y.append(np.nanstd(arrivals))
+    #             if 'rewards_by_agent' in complete['hist_stats']:
+    #                 episodes += complete['episodes_this_iter']
+    #                 x_coords.append(episodes)
+    #                 _actions = []
+    #                 for episode in complete['hist_stats']['rewards_by_agent']:
+    #                     for agent_rewards in episode.values():
+    #                         _actions.append(len(agent_rewards))
+    #                 min_y.append(np.nanmin(_actions))
+    #                 max_y.append(np.nanmax(_actions))
+    #                 median_y.append(np.nanmedian(_actions))
+    #                 mean_y.append(np.nanmean(_actions))
+    #                 std_y.append(np.nanstd(_actions))
     #             else:
     #                 logger.critical('Missing stats in row %d', counter)
     #             counter += 1
 
     #     fig, ax = plt.subplots(figsize=(15, 10))
-    #     ax.errorbar(x_coords, y_coords, yerr=std_y, capsize=5, label='Mean [std]', fmt='-o')
+    #     ax.errorbar(x_coords, mean_y, yerr=std_y, capsize=5, label='Mean [std]', fmt='-o')
     #     ax.plot(x_coords, min_y, label='Min')
     #     ax.plot(x_coords, max_y, label='Max')
     #     ax.plot(x_coords, median_y, label='Median')
-    #     ax.set(xlabel='Learning step', ylabel='Time [h]', title='Arrival at destination over time.')
+    #     ax.set(xlabel='Episodes', ylabel='Actions', title='Actions per episode')
     #     ax.legend(loc='best', ncol=4, shadow=True)
     #     ax.grid()
-    #     fig.savefig('{}.average_arrival_over_learning.svg'.format(self.prefix),
+    #     fig.savefig('{}.actions_over_episodes.svg'.format(self.prefix),
     #                 dpi=300, transparent=False, bbox_inches='tight')
-    #     #plt.show()
+    #     # plt.show()
     #     matplotlib.pyplot.close('all')
 
 ####################################################################################################

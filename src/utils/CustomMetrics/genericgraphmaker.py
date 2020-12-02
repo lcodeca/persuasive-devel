@@ -8,6 +8,8 @@ import re
 
 from copy import deepcopy
 
+from numpyencoder import NumpyEncoder
+
 class GenericGraphMaker():
 
     def __init__(self, input_dir, output_dir, filename, default):
@@ -51,7 +53,7 @@ class GenericGraphMaker():
         self._aggregate_metrics(files)
         # save the new aggregation to file
         with open(self._dataset_fname, 'w') as jsonfile:
-            json.dump(self._aggregated_dataset, jsonfile, indent=2)
+            json.dump(self._aggregated_dataset, jsonfile, indent=2, cls=NumpyEncoder)
 
     def _generate_graphs(self):
         raise NotImplementedError()
