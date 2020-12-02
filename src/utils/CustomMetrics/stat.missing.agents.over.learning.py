@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Process the RLLIB metrics_XYZ.json """
+""" Process the RLLIB  metrics_XYZ.json """
 
 import argparse
 import collections
@@ -67,7 +67,7 @@ def _main():
         profiler.enable()
     ## ========================              PROFILER              ======================== ##
 
-    OnTimeAgents(config.input_dir, config.output_dir).generate()
+    MissingAgents(config.input_dir, config.output_dir).generate()
     logging.info('Done')
 
     ## ========================              PROFILER              ======================== ##
@@ -80,26 +80,26 @@ def _main():
 
 ####################################################################################################
 
-class OnTimeAgents(GenericGraphMaker):
+class MissingAgents(GenericGraphMaker):
 
     def __init__(self, input_dir, output_dir):
         _default = {
             'learning': {
                 'timesteps_total': [],
-                'episode_on_time_agents_min': [],
-                'episode_on_time_agents_mean': [],
-                'episode_on_time_agents_max':[],
+                'episode_missing_agents_min': [],
+                'episode_missing_agents_mean': [],
+                'episode_missing_agents_max':[],
             },
             'evaluation': {
                 'timesteps_total': [],
-                'episode_on_time_agents_min': [],
-                'episode_on_time_agents_mean': [],
-                'episode_on_time_agents_max':[],
+                'episode_missing_agents_min': [],
+                'episode_missing_agents_mean': [],
+                'episode_missing_agents_max':[],
             },
         }
         super().__init__(
             input_dir, output_dir,
-            filename='on-time-agents.json',
+            filename='missing-agents.json',
             default=_default)
 
     def _find_last_metric(self):
@@ -114,12 +114,12 @@ class OnTimeAgents(GenericGraphMaker):
                 # LEARNING
                 self._aggregated_dataset['learning']['timesteps_total'].append(
                     complete['timesteps_total'])
-                self._aggregated_dataset['learning']['episode_on_time_agents_min'].append(
-                    complete['custom_metrics']['episode_on_time_agents_min'])
-                self._aggregated_dataset['learning']['episode_on_time_agents_mean'].append(
-                    complete['custom_metrics']['episode_on_time_agents_mean'])
-                self._aggregated_dataset['learning']['episode_on_time_agents_max'].append(
-                    complete['custom_metrics']['episode_on_time_agents_max'])
+                self._aggregated_dataset['learning']['episode_missing_agents_min'].append(
+                    complete['custom_metrics']['episode_missing_agents_min'])
+                self._aggregated_dataset['learning']['episode_missing_agents_mean'].append(
+                    complete['custom_metrics']['episode_missing_agents_mean'])
+                self._aggregated_dataset['learning']['episode_missing_agents_max'].append(
+                    complete['custom_metrics']['episode_missing_agents_max'])
 
                 # EVALUATION
                 if 'evaluation' in complete:
@@ -128,31 +128,31 @@ class OnTimeAgents(GenericGraphMaker):
 
                     self._aggregated_dataset['evaluation']['timesteps_total'].append(
                         complete['timesteps_total'])
-                    self._aggregated_dataset['evaluation']['episode_on_time_agents_min'].append(
-                        complete['custom_metrics']['episode_on_time_agents_min'])
-                    self._aggregated_dataset['evaluation']['episode_on_time_agents_mean'].append(
-                        complete['custom_metrics']['episode_on_time_agents_mean'])
-                    self._aggregated_dataset['evaluation']['episode_on_time_agents_max'].append(
-                        complete['custom_metrics']['episode_on_time_agents_max'])
+                    self._aggregated_dataset['evaluation']['episode_missing_agents_min'].append(
+                        complete['custom_metrics']['episode_missing_agents_min'])
+                    self._aggregated_dataset['evaluation']['episode_missing_agents_mean'].append(
+                        complete['custom_metrics']['episode_missing_agents_mean'])
+                    self._aggregated_dataset['evaluation']['episode_missing_agents_max'].append(
+                        complete['custom_metrics']['episode_missing_agents_max'])
 
     def _generate_graphs(self):
         # LEARNING
         fig, ax = plt.subplots(figsize=(15, 10))
         ax.plot(
             self._aggregated_dataset['learning']['timesteps_total'],
-            self._aggregated_dataset['learning']['episode_on_time_agents_mean'],
+            self._aggregated_dataset['learning']['episode_missing_agents_mean'],
             '-o', label='Mean')
         ax.plot(
             self._aggregated_dataset['learning']['timesteps_total'],
-            self._aggregated_dataset['learning']['episode_on_time_agents_min'], label='Min')
+            self._aggregated_dataset['learning']['episode_missing_agents_min'], label='Min')
         ax.plot(
             self._aggregated_dataset['learning']['timesteps_total'],
-            self._aggregated_dataset['learning']['episode_on_time_agents_max'], label='Max')
-        ax.set(xlabel='Learning step', ylabel='On-time Agents',
-               title='[L] On-time Agents Over Time')
+            self._aggregated_dataset['learning']['episode_missing_agents_max'], label='Max')
+        ax.set(xlabel='Learning step', ylabel='Missing Agents',
+               title='[L] Missing Agents Over Time')
         ax.legend(loc='best', ncol=4, shadow=True)
         ax.grid()
-        fig.savefig('{}/learning.on_time_agents_over_learning.svg'.format(self._output_dir),
+        fig.savefig('{}/learning.missing_agents_over_learning.svg'.format(self._output_dir),
                     dpi=300, transparent=False, bbox_inches='tight')
         #plt.show()
         matplotlib.pyplot.close('all')
@@ -161,61 +161,61 @@ class OnTimeAgents(GenericGraphMaker):
         fig, ax = plt.subplots(figsize=(15, 10))
         ax.plot(
             self._aggregated_dataset['evaluation']['timesteps_total'],
-            self._aggregated_dataset['evaluation']['episode_on_time_agents_mean'],
+            self._aggregated_dataset['evaluation']['episode_missing_agents_mean'],
             '-o', label='Mean')
         ax.plot(
             self._aggregated_dataset['evaluation']['timesteps_total'],
-            self._aggregated_dataset['evaluation']['episode_on_time_agents_min'], label='Min')
+            self._aggregated_dataset['evaluation']['episode_missing_agents_min'], label='Min')
         ax.plot(
             self._aggregated_dataset['evaluation']['timesteps_total'],
-            self._aggregated_dataset['evaluation']['episode_on_time_agents_max'], label='Max')
-        ax.set(xlabel='Learning step', ylabel='On-time Agents',
-               title='[E] On-time Agents Over Time')
+            self._aggregated_dataset['evaluation']['episode_missing_agents_max'], label='Max')
+        ax.set(xlabel='Learning step', ylabel='Missing Agents',
+               title='[E] Missing Agents Over Time')
         ax.legend(loc='best', ncol=4, shadow=True)
         ax.grid()
-        fig.savefig('{}/evaluation.on_time_agents_over_learning.svg'.format(self._output_dir),
+        fig.savefig('{}/evaluation.missing_agents_over_learning.svg'.format(self._output_dir),
                     dpi=300, transparent=False, bbox_inches='tight')
         #plt.show()
         matplotlib.pyplot.close('all')
 
 ####################################################################################################
 
-    # def on_time_agents_over_timesteps_total(self):
-    #     logger.info('Computing the on-time agents over the timesteps total.')
-    #     x_coords = []
-    #     y_coords = []
-    #     min_y = []
-    #     max_y = []
-    #     with open(self.input, 'r') as jsonfile:
-    #         counter = 0
-    #         for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
-    #             complete = json.loads(row)
-    #             if self.evaluation:
-    #                 if 'evaluation' in complete:
-    #                     tmp = complete['evaluation']
-    #                     tmp['timesteps_total'] = complete['timesteps_total']
-    #                     complete = tmp
-    #                 else:
-    #                     # evaluation stats requested but not present in the results
-    #                     continue
+    def missing_agents_over_timesteps_total(self):
+        logger.info('Computing the missing agents over the timesteps total.')
+        x_coords = []
+        y_coords = []
+        min_y = []
+        max_y = []
+        with open(self.input, 'r') as jsonfile:
+            counter = 0
+            for row in tqdm(jsonfile): # enumerate cannot be used due to the size of the file
+                complete = json.loads(row)
+                if self.evaluation:
+                    if 'evaluation' in complete:
+                        tmp = complete['evaluation']
+                        tmp['timesteps_total'] = complete['timesteps_total']
+                        complete = tmp
+                    else:
+                        # evaluation stats requested but not present in the results
+                        continue
 
-    #             x_coords.append(complete['timesteps_total'])
-    #             y_coords.append(complete['custom_metrics']['episode_on_time_agents_mean'])
-    #             min_y.append(complete['custom_metrics']['episode_on_time_agents_min'])
-    #             max_y.append(complete['custom_metrics']['episode_on_time_agents_max'])
-    #             counter += 1
+                x_coords.append(complete['timesteps_total'])
+                y_coords.append(complete['custom_metrics']['episode_missing_agents_mean'])
+                min_y.append(complete['custom_metrics']['episode_missing_agents_min'])
+                max_y.append(complete['custom_metrics']['episode_missing_agents_max'])
+                counter += 1
 
-    #     fig, ax = plt.subplots(figsize=(15, 10))
-    #     ax.errorbar(x_coords, y_coords, capsize=5, label='Mean', fmt='-o')
-    #     ax.plot(x_coords, min_y, label='Min')
-    #     ax.plot(x_coords, max_y, label='Max')
-    #     ax.set(xlabel='Learning step', ylabel='On-time Agents', title='On-time Agents Over Time')
-    #     ax.legend(loc='best', ncol=4, shadow=True)
-    #     ax.grid()
-    #     fig.savefig('{}.on_time_agents_over_learning.svg'.format(self.prefix),
-    #                 dpi=300, transparent=False, bbox_inches='tight')
-    #     #plt.show()
-    #     matplotlib.pyplot.close('all')
+        fig, ax = plt.subplots(figsize=(15, 10))
+        ax.errorbar(x_coords, y_coords, capsize=5, label='Mean', fmt='-o')
+        ax.plot(x_coords, min_y, label='Min')
+        ax.plot(x_coords, max_y, label='Max')
+        ax.set(xlabel='Learning step', ylabel='Missing Agents', title='Missing Agents Over Time')
+        ax.legend(loc='best', ncol=4, shadow=True)
+        ax.grid()
+        fig.savefig('{}.missing_agents_over_learning.svg'.format(self.prefix),
+                    dpi=300, transparent=False, bbox_inches='tight')
+        #plt.show()
+        matplotlib.pyplot.close('all')
 
 ####################################################################################################
 
