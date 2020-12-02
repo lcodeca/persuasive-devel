@@ -30,8 +30,8 @@ from numpyencoder import NumpyEncoder
 
 import ray
 
-from ray.tune.logger import JsonLogger, UnifiedLogger
-from utils.logger import DBLogger, set_logging
+from ray.tune.logger import NoopLogger, UnifiedLogger
+from utils.logger import set_logging
 
 import ray.rllib.agents.ppo as ppo
 from configs.ppo_conf import persuasive_ppo_conf
@@ -346,11 +346,11 @@ def _main():
         log_dir = os.path.join(os.path.normpath(ARGS.dir), 'logs')
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
-        return UnifiedLogger(config, log_dir, loggers=[JsonLogger])
+        return UnifiedLogger(config, log_dir, loggers=[NoopLogger])
 
     trainer = ppo.PPOTrainer(
         # env=deepmarlenvironment.PersuasiveDeepMARLEnv,
-        env='marl_env', config=policy_conf) # logger_creator=default_logger_creator)
+        env='marl_env', config=policy_conf, logger_creator=default_logger_creator)
 
     last_checkpoint = get_last_checkpoint(checkpoint_dir)
     if last_checkpoint is not None:
