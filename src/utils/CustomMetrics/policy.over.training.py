@@ -159,7 +159,9 @@ class Policy(GenericGraphMaker):
                 learning['too_late'] = too_late
                 learning['too_early'] = too_early
                 learning['missing'] = missing
-                self._aggregated_dataset[training_iteration]['learning'] = learning
+                self._aggregated_dataset[training_iteration] = {
+                    'learning': learning,
+                }
 
                 # EVALUATION
                 if 'evaluation' in complete:
