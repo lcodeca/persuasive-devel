@@ -307,7 +307,7 @@ class DeepSUMOAgents(SUMOModeAgent):
         self.chosen_mode_error = 'Invalid route using mode {}'.format(mode)
         self.cost = float('NaN')
         self.ett = float('NaN')
-        logger.warning('Route not found for %s using mode %s', self.agent_id, mode)
+        logger.debug('Route not found for %s using mode %s', self.agent_id, mode)
         return self.OUTCOME.WRONG_DECISION # wrong decision, paid badly at the end
 
 ####################################################################################################

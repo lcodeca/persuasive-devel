@@ -12,6 +12,7 @@ See:
 
 import sys
 
+from pprint import pformat
 from typing import Dict
 
 import numpy as np
@@ -57,33 +58,33 @@ class PersuasiveCallbacks(DefaultCallbacks):
         episode.hist_data['last_action_by_agent'].append(episode._agent_to_last_action)
 
         missing = 0
+        on_time = 0
         departure = []
         arrival = []
         wait = []
         for info in episode._agent_to_last_info.values():
             if np.isnan(info['departure']):
                 missing += 1
-                continue
-            departure.append(info['departure'])
-            if np.isnan(info['arrival']):
-                continue
-            arrival.append(info['arrival'])
-            if np.isnan(info['wait']):
-                continue
-            wait.append(info['wait'])
+            else:
+                departure.append(info['departure'])
+            if not np.isnan(info['arrival']):
+                arrival.append(info['arrival'])
+                arrival_buffer = (
+                    info['init']['exp-arrival'] - (info['init']['arrival-slots-min'] * 60))
+                if info['arrival'] >= arrival_buffer:
+                    on_time += 1
+            if not np.isnan(info['wait']):
+                wait.append(info['wait'])
         episode.custom_metrics['episode_average_departure'].append(np.mean(departure))
         episode.custom_metrics['episode_average_arrival'].append(np.mean(arrival))
         episode.custom_metrics['episode_average_wait'].append(np.mean(wait))
         episode.custom_metrics['episode_missing_agents'].append(missing)
+        episode.custom_metrics['episode_on_time_agents'].append(on_time)
 
-        on_time = 0
         total_reward = 0
         for reward in episode._agent_reward_history.values():
             _sum = np.sum(reward)
             total_reward += _sum
-            if _sum >= 1:
-                on_time += 1
-        episode.custom_metrics['episode_on_time_agents'].append(on_time)
         episode.custom_metrics['episode_total_reward'].append(total_reward)
 
     # def on_train_result(self, trainer, result: dict, **kwargs):

@@ -326,6 +326,7 @@ class StochasticPersuasiveDeepMARLEnv(PersuasiveDeepMARLEnv):
                 'start': self.agents_init_list[agent].start,
                 'origin': self.agents_init_list[agent].origin,
                 'exp-arrival': self.agents_init_list[agent].exp_arrival[0],
+                'arrival-slots-min': self._config['agent_init']['arrival-slots-min'],
             }
         }
         logger.debug('Info for agent %s: \n%s', agent, pformat(info))
