@@ -47,6 +47,12 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 WAITING_M = 402.17 / 60.0
 LATENESS_M = 761.81 / 60.0
 
+NUM_LATE = 595.43
+
+ARRIVAL_H = 32715.66 / 3600.0
+DEPARTURE_H = 31613.13 / 3600.0
+TRAVEL_TIME_M = 1102.53 / 60.0
+
 ####################################################################################################
 
 def _argument_parser():
@@ -338,6 +344,7 @@ class Overview(GenericGraphMaker):
 
         ## TOO LATE
         axs[0][2].axhline(y=0, linestyle=':')
+        axs[0][2].axhline(y=NUM_LATE, color='r', label='Baseline')
         axs[0][2].errorbar(
             self._aggregated_dataset[tag]['timesteps_total'],
             self._aggregated_dataset[tag]['too_late_mean'],
@@ -382,6 +389,7 @@ class Overview(GenericGraphMaker):
 
         ## DEPARTURE
         axs[2][0].axhline(y=9.0, linestyle=':')
+        axs[2][0].axhline(y=DEPARTURE_H, color='r', label='Baseline')
         axs[2][0].errorbar(
             self._aggregated_dataset[tag]['timesteps_total'],
             self._aggregated_dataset[tag]['departure_mean'],
@@ -396,6 +404,7 @@ class Overview(GenericGraphMaker):
 
         ## ARRIVAL
         axs[2][1].axhline(9.0, linestyle=':')
+        axs[2][1].axhline(y=ARRIVAL_H, color='r', label='Baseline')
         axs[2][1].errorbar(
             self._aggregated_dataset[tag]['timesteps_total'],
             self._aggregated_dataset[tag]['arrival_mean'],
@@ -409,6 +418,7 @@ class Overview(GenericGraphMaker):
         axs[2][1].grid()
 
         ## TRAVEL TIME
+        axs[2][2].axhline(y=TRAVEL_TIME_M, color='r', label='Baseline')
         axs[2][2].errorbar(
             self._aggregated_dataset[tag]['timesteps_total'],
             self._aggregated_dataset[tag]['ttime_mean'],
