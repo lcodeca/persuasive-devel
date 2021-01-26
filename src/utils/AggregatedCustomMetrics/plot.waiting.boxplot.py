@@ -172,6 +172,7 @@ class Waiting():
             else:
                 current.append([])
         axs[0].axhline(y=0, linestyle=':')
+        axs[0].axhline(y=15, linestyle=':', color='g')
         axs[0].axhline(y=WAITING_M, color='r', label='Baseline')
         axs[0].boxplot(current, showfliers=self._outliers, showmeans=True)
         axs[0].set(ylabel='Time [m]', title='wSimplifiedReward\nnoBGTraffic')
@@ -188,6 +189,7 @@ class Waiting():
             else:
                 current.append([])
         axs[1].axhline(y=0, linestyle=':')
+        axs[1].axhline(y=15, linestyle=':', color='g')
         axs[1].axhline(y=WAITING_M, color='r', label='Baseline')
         axs[1].boxplot(current, showfliers=self._outliers, showmeans=True)
         axs[1].set(title='wSimpleTTReward\nnoBGTraffic')
@@ -204,6 +206,7 @@ class Waiting():
             else:
                 current.append([])
         axs[2].axhline(y=0, linestyle=':')
+        axs[2].axhline(y=15, linestyle=':', color='g')
         axs[2].axhline(y=WAITING_M, color='r', label='Baseline')
         axs[2].boxplot(current, showfliers=self._outliers, showmeans=True)
         axs[2].set(title='wSimpleTTCoopReward\nnoBGTraffic')
@@ -220,6 +223,7 @@ class Waiting():
             else:
                 current.append([])
         axs[3].axhline(y=0, linestyle=':')
+        axs[3].axhline(y=15, linestyle=':', color='g')
         axs[3].axhline(y=WAITING_M, color='r', label='Baseline')
         axs[3].boxplot(current, showfliers=self._outliers, showmeans=True)
         axs[3].set(title='wSimpleTTCoopReward\nwBGTraffic')
