@@ -73,6 +73,20 @@ def argument_parser():
     parser.add_argument(
         '--action-distr', type=float, nargs='+',
         help="Probability distribution for the epsilon action. Required with PDEGQLET.")
+    ######## RAY
+    parser.add_argument(
+        '--ray-mem-gb', default=10, type=int,
+        help='RAY Init _memory parameter in GB.')
+    parser.add_argument(
+        '--ray-store-gb', default=10, type=int,
+        help='RAY Init object_store_memory parameter in GB')
+    parser.add_argument(
+        '--ray-cpus', default=str(os.cpu_count()), type=int,
+        help='RAY Init num_cpus parameter.')
+    parser.add_argument(
+        '--ray-gpus', default=0, type=int,
+        help='RAY Init num_gpus parameter.')
+    ######## Profiling
     parser.add_argument(
         '--profiler', dest='profiler', action='store_true',
         help='Enables cProfile.')
@@ -280,6 +294,8 @@ def print_sas_sequence(sequence):
 
 ####################################################################################################
 
+GB = 1024 * 1024 * 1024
+
 def _main():
     """ Training loop """
     # Args
@@ -289,9 +305,12 @@ def _main():
     metrics_dir, checkpoint_dir, best_checkpoint_dir, debug_dir, eval_dir = results_handler(ARGS)
 
     # Initialize the simulation.
-    # ray.init(num_cpus=10, memory=52428800, object_store_memory=78643200) ## minimum values
-    ray.init()
-    # ray.init(address='auto', _redis_password='5241590000000000')
+    # ray.init()
+    # ray.init(memory=52428800, object_store_memory=78643200) ## minimum values
+    # ray.init(address='auto', _redis_password='5241590000000000') ## attach
+    ray.init(
+        num_cpus=ARGS.ray_cpus, num_gpus=ARGS.ray_gpus,
+        _memory=ARGS.ray_mem_gb*GB, object_store_memory=ARGS.ray_store_gb*GB)
 
     # Load default Scenario configuration
     experiment_config = load_json_file(ARGS.config)
