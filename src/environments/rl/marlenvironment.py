@@ -7,6 +7,7 @@ import logging
 import os
 import sys
 
+from copy import deepcopy
 from pprint import pformat
 
 import numpy as np
@@ -101,17 +102,18 @@ class SUMOModeAgent(object):
     #       'ext-stats': true,
     #  }
     Config = collections.namedtuple('Config',
-                                    ['ID',              # Agent name
-                                     'seed',            # Agent init random seed
+                                    ['ID',               # Agent name
+                                     'seed',             # Agent init random seed
                                      'ext',
-                                     'start',           # Agent starting time
-                                     'origin',          # edge - origin
-                                     'destination',     # edge - destination
-                                     'modes',           # list of available modes
-                                     'exp_arrival'])    # expected arrival time and weight
+                                     'start',            # Agent starting time
+                                     'origin',           # edge - origin
+                                     'destination',      # edge - destination
+                                     'modes',            # list of available modes
+                                     'action_to_mode',   # dict of action --> mode
+                                     'modes_w_vehicles', # list of modes with vehicle
+                                     'exp_arrival'])     # expected arrival time and weight
 
-    ## Actions --> Modes
-    action_to_mode = {
+    default_action_to_mode = {
         1: 'passenger',
         2: 'public',
         3: 'walk',
@@ -119,9 +121,10 @@ class SUMOModeAgent(object):
         5: 'ptw',
         6: 'on-demand',
     }
-    modes_w_vehicles = ['passenger', 'bicycle', 'ptw', 'on-demand',]
+    default_modes_w_vehicles = ['passenger', 'bicycle', 'ptw', 'on-demand',]
 
     def __init__(self, config):
+        ##
         self._config = config
         self.agent_id = config.ID
         self.seed = config.seed
@@ -130,6 +133,8 @@ class SUMOModeAgent(object):
         self.origin = config.origin
         self.destination = config.destination
         self.modes = config.modes
+        self.action_to_mode = config.action_to_mode
+        self.modes_w_vehicles = config.modes_w_vehicles
         self.waited_steps = 0
         self.arrival, self.waiting_weight, self.late_weight = config.exp_arrival
         self.chosen_mode = None
@@ -321,9 +326,19 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
         for agent, conf in self._config['agent_init'].items():
             if 'ext-stats' not in conf:
                 conf['ext-stats'] = False
+            if 'action-to-mode' not in conf:
+                conf['action-to-mode'] = deepcopy(SUMOModeAgent.default_action_to_mode)
+            else:
+                _tmp = {}
+                for item, value in conf['action-to-mode'].items():
+                    _tmp[int(item)] = value # JSON does not allows integers as keys, only strings
+                conf['action-to-mode'] = _tmp
+            if 'modes-w-vehicles' not in conf:
+                conf['modes-w-vehicles'] = deepcopy(SUMOModeAgent.default_modes_w_vehicles)
             self.agents_init_list[agent] = SUMOModeAgent.Config(
                 agent, conf['seed'], conf['ext-stats'], conf['start'],
                 conf['origin'], conf['destination'], conf['modes'],
+                conf['action-to-mode'], conf['modes-w-vehicles'],
                 conf['expected-arrival-time'])
             if DEBUGGER:
                 logger.debug('%s', pformat(self.agents_init_list[agent]))
