@@ -139,6 +139,18 @@ class StochasticPersuasiveDeepMARLEnv(PersuasiveDeepMARLEnv):
                     _start = self._config['agent_init']['min_start']
                 distribution[pos] = _start
 
+        if 'action-to-mode' not in self._config['agent_init']:
+            self._config['agent_init']['action-to-mode'] = deepcopy(
+                DeepSUMOAgents.default_action_to_mode)
+        else:
+            _tmp = {}
+            for item, value in self._config['agent_init']['action-to-mode'].items():
+                _tmp[int(item)] = value # JSON does not allows integers as keys, only strings
+                self._config['agent_init']['action-to-mode'] = _tmp
+        if 'modes-w-vehicles' not in self._config['agent_init']:
+            self._config['agent_init']['modes-w-vehicles'] = deepcopy(
+                DeepSUMOAgents.default_modes_w_vehicles)
+
         # Agents creation
         self.agents_init_list = dict()
         for agent_num in range(self._config['agent_init']['agents']):
@@ -146,7 +158,7 @@ class StochasticPersuasiveDeepMARLEnv(PersuasiveDeepMARLEnv):
             current_ext_stats = False
             if ext_stats > 0:
                 current_ext_stats = True
-                ext_stats -= 0
+                ext_stats -= 1
             start = distribution[agent_num]
             origin = self._generate_random_coords_in_area()
             self.agents_init_list[agent] = DeepSUMOAgents.Config(
@@ -154,6 +166,8 @@ class StochasticPersuasiveDeepMARLEnv(PersuasiveDeepMARLEnv):
                 current_ext_stats, start, origin,
                 self._config['agent_init']['destination'],
                 self._config['agent_init']['modes'],
+                self._config['agent_init']['action-to-mode'],
+                self._config['agent_init']['modes-w-vehicles'],
                 self._config['agent_init']['expected-arrival-time'])
             if DEBUGGER:
                 logger.debug('%s', pformat(self.agents_init_list[agent]))
