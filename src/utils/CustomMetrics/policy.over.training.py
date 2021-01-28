@@ -101,6 +101,24 @@ class Policy(GenericGraphMaker):
             input_dir, output_dir,
             filename='policies.json',
             default=_default)
+        self._action_to_mode = {
+            0: 'wait',
+            1: 'passenger',
+            2: 'public',
+            3: 'walk',
+            4: 'bicycle',
+            5: 'ptw',
+            6: 'on-demand',
+        }
+        self._mode_to_color = {
+            'wait': 'black',
+            'passenger': 'red',
+            'public': 'green',
+            'walk': 'orange',
+            'bicycle': 'blue',
+            'ptw': 'purple',
+            'on-demand': 'grey',
+        }
 
     def _find_last_metric(self):
         return len(self._aggregated_dataset)
@@ -109,6 +127,12 @@ class Policy(GenericGraphMaker):
         for filename in tqdm(files):
             with open(os.path.join(self._input_dir, filename), 'r') as jsonfile:
                 complete = json.load(jsonfile)
+
+                if 'action-to-mode' in complete['config']['env_config']['agent_init']:
+                    action_to_mode = \
+                        complete['config']['env_config']['agent_init']['action-to-mode']
+                else:
+                    action_to_mode = self._action_to_mode.copy()
 
                 training_iteration = int(complete['training_iteration'])
                 expected_arrival_s = complete['config']['env_config']['agent_init'][
@@ -123,6 +147,7 @@ class Policy(GenericGraphMaker):
                 episode = info_by_episode[pos]
 
                 learning = {
+                    'action-to-mode': action_to_mode,
                     'expected_arrival_s': expected_arrival_s,
                     'slots_m': slots_m,
                     'agents_num': len(episode),
@@ -173,6 +198,7 @@ class Policy(GenericGraphMaker):
                     episode = info_by_episode[pos]
 
                     evaluation = {
+                        'action-to-mode': action_to_mode,
                         'expected_arrival_s': expected_arrival_s,
                         'slots_m': slots_m,
                         'agents_num': len(episode),
@@ -215,15 +241,6 @@ class Policy(GenericGraphMaker):
         return round(num / agents * 100.0, 1)
 
     def _generate_graphs(self):
-        modes_color = {
-            0: 'black',
-            1: 'red',
-            2: 'green',
-            3: 'orange',
-            4: 'blue',
-            5: 'purple',
-        }
-
         already_plotted = []
         for filename in os.listdir(self._output_dir):
             if 'svg' in filename:
@@ -240,6 +257,10 @@ class Policy(GenericGraphMaker):
             # ################################################################
 
             current = self._aggregated_dataset[missing_plot]['learning']
+            self._action_to_mode = {}
+            for _action, _mode in current['action-to-mode'].items():
+                self._action_to_mode[int(_action)] = _mode
+            self._action_to_mode[0] = 'wait'
 
             # ############ LEARNIN
             axs[0].bar(current['expected_arrival_s']/3600, current['agents_num'],
@@ -257,7 +278,7 @@ class Policy(GenericGraphMaker):
                     [agent['start'], agent['departure']], y, color='black', alpha=0.5)
                 axs[0].plot(
                     [agent['departure'], agent['arrival']], y,
-                    color=modes_color[agent['mode']], alpha=0.9)
+                    color=self._mode_to_color[self._action_to_mode[agent['mode']]], alpha=0.9)
 
             title = 'Learning \n'
             title += 'early {} - on time {} - late {} - missing {} \n'.format(
@@ -268,26 +289,13 @@ class Policy(GenericGraphMaker):
                 self._perc(current['too_late'], current['agents_num']),
                 self._perc(current['missing'], current['agents_num']))
             axs[0].set_title(title)
-            labels = [
-                mpatches.Patch(
-                    color='black', label='Wait \n({}%)'.format(
-                        self._perc(current['mode_usage'][0], current['agents_num']))),
-                mpatches.Patch(
-                    color='red', label='Car \n({}%)'.format(
-                        self._perc(current['mode_usage'][1], current['agents_num']))),
-                mpatches.Patch(
-                    color='green', label='PT \n({}%)'.format(
-                        self._perc(current['mode_usage'][2], current['agents_num']))),
-                mpatches.Patch(
-                    color='orange', label='Walk \n({}%)'.format(
-                        self._perc(current['mode_usage'][3], current['agents_num']))),
-                mpatches.Patch(
-                    color='blue', label='Bicycle \n({}%)'.format(
-                        self._perc(current['mode_usage'][4], current['agents_num']))),
-                mpatches.Patch(
-                    color='purple', label='PTW \n({}%)'.format(
-                        self._perc(current['mode_usage'][5], current['agents_num']))),
-            ]
+            labels = []
+            for action in sorted(self._action_to_mode):
+                color = self._mode_to_color[self._action_to_mode[action]]
+                label = '{} \n({}%)'.format(
+                    self._action_to_mode[action],
+                    self._perc(current['mode_usage'][action], current['agents_num']))
+                labels.append(mpatches.Patch(color=color, label=label))
             axs[0].legend(handles=labels, loc='upper left')
 
             ############ EVALUATION
@@ -309,37 +317,25 @@ class Policy(GenericGraphMaker):
                         [agent['start'], agent['departure']], y, color='black', alpha=0.5)
                     axs[1].plot(
                         [agent['departure'], agent['arrival']], y,
-                        color=modes_color[agent['mode']], alpha=0.9)
+                        color=self._mode_to_color[self._action_to_mode[agent['mode']]], alpha=0.9)
 
                 title = 'Evaluation \n'
                 title += 'early {} - on time {} - late {} - missing {} \n'.format(
-                    current['too_early'], current['on_time'], current['too_late'], current['missing'])
+                    current['too_early'], current['on_time'], current['too_late'],
+                    current['missing'])
                 title += 'early {}% - on time {}% - late {}% - missing {}% \n'.format(
                     self._perc(current['too_early'], current['agents_num']),
                     self._perc(current['on_time'], current['agents_num']),
                     self._perc(current['too_late'], current['agents_num']),
                     self._perc(current['missing'], current['agents_num']))
                 axs[1].set_title(title)
-                labels = [
-                    mpatches.Patch(
-                        color='black', label='Wait \n({}%)'.format(
-                            self._perc(current['mode_usage'][0], current['agents_num']))),
-                    mpatches.Patch(
-                        color='red', label='Car \n({}%)'.format(
-                            self._perc(current['mode_usage'][1], current['agents_num']))),
-                    mpatches.Patch(
-                        color='green', label='PT \n({}%)'.format(
-                            self._perc(current['mode_usage'][2], current['agents_num']))),
-                    mpatches.Patch(
-                        color='orange', label='Walk \n({}%)'.format(
-                            self._perc(current['mode_usage'][3], current['agents_num']))),
-                    mpatches.Patch(
-                        color='blue', label='Bicycle \n({}%)'.format(
-                            self._perc(current['mode_usage'][4], current['agents_num']))),
-                    mpatches.Patch(
-                        color='purple', label='PTW \n({}%)'.format(
-                            self._perc(current['mode_usage'][5], current['agents_num']))),
-                ]
+                labels = []
+                for action in sorted(self._action_to_mode):
+                    color = self._mode_to_color[self._action_to_mode[action]]
+                    label = '{} \n({}%)'.format(
+                        self._action_to_mode[action],
+                        self._perc(current['mode_usage'][action], current['agents_num']))
+                    labels.append(mpatches.Patch(color=color, label=label))
                 axs[1].legend(handles=labels, loc='upper left')
 
             ################################################################

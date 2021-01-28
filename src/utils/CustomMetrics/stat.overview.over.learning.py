@@ -156,6 +156,14 @@ class Overview(GenericGraphMaker):
             #######################
         }
         _default = {
+            'action-to-mode': {
+                0: 'wait',
+                1: 'passenger',
+                2: 'public',
+                3: 'walk',
+                4: 'bicycle',
+                5: 'ptw'
+            },
             'learning': deepcopy(metrics),
             'evaluation': deepcopy(metrics),
         }
@@ -163,6 +171,14 @@ class Overview(GenericGraphMaker):
             input_dir, output_dir,
             filename='overview.json',
             default=_default)
+        self._default_mode_to_metric = {
+            'wait': 'm_wait_',
+            'passenger': 'm_car_',
+            'public': 'm_pt_',
+            'walk': 'm_walk_',
+            'bicycle': 'm_bicycle_',
+            'ptw': 'm_ptw_'
+        }
 
     def _find_last_metric(self):
         return len(self._aggregated_dataset['learning']['timesteps_total'])
@@ -255,39 +271,39 @@ class Overview(GenericGraphMaker):
         self._aggregated_dataset[tag]['arrival_mean'].append(np.nanmean(avg_arrival_s)/3600)
         self._aggregated_dataset[tag]['arrival_median'].append(np.nanmedian(avg_arrival_s)/3600)
         self._aggregated_dataset[tag]['arrival_std'].append(np.nanstd(avg_arrival_s)/3600)
-        ## WAITING
-        self._aggregated_dataset[tag]['m_wait_mean'].append(np.nanmean(avg_modes[0]))
-        self._aggregated_dataset[tag]['m_wait_median'].append(np.nanmedian(avg_modes[0]))
-        self._aggregated_dataset[tag]['m_wait_std'].append(np.nanstd(avg_modes[0]))
-        ## WALKING
-        self._aggregated_dataset[tag]['m_walk_mean'].append(np.nanmean(avg_modes[3]))
-        self._aggregated_dataset[tag]['m_walk_median'].append(np.nanmedian(avg_modes[3]))
-        self._aggregated_dataset[tag]['m_walk_std'].append(np.nanstd(avg_modes[3]))
-        ## BICYCLE
-        self._aggregated_dataset[tag]['m_bicycle_mean'].append(np.nanmean(avg_modes[4]))
-        self._aggregated_dataset[tag]['m_bicycle_median'].append(np.nanmedian(avg_modes[4]))
-        self._aggregated_dataset[tag]['m_bicycle_std'].append(np.nanstd(avg_modes[4]))
-        ## PUBLIC TRANSPORTS
-        self._aggregated_dataset[tag]['m_pt_mean'].append(np.nanmean(avg_modes[2]))
-        self._aggregated_dataset[tag]['m_pt_median'].append(np.nanmedian(avg_modes[2]))
-        self._aggregated_dataset[tag]['m_pt_std'].append(np.nanstd(avg_modes[2]))
-        ## CAR
-        self._aggregated_dataset[tag]['m_car_mean'].append(np.nanmean(avg_modes[1]))
-        self._aggregated_dataset[tag]['m_car_median'].append(np.nanmedian(avg_modes[1]))
-        self._aggregated_dataset[tag]['m_car_std'].append(np.nanstd(avg_modes[1]))
-        ## POWERED TWO-WHEELERS
-        self._aggregated_dataset[tag]['m_ptw_mean'].append(np.nanmean(avg_modes[5]))
-        self._aggregated_dataset[tag]['m_ptw_median'].append(np.nanmedian(avg_modes[5]))
-        self._aggregated_dataset[tag]['m_ptw_std'].append(np.nanstd(avg_modes[5]))
-    ########### DONE
+
+        ## All the MODES
+        for _current_mode, _current_metric in self._default_mode_to_metric.items():
+            print(_current_mode, _current_metric, avg_modes[self._mode_to_action[_current_mode]])
+            self._aggregated_dataset[tag]['{}mean'.format(_current_metric)].append(
+                np.nanmean(avg_modes[self._mode_to_action[_current_mode]]))
+            self._aggregated_dataset[tag]['{}median'.format(_current_metric)].append(
+                np.nanmedian(avg_modes[self._mode_to_action[_current_mode]]))
+            self._aggregated_dataset[tag]['{}std'.format(_current_metric)].append(
+                np.nanstd(avg_modes[self._mode_to_action[_current_mode]]))
 
     def _aggregate_metrics(self, files):
         for filename in tqdm(files):
             # print(filename)
             with open(os.path.join(self._input_dir, filename), 'r') as jsonfile:
                 complete = json.load(jsonfile)
+
+                if 'action-to-mode' in complete['config']['env_config']['agent_init']:
+                    self._aggregated_dataset['action-to-mode'] = \
+                        complete['config']['env_config']['agent_init']['action-to-mode']
+                    self._aggregated_dataset['action-to-mode'][0] = 'wait'
+
+                self._mode_to_action = {}
+                for action, mode in self._aggregated_dataset['action-to-mode'].items():
+                    self._mode_to_action[mode] = int(action)
+                for mode in self._default_mode_to_metric:
+                    if mode not in self._mode_to_action:
+                        self._mode_to_action[mode] = -666 # cause i'm faily sure it's an
+                                                          # impossible action value in TF
+
                 # LEARNING
                 self._aggregate_metrics_helper(complete, 'learning')
+
                 # EVALUATION
                 if 'evaluation' in complete:
                     complete['evaluation']['timesteps_total'] = complete['timesteps_total']
@@ -295,8 +311,7 @@ class Overview(GenericGraphMaker):
                     self._aggregate_metrics_helper(complete, 'evaluation')
 
     def _generate_graphs_helper(self, tag, lbl):
-        # LEARNING
-        fig, axs = plt.subplots(5, 3, figsize=(45, 25), constrained_layout=True)
+        fig, axs = plt.subplots(5, 3, figsize=(45, 25), constrained_layout=True) # , sharex=True
         fig.suptitle('{} Aggregated Overview over Learning'.format(lbl))
 
         ## REWARDS
@@ -516,7 +531,8 @@ class Overview(GenericGraphMaker):
         axs[4][2].plot(
             self._aggregated_dataset[tag]['timesteps_total'],
             self._aggregated_dataset[tag]['m_pt_median'], label='Median')
-        axs[4][2].set(xlabel='Learning step', ylabel='People [#]', title='PUBLIC TRANSPORTS over time.')
+        axs[4][2].set(
+            xlabel='Learning step', ylabel='People [#]', title='PUBLIC TRANSPORTS over time.')
         axs[4][2].legend(ncol=3, loc='best', shadow=True)
         axs[4][2].grid()
 
