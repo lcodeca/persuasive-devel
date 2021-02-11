@@ -274,7 +274,7 @@ class Overview(GenericGraphMaker):
 
         ## All the MODES
         for _current_mode, _current_metric in self._default_mode_to_metric.items():
-            print(_current_mode, _current_metric, avg_modes[self._mode_to_action[_current_mode]])
+            # print(_current_mode, _current_metric, avg_modes[self._mode_to_action[_current_mode]])
             self._aggregated_dataset[tag]['{}mean'.format(_current_metric)].append(
                 np.nanmean(avg_modes[self._mode_to_action[_current_mode]]))
             self._aggregated_dataset[tag]['{}median'.format(_current_metric)].append(

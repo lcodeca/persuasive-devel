@@ -22,6 +22,10 @@ import numpy as np
 
 ####################################################################################################
 
+import consts
+
+####################################################################################################
+
 SMALL_SIZE = 20
 MEDIUM_SIZE = SMALL_SIZE + 4
 BIGGER_SIZE = MEDIUM_SIZE + 4
@@ -101,9 +105,70 @@ EXPERIMENTS_GRID = {
         'title': 'wSimpleTTCoopReward\nwBGTraffic\nComplete',
         'coords': (0, 3),
     },
+    'ppo_1000ag_4m_wParetoDistr_30_2_30_3_45_4_45_4_60_5_60_5_60_5_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_noPTW': {
+        'title': 'wSimpleTTReward\nnoBGTraffic\nComplete_noPTW',
+        'coords': (0, 4),
+    },
+    'ppo_1000ag_4m_wParetoDistr_30_2_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_noPTW': {
+        'title': 'wSimpleTTReward\nnoBGTraffic\n30_2_noPTW',
+        'coords': (1, 4),
+    },
+    'ppo_1000ag_4m_wParetoDistr_30_3_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_noPTW': {
+        'title': 'wSimpleTTReward\nnoBGTraffic\n30_3_noPTW',
+        'coords': (2, 4),
+    },
+    'ppo_1000ag_4m_wParetoDistr_45_4_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_noPTW': {
+        'title': 'wSimpleTTReward\nnoBGTraffic\n45_5_noPTW',
+        'coords': (3, 4),
+    },
+    'ppo_1000ag_4m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_noPTW': {
+        'title': 'wSimpleTTReward\nnoBGTraffic\n60_6_noPTW',
+        'coords': (4, 4),
+    },
+    'ppo_1000ag_4m_wParetoDistr_30_2_30_3_45_4_45_4_60_5_60_5_60_5_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_noPTW': {
+        'title': 'wSimpleTTCoopReward\nnoBGTraffic\nComplete_noPTW',
+        'coords': (0, 5),
+    },
+    'ppo_1000ag_4m_wParetoDistr_30_2_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_noPTW': {
+        'title': 'wSimpleTTCoopReward\nnoBGTraffic\n30_2_noPTW',
+        'coords': (1, 5),
+    },
+    'ppo_1000ag_4m_wParetoDistr_30_3_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_noPTW': {
+        'title': 'wSimpleTTCoopReward\nnoBGTraffic\n30_3_noPTW',
+        'coords': (2, 5),
+    },
+    'ppo_1000ag_4m_wParetoDistr_45_4_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_noPTW': {
+        'title': 'wSimpleTTCoopReward\nnoBGTraffic\n45_5_noPTW',
+        'coords': (3, 5),
+    },
+    'ppo_1000ag_4m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_noPTW': {
+        'title': 'wSimpleTTCoopReward\nnoBGTraffic\n60_6_noPTW',
+        'coords': (4, 5),
+    },
+    'ppo_1000ag_2m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_carOnly': {
+        'title': 'wSimpleTTReward\nnoBGTraffic\n60_5_carOnly',
+        'coords': (4, 6),
+    },
+    'ppo_1000ag_2m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_carOnly': {
+        'title': 'wSimpleTTCoopReward\nnoBGTraffic\n60_5_carOnly',
+        'coords': (4, 7),
+    },
+    'ppo_1000ag_5m_wParetoDistr_30_2_30_2_45_4_45_4_60_5_60_5_60_5_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_ext': {
+        'title': 'wSimpleTTReward\nnoBGTraffic\nComplete_ext',
+        'coords': (0, 8),
+    },
+    'ppo_1000ag_5m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_ext': {
+        'title': 'wSimpleTTReward\nnoBGTraffic\n60_5_ext',
+        'coords': (4, 8),
+    },
 }
 
-MISSING = [(1, 3), (2, 3), (3, 3), (4, 3)]
+MISSING = [
+    (1, 3), (2, 3), (3, 3), (4, 3),
+    (0, 6), (1, 6), (2, 6), (3, 6),
+    (0, 7), (1, 7), (2, 7), (3, 7),
+    (1, 8), (2, 8), (3, 8),
+]
 
 MODES = ['wait', 'walk', 'bicycle', 'public', 'ptw', 'car']
 
@@ -176,7 +241,7 @@ class ModeUsage():
         return [0]
 
     def generate(self):
-        fig, axs = plt.subplots(5, 4, figsize=(20, 30), sharey=True, squeeze=True, constrained_layout=True, )
+        fig, axs = plt.subplots(5, 9, figsize=(40, 30), sharey=True, squeeze=True, constrained_layout=True, )
         fig.suptitle('Transporation Modes Usage')
 
         for exp, options in EXPERIMENTS_GRID.items():
@@ -215,58 +280,3 @@ if __name__ == '__main__':
     _main()
 
 ####################################################################################################
-
-# ###############################################################################
-
-# green_diamond = dict(markerfacecolor='g', marker='D')
-# ax3.set_title('Changed Outlier Symbols')
-# ax3.boxplot(data, flierprops=green_diamond)
-
-# ###############################################################################
-
-# fig4, ax4 = plt.subplots()
-# ax4.set_title('Hide Outlier Points')
-# ax4.boxplot(data, showfliers=self._outliers, showmeans=True)
-
-# plt.show()
-
-# ###############################################################################
-
-# red_square = dict(markerfacecolor='r', marker='s')
-# fig5, ax5 = plt.subplots()
-# ax5.set_title('Horizontal Boxes')
-# ax5.boxplot(data, vert=False, flierprops=red_square)
-
-# plt.show()
-
-# ###############################################################################
-
-# fig6, ax6 = plt.subplots()
-# ax6.set_title('Shorter Whisker Length')
-# ax6.boxplot(data, flierprops=red_square, vert=False, whis=0.75)
-
-# plt.show()
-
-# ###############################################################################
-# # Fake up some more data
-
-# spread = np.random.rand(50) * 100
-# center = np.ones(25) * 40
-# flier_high = np.random.rand(10) * 100 + 100
-# flier_low = np.random.rand(10) * -100
-# d2 = np.concatenate((spread, center, flier_high, flier_low))
-# data.shape = (-1, 1)
-# d2.shape = (-1, 1)
-
-# ###############################################################################
-# # Making a 2-D array only works if all the columns are the
-# # same length.  If they are not, then use a list instead.
-# # This is actually more efficient because boxplot converts
-# # a 2-D array into a list of vectors internally anyway.
-
-# data = [data, d2, d2[::2,0]]
-# fig7, ax7 = plt.subplots()
-# ax7.set_title('Multiple Samples with Different sizes')
-# ax7.boxplot(data)
-
-# plt.show()
