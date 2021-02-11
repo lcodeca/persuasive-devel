@@ -34,6 +34,9 @@ def _argument_parser():
     parser.add_argument('--eval', dest='evaluation', action='store_true',
                         help='Set Evaluation vs Learning.')
     parser.set_defaults(evaluation=False)
+    parser.add_argument('--reset', dest='reset', action='store_true',
+                        help='Reset the metric if set.')
+    parser.set_defaults(reset=False)
     parser.add_argument('--profiler', dest='profiler', action='store_true',
                         help='Enable cProfile.')
     parser.set_defaults(profiler=False)
@@ -52,7 +55,7 @@ def _main():
 
     Extractor(
         config.exp, config.input_dir, config.max_metrics, config.evaluation,
-        config.output_dir).extract()
+        config.output_dir, config.reset).extract()
 
     ## ========================              PROFILER              ======================== ##
     if config.profiler:
@@ -68,7 +71,7 @@ class Extractor():
 
     def __init__(self,
                  experiment: str, input_dir: str, max_metrics: int,
-                 evaluation: bool, output_dir: str):
+                 evaluation: bool, output_dir: str, reset: bool):
         self._exp = experiment
         self._eval = evaluation
         self._input_dir = input_dir
@@ -92,7 +95,27 @@ class Extractor():
             'm_bicycle': os.path.join(self._output_dir, 'm_bicycle.json'),
             'm_public': os.path.join(self._output_dir, 'm_public.json'),
         }
+        self._metric_to_mode = {
+            'm_wait': 'wait',
+            'm_car': 'passenger',
+            'm_ptw': 'ptw',
+            'm_walk': 'walk',
+            'm_bicycle': 'bicycle',
+            'm_public': 'public',
+        }
+        self._mode_to_action = {
+            'wait': 0,
+            'passenger': 1,
+            'public': 2,
+            'walk': 3,
+            'bicycle': 4,
+            'ptw': 5,
+        }
         self._complete_metrics = None
+        self._reset = {}
+        for metric in self._dataset_fname:
+            self._reset[metric] = reset
+        print('Starting:', self._exp)
 
     def extract(self):
         self._extract()
@@ -108,6 +131,15 @@ class Extractor():
         for filename in tqdm(files):
             with open(os.path.join(self._input_dir, filename), 'r') as jsonfile:
                 self._complete_metrics = json.load(jsonfile)
+
+                if 'action-to-mode' in self._complete_metrics['config']['env_config']['agent_init']:
+                    self._mode_to_action = {'wait': 0,}
+                    for _action, _mode in self._complete_metrics['config']['env_config']['agent_init']['action-to-mode'].items():
+                        self._mode_to_action[_mode] = int(_action)
+                    print('Using CONFIGURED action-to-mode:', self._mode_to_action)
+                else:
+                    print('Using default action-to-mode:', self._mode_to_action)
+
                 if self._eval:
                     if 'evaluation' in self._complete_metrics:
                         self._complete_metrics['evaluation']['timesteps_total'] = \
@@ -211,30 +243,41 @@ class Extractor():
         self._load_aggregate_data('arrival')
         self._aggregated_dataset[self._exp].extend(deepcopy(avg_arrival_s))
         self._save_aggregate_data('arrival')
-        ## WAIT
-        self._load_aggregate_data('m_wait')
-        self._aggregated_dataset[self._exp].extend(deepcopy(avg_modes[0]))
-        self._save_aggregate_data('m_wait')
-        ## WALK
-        self._load_aggregate_data('m_walk')
-        self._aggregated_dataset[self._exp].extend(deepcopy(avg_modes[3]))
-        self._save_aggregate_data('m_walk')
-        ## BICYCLE
-        self._load_aggregate_data('m_bicycle')
-        self._aggregated_dataset[self._exp].extend(deepcopy(avg_modes[4]))
-        self._save_aggregate_data('m_bicycle')
-        ## PUBLIC TRANSPORTS
-        self._load_aggregate_data('m_public')
-        self._aggregated_dataset[self._exp].extend(deepcopy(avg_modes[2]))
-        self._save_aggregate_data('m_public')
-        ## CAR
-        self._load_aggregate_data('m_car')
-        self._aggregated_dataset[self._exp].extend(deepcopy(avg_modes[1]))
-        self._save_aggregate_data('m_car')
-        ## POWERED TWO-WHEELERS
-        self._load_aggregate_data('m_ptw')
-        self._aggregated_dataset[self._exp].extend(deepcopy(avg_modes[5]))
-        self._save_aggregate_data('m_ptw')
+
+        for _metric, _mode in self._metric_to_mode.items():
+            self._load_aggregate_data(_metric)
+            if _mode in self._mode_to_action:
+                self._aggregated_dataset[self._exp].extend(
+                    deepcopy(avg_modes[self._mode_to_action[_mode]]))
+                # print(_mode, avg_modes[self._mode_to_action[_mode]])
+            else:
+                print('Missing:', _mode, self._exp)
+            self._save_aggregate_data(_metric)
+
+        # ## WAIT
+        # self._load_aggregate_data('m_wait')
+        # self._aggregated_dataset[self._exp].extend(deepcopy(avg_modes[0]))
+        # self._save_aggregate_data('m_wait')
+        # ## WALK
+        # self._load_aggregate_data('m_walk')
+        # self._aggregated_dataset[self._exp].extend(deepcopy(avg_modes[3]))
+        # self._save_aggregate_data('m_walk')
+        # ## BICYCLE
+        # self._load_aggregate_data('m_bicycle')
+        # self._aggregated_dataset[self._exp].extend(deepcopy(avg_modes[4]))
+        # self._save_aggregate_data('m_bicycle')
+        # ## PUBLIC TRANSPORTS
+        # self._load_aggregate_data('m_public')
+        # self._aggregated_dataset[self._exp].extend(deepcopy(avg_modes[2]))
+        # self._save_aggregate_data('m_public')
+        # ## CAR
+        # self._load_aggregate_data('m_car')
+        # self._aggregated_dataset[self._exp].extend(deepcopy(avg_modes[1]))
+        # self._save_aggregate_data('m_car')
+        # ## POWERED TWO-WHEELERS
+        # self._load_aggregate_data('m_ptw')
+        # self._aggregated_dataset[self._exp].extend(deepcopy(avg_modes[5]))
+        # self._save_aggregate_data('m_ptw')
 
     def _load_aggregate_data(self, metric):
         if os.path.isfile(self._dataset_fname[metric]):
@@ -242,6 +285,10 @@ class Extractor():
                 self._aggregated_dataset = json.load(jsonfile)
         else:
             self._aggregated_dataset = dict()
+        if self._reset[metric]:
+            self._reset[metric] = False
+            self._aggregated_dataset[self._exp] = []
+            print('Resetting:', metric, self._exp)
         if self._exp not in self._aggregated_dataset:
             self._aggregated_dataset[self._exp] = []
 

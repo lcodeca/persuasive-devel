@@ -22,6 +22,10 @@ import numpy as np
 
 ####################################################################################################
 
+import consts
+
+####################################################################################################
+
 SMALL_SIZE = 20
 MEDIUM_SIZE = SMALL_SIZE + 4
 BIGGER_SIZE = MEDIUM_SIZE + 4
@@ -36,73 +40,6 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 ####################################################################################################
 
-EXPERIMENTS_BY_REWARD_MODEL = {
-    'wSimplifiedReward_noBGTraffic': [
-        'ppo_1000ag_5m_wParetoDistr_30_2_30_3_45_4_45_4_60_5_60_5_60_5_60_5_wGlobalUsage_wFutureDemand_wSimplifiedReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_30_2_wGlobalUsage_wFutureDemand_wSimplifiedReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_30_3_wGlobalUsage_wFutureDemand_wSimplifiedReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_45_4_wGlobalUsage_wFutureDemand_wSimplifiedReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimplifiedReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-    ],
-    'wSimpleTTReward_noBGTraffic': [
-        'ppo_1000ag_5m_wParetoDistr_30_2_30_3_45_4_45_4_60_5_60_5_60_5_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_30_2_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_30_3_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_45_4_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-    ],
-    'wSimpleTTCoopReward_noBGTraffic': [
-        'ppo_1000ag_5m_wParetoDistr_30_2_30_3_45_4_45_4_60_5_60_5_60_5_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_30_2_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_30_3_GlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_45_4_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-    ],
-    'wSimpleTTCoopReward_wBGTraffic': [
-        'ppo_1000ag_5m_wParetoDistr_30_2_30_3_45_4_45_4_60_5_60_5_60_5_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_wBGTraffic_deep100_1000_128',
-    ]
-}
-
-EXPERIMENTS_BY_INITIAL_DISTRIBUTION = {
-    'complete': [
-        'ppo_1000ag_5m_wParetoDistr_30_2_30_3_45_4_45_4_60_5_60_5_60_5_60_5_wGlobalUsage_wFutureDemand_wSimplifiedReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_30_2_30_3_45_4_45_4_60_5_60_5_60_5_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_30_2_30_3_45_4_45_4_60_5_60_5_60_5_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_30_2_30_3_45_4_45_4_60_5_60_5_60_5_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_wBGTraffic_deep100_1000_128',
-    ],
-    '30_2': [
-        'ppo_1000ag_5m_wParetoDistr_30_2_wGlobalUsage_wFutureDemand_wSimplifiedReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_30_2_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_30_2_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-    ],
-    '30_3': [
-        'ppo_1000ag_5m_wParetoDistr_30_3_wGlobalUsage_wFutureDemand_wSimplifiedReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_30_3_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_30_3_GlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-    ],
-    '45_4': [
-        'ppo_1000ag_5m_wParetoDistr_45_4_wGlobalUsage_wFutureDemand_wSimplifiedReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_45_4_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_45_4_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-    ],
-    '60_5': [
-        'ppo_1000ag_5m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimplifiedReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-        'ppo_1000ag_5m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128',
-    ],
-
-}
-
-WAITING_M = 402.17 / 60.0
-LATENESS_S = 761.81
-
-NUM_LATE = 595.43
-
-ARRIVAL_S = 32715.66
-DEPARTURE_S = 31613.13
-TRAVEL_TIME_S = 1102.53
-
-####################################################################################################
 
 def _argument_parser():
     """ Argument parser for the stats parser. """
@@ -161,76 +98,59 @@ class Waiting():
             return ret
         return [0]
 
+    def _pack_data(self, chunk):
+        current = []
+        labels = []
+        for lbl, exp in consts.EXPERIMENTS[chunk].items():
+            labels.append(lbl)
+            if exp in self._complete_data:
+                current.append(self._nan_to_0(self._complete_data[exp]))
+            else:
+                current.append([])
+        return labels, current
+
     def generate(self):
         fig, axs = plt.subplots(1, 4, figsize=(25, 15), constrained_layout=True, sharey=True)
         fig.suptitle('Waiting Time by Reward Model')
 
-        current = []
-        for exp in EXPERIMENTS_BY_REWARD_MODEL['wSimplifiedReward_noBGTraffic']:
-            if exp in self._complete_data:
-                current.append(self._nan_to_0(self._complete_data[exp]))
-            else:
-                current.append([])
+        labels, current = self._pack_data('wSimplifiedReward_noBGTraffic')
         axs[0].axhline(y=0, linestyle=':')
         axs[0].axhline(y=15, linestyle=':', color='g')
-        axs[0].axhline(y=WAITING_M, color='r', label='Baseline')
+        axs[0].axhline(y=consts.WAITING_M, color='r', label='Baseline')
         axs[0].boxplot(current, showfliers=self._outliers, showmeans=True)
         axs[0].set(ylabel='Time [m]', title='wSimplifiedReward\nnoBGTraffic')
-        axs[0].set_xticks(
-            range(1, len(EXPERIMENTS_BY_INITIAL_DISTRIBUTION)+1)) #, minor=False)
-        axs[0].set_xticklabels(
-            EXPERIMENTS_BY_INITIAL_DISTRIBUTION.keys(), rotation=45) #, fontdict=None, minor=False)
+        axs[0].set_xticks(range(1, len(labels)+1)) #, minor=False)
+        axs[0].set_xticklabels(labels, rotation=90) #, fontdict=None, minor=False)
         axs[0].grid()
 
-        current = []
-        for exp in EXPERIMENTS_BY_REWARD_MODEL['wSimpleTTReward_noBGTraffic']:
-            if exp in self._complete_data:
-                current.append(self._nan_to_0(self._complete_data[exp]))
-            else:
-                current.append([])
+        labels, current = self._pack_data('wSimpleTTReward_noBGTraffic')
         axs[1].axhline(y=0, linestyle=':')
         axs[1].axhline(y=15, linestyle=':', color='g')
-        axs[1].axhline(y=WAITING_M, color='r', label='Baseline')
+        axs[1].axhline(y=consts.WAITING_M, color='r', label='Baseline')
         axs[1].boxplot(current, showfliers=self._outliers, showmeans=True)
         axs[1].set(title='wSimpleTTReward\nnoBGTraffic')
-        axs[1].set_xticks(
-            range(1, len(EXPERIMENTS_BY_INITIAL_DISTRIBUTION)+1)) #, minor=False)
-        axs[1].set_xticklabels(
-            EXPERIMENTS_BY_INITIAL_DISTRIBUTION.keys(), rotation=45) #, fontdict=None, minor=False)
+        axs[1].set_xticks(range(1, len(labels)+1)) #, minor=False)
+        axs[1].set_xticklabels(labels, rotation=90) #, fontdict=None, minor=False)
         axs[1].grid()
 
-        current = []
-        for exp in EXPERIMENTS_BY_REWARD_MODEL['wSimpleTTCoopReward_noBGTraffic']:
-            if exp in self._complete_data:
-                current.append(self._nan_to_0(self._complete_data[exp]))
-            else:
-                current.append([])
+        labels, current = self._pack_data('wSimpleTTCoopReward_noBGTraffic')
         axs[2].axhline(y=0, linestyle=':')
         axs[2].axhline(y=15, linestyle=':', color='g')
-        axs[2].axhline(y=WAITING_M, color='r', label='Baseline')
+        axs[2].axhline(y=consts.WAITING_M, color='r', label='Baseline')
         axs[2].boxplot(current, showfliers=self._outliers, showmeans=True)
         axs[2].set(title='wSimpleTTCoopReward\nnoBGTraffic')
-        axs[2].set_xticks(
-            range(1, len(EXPERIMENTS_BY_INITIAL_DISTRIBUTION)+1)) #, minor=False)
-        axs[2].set_xticklabels(
-            EXPERIMENTS_BY_INITIAL_DISTRIBUTION.keys(), rotation=45) #, fontdict=None, minor=False)
+        axs[2].set_xticks(range(1, len(labels)+1)) #, minor=False)
+        axs[2].set_xticklabels(labels, rotation=90) #, fontdict=None, minor=False)
         axs[2].grid()
 
-        current = []
-        for exp in EXPERIMENTS_BY_REWARD_MODEL['wSimpleTTCoopReward_wBGTraffic']:
-            if exp in self._complete_data:
-                current.append(self._nan_to_0(self._complete_data[exp]))
-            else:
-                current.append([])
+        labels, current = self._pack_data('wSimpleTTCoopReward_wBGTraffic')
         axs[3].axhline(y=0, linestyle=':')
         axs[3].axhline(y=15, linestyle=':', color='g')
-        axs[3].axhline(y=WAITING_M, color='r', label='Baseline')
+        axs[3].axhline(y=consts.WAITING_M, color='r', label='Baseline')
         axs[3].boxplot(current, showfliers=self._outliers, showmeans=True)
         axs[3].set(title='wSimpleTTCoopReward\nwBGTraffic')
-        axs[3].set_xticks(
-            range(1, len(EXPERIMENTS_BY_INITIAL_DISTRIBUTION)+1)) #, minor=False)
-        axs[3].set_xticklabels(
-            EXPERIMENTS_BY_INITIAL_DISTRIBUTION.keys(), rotation=45) #, fontdict=None, minor=False)
+        axs[3].set_xticks(range(1, len(labels)+1)) #, minor=False)
+        axs[3].set_xticklabels(labels, rotation=90) #, fontdict=None, minor=False)
         axs[3].grid()
 
         # plt.show()
@@ -243,58 +163,3 @@ if __name__ == '__main__':
     _main()
 
 ####################################################################################################
-
-# ###############################################################################
-
-# green_diamond = dict(markerfacecolor='g', marker='D')
-# ax3.set_title('Changed Outlier Symbols')
-# ax3.boxplot(data, flierprops=green_diamond)
-
-# ###############################################################################
-
-# fig4, ax4 = plt.subplots()
-# ax4.set_title('Hide Outlier Points')
-# ax4.boxplot(data, showfliers=self._outliers, showmeans=True)
-
-# plt.show()
-
-# ###############################################################################
-
-# red_square = dict(markerfacecolor='r', marker='s')
-# fig5, ax5 = plt.subplots()
-# ax5.set_title('Horizontal Boxes')
-# ax5.boxplot(data, vert=False, flierprops=red_square)
-
-# plt.show()
-
-# ###############################################################################
-
-# fig6, ax6 = plt.subplots()
-# ax6.set_title('Shorter Whisker Length')
-# ax6.boxplot(data, flierprops=red_square, vert=False, whis=0.75)
-
-# plt.show()
-
-# ###############################################################################
-# # Fake up some more data
-
-# spread = np.random.rand(50) * 100
-# center = np.ones(25) * 40
-# flier_high = np.random.rand(10) * 100 + 100
-# flier_low = np.random.rand(10) * -100
-# d2 = np.concatenate((spread, center, flier_high, flier_low))
-# data.shape = (-1, 1)
-# d2.shape = (-1, 1)
-
-# ###############################################################################
-# # Making a 2-D array only works if all the columns are the
-# # same length.  If they are not, then use a list instead.
-# # This is actually more efficient because boxplot converts
-# # a 2-D array into a list of vectors internally anyway.
-
-# data = [data, d2, d2[::2,0]]
-# fig7, ax7 = plt.subplots()
-# ax7.set_title('Multiple Samples with Different sizes')
-# ax7.boxplot(data)
-
-# plt.show()
