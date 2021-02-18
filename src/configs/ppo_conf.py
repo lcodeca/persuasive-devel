@@ -33,6 +33,7 @@ def persuasive_ppo_conf(rollout_size=10,
     custom_configuration['ignore_worker_failures'] = True
     custom_configuration['log_level'] = 'WARN'
     custom_configuration['monitor'] = True
+    custom_configuration['num_gpus'] = 0
     custom_configuration['num_cpus_for_driver'] = 1
     custom_configuration['num_cpus_per_worker'] = 1
     custom_configuration['num_envs_per_worker'] = 1
@@ -46,7 +47,7 @@ def persuasive_ppo_conf(rollout_size=10,
         # trainer.setup(dThis only makes sense
     # to increase if your environment is particularly slow to sample, or if
     # you"re using the Async or Ape-X optimizers.
-    custom_configuration['num_workers'] = 2
+    custom_configuration['num_workers'] = 1
     custom_configuration['num_gpus_per_worker'] = 0
     # Prevent iterations from going lower than this time span
     # custom_configuration['min_iter_time_s'] = 1

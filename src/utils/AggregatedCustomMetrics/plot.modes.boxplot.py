@@ -161,6 +161,22 @@ EXPERIMENTS_GRID = {
         'title': 'wSimpleTTReward\nnoBGTraffic\n60_5_ext',
         'coords': (4, 8),
     },
+    'ppo_1000ag_2m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_metroOnly': {
+        'title': 'wSimpleTTReward\nnoBGTraffic\n60_5_metroOnly',
+        'coords': (4, 9),
+    },
+    'ppo_1000ag_2m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_metroOnly': {
+        'title': 'wSimpleTTCoopReward\nnoBGTraffic\n60_5_metroOnly',
+        'coords': (4, 10),
+    },
+    'ppo_1000ag_2m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_wParking': {
+        'title': 'wSimpleTTReward\nnoBGTraffic\n60_5_wParking',
+        'coords': (4, 11),
+    },
+    'ppo_1000ag_2m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_wParking': {
+        'title': 'wSimpleTTCoopReward\nnoBGTraffic\n60_5_wParking',
+        'coords': (4, 12),
+    },
 }
 
 MISSING = [
@@ -168,6 +184,10 @@ MISSING = [
     (0, 6), (1, 6), (2, 6), (3, 6),
     (0, 7), (1, 7), (2, 7), (3, 7),
     (1, 8), (2, 8), (3, 8),
+    (0, 9), (1, 9), (2, 9), (3, 9),
+    (0, 10), (1, 10), (2, 10), (3, 10),
+    (0, 11), (1, 11), (2, 11), (3, 11),
+    (0, 12), (1, 12), (2, 12), (3, 12),
 ]
 
 MODES = ['wait', 'walk', 'bicycle', 'public', 'ptw', 'car']
@@ -241,7 +261,7 @@ class ModeUsage():
         return [0]
 
     def generate(self):
-        fig, axs = plt.subplots(5, 9, figsize=(40, 30), sharey=True, squeeze=True, constrained_layout=True, )
+        fig, axs = plt.subplots(5, 13, figsize=(50, 30), sharey=True, squeeze=True, constrained_layout=True, )
         fig.suptitle('Transporation Modes Usage')
 
         for exp, options in EXPERIMENTS_GRID.items():
