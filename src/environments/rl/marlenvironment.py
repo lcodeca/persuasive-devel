@@ -111,6 +111,7 @@ class SUMOModeAgent(object):
                                      'modes',            # list of available modes
                                      'action_to_mode',   # dict of action --> mode
                                      'modes_w_vehicles', # list of modes with vehicle
+                                     'ownership',        # dict of mode --> bool
                                      'exp_arrival'])     # expected arrival time and weight
 
     default_action_to_mode = {
@@ -134,7 +135,9 @@ class SUMOModeAgent(object):
         self.destination = config.destination
         self.modes = config.modes
         self.action_to_mode = config.action_to_mode
+        self.mode_to_action = self._compute_mode_from_action()
         self.modes_w_vehicles = config.modes_w_vehicles
+        self.ownership = config.ownership
         self.waited_steps = 0
         self.arrival, self.waiting_weight, self.late_weight = config.exp_arrival
         self.chosen_mode = None
@@ -142,6 +145,13 @@ class SUMOModeAgent(object):
         self.cost = 0.0
         self.ett = 0.0
         self.inserted = False
+
+    def _compute_mode_from_action(self):
+        """ Reverse of self.action_to_mode """
+        ret = {}
+        for action, mode in self.action_to_mode.items():
+            ret[mode] = action
+        return ret
 
     def step(self, action, handler):
         """ Implements the logic of each specific action passed as input. """
@@ -335,11 +345,17 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
                 conf['action-to-mode'] = _tmp
             if 'modes-w-vehicles' not in conf:
                 conf['modes-w-vehicles'] = deepcopy(SUMOModeAgent.default_modes_w_vehicles)
+            if 'ownership' not in conf:
+                conf['ownership'] = {
+                    'passenger': True,
+                    'bicycle': True,
+                    'ptw': True,
+                }
             self.agents_init_list[agent] = SUMOModeAgent.Config(
                 agent, conf['seed'], conf['ext-stats'], conf['start'],
                 conf['origin'], conf['destination'], conf['modes'],
                 conf['action-to-mode'], conf['modes-w-vehicles'],
-                conf['expected-arrival-time'])
+                conf['ownership'], conf['expected-arrival-time'])
             if DEBUGGER:
                 logger.debug('%s', pformat(self.agents_init_list[agent]))
 
