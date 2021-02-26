@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 """
-    Persuasive implementation of a
-    custom model with action masking tied to the ownership of a vehicle.
+    Persuasive implementation of a custom model with action masking tied to
+    the ownership of a vehicle.
     See:
     - https://docs.ray.io/en/master/rllib-models.html#variable-length-parametric-action-spaces
     - https://github.com/ray-project/ray/blob/releases/1.0.0/rllib/examples/models/parametric_actions_model.py
@@ -39,17 +39,17 @@ class OwnershipActionMaskingModel(FullyConnectedNetwork):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(19, ),
-                 action_embed_size=6,
                  **kw):
-        # super(OwnershipActionMaskingModel, self).__init__(
-        #     Box(-1, 1, shape=true_obs_shape),
-        #     action_space, num_outputs, model_config, name, **kw)
         super(OwnershipActionMaskingModel, self).__init__(
             obs_space, action_space, num_outputs, model_config, name, **kw)
+
+        self.true_obs_shape = model_config['custom_model_config']['true_obs_shape']
+        self.action_embed_size = model_config['custom_model_config']['action_embed_size']
+
         self.action_embed_model = FullyConnectedNetwork(
-            Box(-1, 1, shape=true_obs_shape), action_space, action_embed_size,
+            self.true_obs_shape, action_space, self.action_embed_size,
             model_config, name + "_action_embed")
+        # Box(-1, 0, shape=true_obs_shape)
         self.register_variables(self.action_embed_model.variables())
 
     def forward(self, input_dict, state, seq_lens):
@@ -61,8 +61,6 @@ class OwnershipActionMaskingModel(FullyConnectedNetwork):
         action_embed, _ = self.action_embed_model({
             "obs": input_dict["obs"]["obs"]
         })
-
-        # model_out, self._value_out = self.base_model(input_dict["obs"]["obs"])
 
         # Expand the model output to [BATCH, 1, EMBED_SIZE]. Note that the
         # avail actions tensor is of shape [BATCH, MAX_ACTIONS, EMBED_SIZE].

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Stochastic MARL Environment based on CoopCSPersuasiveDeepMARLEnv reward where the
+Stochastic MARL Environment based on ComplexStochasticPersuasiveDeepMARLEnv reward where the
 passenger & ptw actions require finding a parking space.
 """
 
@@ -22,10 +22,10 @@ import shapely.geometry as geometry
 import gym
 import ray
 
-from environments.stochasticdeeprl.complexcoopstochasticdeepmarlenv import \
-    CoopCSPersuasiveDeepMARLEnv
 from environments.stochasticdeeprl.complexstochasticdeepmarlenv import \
-    ComplexDeepSUMOAgents
+    ComplexStochasticPersuasiveDeepMARLEnv
+from environments.stochasticdeeprl.ownershipcoopstochasticdeepmarlenv import \
+    OwnershipDeepSUMOAgents
 
 from utils.logger import set_logging
 
@@ -47,36 +47,13 @@ logger = set_logging(__name__)
 
 def env_creator(config):
     """ Environment creator used in the environment registration. """
-    logger.debug('[env_creator] Environment creation: OwnershipCoopCSPersuasiveDeepMARLEnv')
-    return OwnershipCoopCSPersuasiveDeepMARLEnv(config)
-
-####################################################################################################
-
-class OwnershipDeepSUMOAgents(ComplexDeepSUMOAgents):
-    """ SUMO agent that computes specific max penalties given origin and destination. """
-
-    def step(self, action, handler):
-        """ Implements the logic of each specific action passed as input. """
-
-        # Check if the action is possible
-        if action != 0:
-            mode = self.action_to_mode[action]
-            if mode in self.ownership:
-                # it's a personal vehicle
-                if self.ownership[mode] == False:
-                    # this should never happen
-                    logger.error('Ownership issues for agent %s. [%d - %s] [%s]',
-                                self.agent_id, action, mode, str(self.ownership))
-                    raise Exception(
-                        'Ownership issues for agent {}. [{} - {}] [{}]'.format(
-                            self.agent_id, action, mode, str(self.ownership)))
-
-        return super(OwnershipDeepSUMOAgents, self).step(action, handler)
+    logger.debug('[env_creator] Environment creation: OwnershipCSPersuasiveDeepMARLEnv')
+    return OwnershipCSPersuasiveDeepMARLEnv(config)
 
 ####################################################################################################
 
 #@ray.remote(num_cpus=10, num_gpus=1)
-class OwnershipCoopCSPersuasiveDeepMARLEnv(CoopCSPersuasiveDeepMARLEnv):
+class OwnershipCSPersuasiveDeepMARLEnv(ComplexStochasticPersuasiveDeepMARLEnv):
     """ Simplified REWARD (with TRAVEL_TIME), aggregated MODE USAGE, FUTURE DEMAND and PARKING. """
 
     ################################################################################################
@@ -197,10 +174,11 @@ class OwnershipCoopCSPersuasiveDeepMARLEnv(CoopCSPersuasiveDeepMARLEnv):
     ################################################################################################
 
     def step(self, action_dict):
+        # action translation from array to value
         # for agent, action in action_dict.items():
         #     print(agent, action)
         obs, rewards, dones, infos = super(
-            OwnershipCoopCSPersuasiveDeepMARLEnv, self).step(action_dict)
+            OwnershipCSPersuasiveDeepMARLEnv, self).step(action_dict)
         # print(pformat(obs))
         return obs, rewards, dones, infos
 
@@ -226,6 +204,7 @@ class OwnershipCoopCSPersuasiveDeepMARLEnv(CoopCSPersuasiveDeepMARLEnv):
             else:
                 ownership.append(0)
         deep.extend(ownership)
+        #####################################
         return deepcopy(deep)
 
     def craft_final_state(self, agent):

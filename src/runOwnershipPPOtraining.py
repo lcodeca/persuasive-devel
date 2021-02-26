@@ -35,7 +35,7 @@ from utils.logger import set_logging
 
 import ray.rllib.agents.ppo as ppo
 from configs.ppo_ownership_conf import persuasive_ppo_conf
-from environments.stochasticdeeprl import ownershipcoopstochasticdeepmarlenv
+from environments.stochasticdeeprl import ownershipstochasticdeepmarlenv
 
 ####################################################################################################
 
@@ -327,8 +327,8 @@ def _main():
 
     marl_env = None
     if ARGS.env == 'MARL':
-        ray.tune.registry.register_env('marl_env', ownershipcoopstochasticdeepmarlenv.env_creator)
-        marl_env = ownershipcoopstochasticdeepmarlenv.OwnershipCoopCSPersuasiveDeepMARLEnv(
+        ray.tune.registry.register_env('marl_env', ownershipstochasticdeepmarlenv.env_creator)
+        marl_env = ownershipstochasticdeepmarlenv.OwnershipCSPersuasiveDeepMARLEnv(
             env_config)
     else:
         raise Exception('Unknown environment %s' % ARGS.env)
