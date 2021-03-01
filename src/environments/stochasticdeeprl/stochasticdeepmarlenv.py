@@ -151,6 +151,12 @@ class StochasticPersuasiveDeepMARLEnv(PersuasiveDeepMARLEnv):
             self._config['agent_init']['modes-w-vehicles'] = deepcopy(
                 DeepSUMOAgents.default_modes_w_vehicles)
 
+        ownership = {
+            'passenger': True,
+            'bicycle': True,
+            'ptw': True,
+        }
+
         # Agents creation
         self.agents_init_list = dict()
         for agent_num in range(self._config['agent_init']['agents']):
@@ -168,6 +174,7 @@ class StochasticPersuasiveDeepMARLEnv(PersuasiveDeepMARLEnv):
                 self._config['agent_init']['modes'],
                 self._config['agent_init']['action-to-mode'],
                 self._config['agent_init']['modes-w-vehicles'],
+                deepcopy(ownership),
                 self._config['agent_init']['expected-arrival-time'])
             if DEBUGGER:
                 logger.debug('%s', pformat(self.agents_init_list[agent]))
