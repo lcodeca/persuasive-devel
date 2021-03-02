@@ -167,11 +167,26 @@ class StochasticPersuasiveDeepMARLEnv(PersuasiveDeepMARLEnv):
                 ext_stats -= 1
             start = distribution[agent_num]
             origin = self._generate_random_coords_in_area()
+
+            if 'ownership' in self._config['agent_init']:
+                # use the probability
+                for mode, prob in self._config['agent_init']['ownership'].items():
+                    _chance = self.rndgen.random()
+                    ownership[mode] = _chance >= prob
+                    # print('Ownership:', mode, prob, _chance, ownership[mode])
+
+            modes = deepcopy(self._config['agent_init']['modes'])
+            for mode, pref in modes.items():
+                if isinstance(pref, (list, tuple)):
+                    modes[mode] = self.rndgen.uniform(pref[0], pref[1])
+                    # print('Pref:', mode, pref[0], pref[1], modes[mode])
+            # print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+
             self.agents_init_list[agent] = DeepSUMOAgents.Config(
                 agent, self._config['agent_init']['seed'],
                 current_ext_stats, start, origin,
                 self._config['agent_init']['destination'],
-                self._config['agent_init']['modes'],
+                modes,
                 self._config['agent_init']['action-to-mode'],
                 self._config['agent_init']['modes-w-vehicles'],
                 deepcopy(ownership),
@@ -287,7 +302,7 @@ class StochasticPersuasiveDeepMARLEnv(PersuasiveDeepMARLEnv):
         # Flattening of the dictionary
         deep_ret = self.deep_state_flattener(ret)
         logger.debug('[%s] Observation: %s', agent, str(deep_ret))
-        return np.array(deep_ret, dtype=np.int64)
+        return np.array(deep_ret, dtype=np.float64)
 
     def get_obs_space(self, agent):
         """ Returns the observation space. """

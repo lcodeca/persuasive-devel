@@ -108,7 +108,7 @@ class SUMOModeAgent(object):
                                      'start',            # Agent starting time
                                      'origin',           # edge - origin
                                      'destination',      # edge - destination
-                                     'modes',            # list of available modes
+                                     'modes',            # dict of available modes w weight
                                      'action_to_mode',   # dict of action --> mode
                                      'modes_w_vehicles', # list of modes with vehicle
                                      'ownership',        # dict of mode --> bool
@@ -125,7 +125,6 @@ class SUMOModeAgent(object):
     default_modes_w_vehicles = ['passenger', 'bicycle', 'ptw', 'on-demand',]
 
     def __init__(self, config):
-        ##
         self._config = config
         self.agent_id = config.ID
         self.seed = config.seed
@@ -351,11 +350,16 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
                     'bicycle': True,
                     'ptw': True,
                 }
+            modes = conf['modes']
+            for mode, pref in modes.items():
+                if isinstance(pref, (list, tuple)):
+                    modes[mode] = self.rndgen.uniform(pref[0], pref[1])
+
             self.agents_init_list[agent] = SUMOModeAgent.Config(
                 agent, conf['seed'], conf['ext-stats'], conf['start'],
-                conf['origin'], conf['destination'], conf['modes'],
+                conf['origin'], conf['destination'], deepcopy(modes),
                 conf['action-to-mode'], conf['modes-w-vehicles'],
-                conf['ownership'], conf['expected-arrival-time'])
+                deepcopy(conf['ownership']), conf['expected-arrival-time'])
             if DEBUGGER:
                 logger.debug('%s', pformat(self.agents_init_list[agent]))
 
