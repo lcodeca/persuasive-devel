@@ -161,21 +161,29 @@ EXPERIMENTS_GRID = {
         'title': 'wSimpleTTReward\nnoBGTraffic\n60_5_ext',
         'coords': (4, 8),
     },
-    'ppo_1000ag_2m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_metroOnly': {
+    'ppo_1000ag_5m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_metroOnly': {
         'title': 'wSimpleTTReward\nnoBGTraffic\n60_5_metroOnly',
         'coords': (4, 9),
     },
-    'ppo_1000ag_2m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_metroOnly': {
+    'ppo_1000ag_5m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_metroOnly': {
         'title': 'wSimpleTTCoopReward\nnoBGTraffic\n60_5_metroOnly',
         'coords': (4, 10),
     },
-    'ppo_1000ag_2m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_wParking': {
+    'ppo_1000ag_5m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_wParking': {
         'title': 'wSimpleTTReward\nnoBGTraffic\n60_5_wParking',
         'coords': (4, 11),
     },
-    'ppo_1000ag_2m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_wParking': {
+    'ppo_1000ag_5m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128_wParking': {
         'title': 'wSimpleTTCoopReward\nnoBGTraffic\n60_5_wParking',
         'coords': (4, 12),
+    },
+    'ppo_1000ag_5m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_wOwnership_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128': {
+        'title': 'wSimpleTTReward\nnoBGTraffic\n60_5_wOwnership',
+        'coords': (4, 13),
+    },
+    'ppo_1000ag_5m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_wOwnership_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128': {
+        'title': 'wSimpleTTCoopReward\nnoBGTraffic\n60_5_wOwnership',
+        'coords': (4, 14),
     },
 }
 
@@ -188,6 +196,8 @@ MISSING = [
     (0, 10), (1, 10), (2, 10), (3, 10),
     (0, 11), (1, 11), (2, 11), (3, 11),
     (0, 12), (1, 12), (2, 12), (3, 12),
+    (0, 13), (1, 13), (2, 13), (3, 13),
+    (0, 14), (1, 14), (2, 14), (3, 14),
 ]
 
 MODES = ['wait', 'walk', 'bicycle', 'public', 'ptw', 'car']
@@ -261,7 +271,9 @@ class ModeUsage():
         return [0]
 
     def generate(self):
-        fig, axs = plt.subplots(5, 13, figsize=(50, 30), sharey=True, squeeze=True, constrained_layout=True, )
+        fig, axs = plt.subplots(
+            5, 15, figsize=(50, 30),
+            sharey=True, squeeze=True, constrained_layout=True, )
         fig.suptitle('Transporation Modes Usage')
 
         for exp, options in EXPERIMENTS_GRID.items():
