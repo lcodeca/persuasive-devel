@@ -14,6 +14,8 @@ from learning.ownershipactionmaskingmodel import OwnershipActionMaskingModel
 
 def persuasive_ppo_conf(rollout_size=10,
                         agents=100,
+                        true_obs_shape=None,
+                        action_embed_size=None,
                         debug_folder=None,
                         eval_folder=None,
                         alpha=5e-5,
@@ -136,6 +138,8 @@ def persuasive_ppo_conf(rollout_size=10,
     # === MODEL ===
     custom_configuration['model']['use_lstm'] = False
     custom_configuration['model']['custom_model'] = 'custom_model'
+    custom_configuration['model']['custom_model_config']['true_obs_shape'] = true_obs_shape
+    custom_configuration['model']['custom_model_config']['action_embed_size'] = action_embed_size
 
     # === Evaluation Settings ===
     # Evaluate with every `evaluation_interval` training iterations.
