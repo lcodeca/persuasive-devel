@@ -1,5 +1,5 @@
 # Testing
-misc
+tests
 examples/tests/res_*
 examples/tests/test_*
 examples/tests/sumo
