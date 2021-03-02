@@ -686,7 +686,7 @@ class PersuasiveDeepMARLEnv(PersuasiveMultiAgentEnv):
         # Flattening of the dictionary
         deep_ret = self.deep_state_flattener(ret)
         logger.debug('[%s] Observation: %s', agent, str(deep_ret))
-        return np.array(deep_ret, dtype=np.int64)
+        return np.array(deep_ret, dtype=np.float64)
 
     def old_get_obs_space(self, agent):
         """ Returns the observation space. """

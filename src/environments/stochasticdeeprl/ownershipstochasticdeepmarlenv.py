@@ -58,87 +58,6 @@ class OwnershipCSPersuasiveDeepMARLEnv(ComplexStochasticPersuasiveDeepMARLEnv):
 
     ################################################################################################
 
-    def _config_from_agent_init(self):
-        """ Load the agents configuration and format it in a usabe format. """
-        # Convex hull initialization
-        if not self.taz_shape:
-            self.taz_shape = geometry.MultiPoint(
-                self._config['agent_init']['taz-shape']).convex_hull
-
-        # Extended Stats parameter
-        ext_stats = self._config['agent_init']['ext-stats']
-
-        # Starting time distribution:
-        #   uniform during evaluation
-        #   pareto during learning
-        distribution = None
-        if self._config['agent_init']['eval']:
-            distribution = self.rndgen.uniform(
-                self._config['agent_init']['eval']['from'],
-                self._config['agent_init']['eval']['to'],
-                self._config['agent_init']['agents']
-            )
-        else:
-            distribution = self.rndgen.pareto(
-                self._config['agent_init']['pareto-time-to-event']['a_shape'],
-                self._config['agent_init']['agents'])
-            distribution += 1
-            distribution *= self._config['agent_init']['pareto-time-to-event']['m_min']
-            # transform the time to the event to the starting time
-            for pos, time_to_event in enumerate(distribution):
-                _start = self._config['agent_init']['expected-arrival-time'][0]
-                _start -= time_to_event * 60 # min to sec
-                if _start < self._config['agent_init']['min_start']:
-                    _start = self._config['agent_init']['min_start']
-                distribution[pos] = _start
-
-        if 'action-to-mode' not in self._config['agent_init']:
-            self._config['agent_init']['action-to-mode'] = deepcopy(
-                OwnershipDeepSUMOAgents.default_action_to_mode)
-        else:
-            _tmp = {}
-            for item, value in self._config['agent_init']['action-to-mode'].items():
-                _tmp[int(item)] = value # JSON does not allows integers as keys, only strings
-                self._config['agent_init']['action-to-mode'] = _tmp
-        if 'modes-w-vehicles' not in self._config['agent_init']:
-            self._config['agent_init']['modes-w-vehicles'] = deepcopy(
-                OwnershipDeepSUMOAgents.default_modes_w_vehicles)
-
-        ownership = {
-            'passenger': True,
-            'bicycle': True,
-            'ptw': True,
-        }
-
-        # Agents creation
-        self.agents_init_list = dict()
-        for agent_num in range(self._config['agent_init']['agents']):
-            agent = 'agent_{}'.format(agent_num)
-            current_ext_stats = False
-            if ext_stats > 0:
-                current_ext_stats = True
-                ext_stats -= 1
-            start = distribution[agent_num]
-            origin = self._generate_random_coords_in_area()
-            if 'ownership' in self._config['agent_init']:
-                # use the probability
-                for mode, prob in self._config['agent_init']['ownership'].items():
-                    _chance = self.rndgen.random()
-                    ownership[mode] = _chance >= prob
-                    # print(mode, _chance, prob, ownership[mode])
-            # print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-            self.agents_init_list[agent] = OwnershipDeepSUMOAgents.Config(
-                agent, self._config['agent_init']['seed'],
-                current_ext_stats, start, origin,
-                self._config['agent_init']['destination'],
-                self._config['agent_init']['modes'],
-                self._config['agent_init']['action-to-mode'],
-                self._config['agent_init']['modes-w-vehicles'],
-                deepcopy(ownership),
-                self._config['agent_init']['expected-arrival-time'])
-            if DEBUGGER:
-                logger.debug('%s', pformat(self.agents_init_list[agent]))
-
     def _initialize_agents(self):
         self.agents = dict()
         self.waiting_agents = list()
@@ -221,7 +140,7 @@ class OwnershipCSPersuasiveDeepMARLEnv(ComplexStochasticPersuasiveDeepMARLEnv):
         observation = {
             "action_mask": [1] * self.get_action_space_size(agent),
             "avail_actions": [0] * self.get_action_space_size(agent),
-            "obs": np.array(self.deep_state_flattener(final_state), dtype=np.int64),
+            "obs": np.array(self.deep_state_flattener(final_state), dtype=np.float64),
         }
         return observation
 
@@ -301,7 +220,7 @@ class OwnershipCSPersuasiveDeepMARLEnv(ComplexStochasticPersuasiveDeepMARLEnv):
         observation = {
             "action_mask": action_mask,
             "avail_actions": [1] * self.get_action_space_size(agent),
-            "obs": np.array(deep_ret, dtype=np.int64),
+            "obs": np.array(deep_ret, dtype=np.float64),
         }
 
         logger.debug('[%s] Observation: %s', agent, str(deep_ret))
