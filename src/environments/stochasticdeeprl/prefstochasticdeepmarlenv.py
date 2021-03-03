@@ -140,7 +140,7 @@ class PrefCSPersuasiveDeepMARLEnv(ComplexStochasticPersuasiveDeepMARLEnv):
         deep.extend(state['usage'])
         deep.append(state['future_demand'])
         deep.extend(state['preferences'])
-        print('Flattned observation: ', deep)
+        # print('Flattned observation: ', deep)
         return deepcopy(deep)
 
     def craft_final_state(self, agent):
@@ -159,12 +159,12 @@ class PrefCSPersuasiveDeepMARLEnv(ComplexStochasticPersuasiveDeepMARLEnv):
         for mode in sorted(self.agents[agent].modes):
             preferences.append(self.agents[agent].modes[mode])
         final_state['preferences'] = preferences
-        print('Preferences:', preferences)
+        # print('Preferences:', preferences)
 
         observation = np.array(
             self.deep_state_flattener(final_state), dtype=np.float64)
         logger.debug('[%s] Final observation: %s', agent, pformat(observation))
-        print('[{}] Final observation: {}'.format(agent, pformat(observation)))
+        # print('[{}] Final observation: {}'.format(agent, pformat(observation)))
         return observation
 
     def get_observation(self, agent):
@@ -229,14 +229,14 @@ class PrefCSPersuasiveDeepMARLEnv(ComplexStochasticPersuasiveDeepMARLEnv):
         for mode in sorted(self.agents[agent].modes):
             preferences.append(self.agents[agent].modes[mode])
         ret['preferences'] = preferences
-        print('[{}] Preferences: {}'.format(agent, preferences))
+        # print('[{}] Preferences: {}'.format(agent, preferences))
 
         # Flattening of the dictionary
         deep_ret = self.deep_state_flattener(ret)
 
         observation = np.array(deep_ret, dtype=np.float64)
 
-        print('[{}] Observation: {}'.format(agent, pformat(observation)))
+        # print('[{}] Observation: {}'.format(agent, pformat(observation)))
         logger.debug('[%s] Observation: %s', agent, pformat(observation))
         return observation
 
