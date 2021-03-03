@@ -141,6 +141,7 @@ class Overview(GenericGraphMaker):
             'm_bicycle_mean': [],
             'm_bicycle_median': [],
             'm_bicycle_std': [],
+            'm_bicycle_ownership': [],
             #######################
             'm_pt_mean': [],
             'm_pt_median': [],
@@ -149,10 +150,12 @@ class Overview(GenericGraphMaker):
             'm_car_mean': [],
             'm_car_median': [],
             'm_car_std': [],
+            'm_car_ownership': [],
             #######################
             'm_ptw_mean': [],
             'm_ptw_median': [],
             'm_ptw_std': [],
+            'm_ptw_ownership': [],
             #######################
         }
         _default = {
@@ -206,6 +209,7 @@ class Overview(GenericGraphMaker):
         avg_missing = []
         avg_too_late = []
         avg_modes = collections.defaultdict(list)
+        avg_ownership = collections.defaultdict(list)
 
         for pos, episode in enumerate(info_by_episode):
             arrival_s = []
@@ -216,6 +220,7 @@ class Overview(GenericGraphMaker):
             missing = 0
             too_late = 0
             modes = collections.defaultdict(int)
+            ownership = collections.defaultdict(int)
             for agent, info in episode.items():
                 if np.isnan(info['arrival']):
                     # MISSING
@@ -233,6 +238,10 @@ class Overview(GenericGraphMaker):
                         lateness_s.append(info['arrival']-info['init']['exp-arrival'])
                     else:
                         waiting_s.append(info['init']['exp-arrival']-info['arrival'])
+                if 'ownership' in info['init']:
+                    for mode, val in info['init']['ownership'].items():
+                        if val:
+                            ownership[mode] += 1
             avg_arrival_s.append(np.nanmean(arrival_s))
             avg_departure_s.append(np.nanmean(departure_s))
             avg_lateness_s.append(np.nanmean(lateness_s))
@@ -242,6 +251,8 @@ class Overview(GenericGraphMaker):
             avg_too_late.append(too_late)
             for mode, val in modes.items():
                 avg_modes[mode].append(val)
+            for mode, val in ownership.items():
+                avg_ownership[mode].append(val)
 
         ## MISSING
         self._aggregated_dataset[tag]['missing_mean'].append(np.nanmean(avg_missing))
@@ -281,6 +292,11 @@ class Overview(GenericGraphMaker):
                 np.nanmedian(avg_modes[self._mode_to_action[_current_mode]]))
             self._aggregated_dataset[tag]['{}std'.format(_current_metric)].append(
                 np.nanstd(avg_modes[self._mode_to_action[_current_mode]]))
+            # ownership
+            if _current_mode in ['bicycle', 'passenger', 'ptw']:
+                self._aggregated_dataset[tag]['{}ownership'.format(_current_metric)].append(
+                    np.nanmean(avg_ownership[_current_mode]))
+                # print(avg_ownership[_current_mode])
 
     def _aggregate_metrics(self, files):
         for filename in tqdm(files):
@@ -471,8 +487,11 @@ class Overview(GenericGraphMaker):
         axs[3][1].plot(
             self._aggregated_dataset[tag]['timesteps_total'],
             self._aggregated_dataset[tag]['m_car_median'], label='Median')
+        axs[3][1].plot(
+            self._aggregated_dataset[tag]['timesteps_total'],
+            self._aggregated_dataset[tag]['m_car_ownership'], label='Ownership')
         axs[3][1].set(ylabel='People [#]', title='CAR over time.')
-        axs[3][1].legend(ncol=3, loc='best', shadow=True)
+        axs[3][1].legend(ncol=4, loc='best', shadow=True)
         axs[3][1].grid()
 
         ## Mode: PTW
@@ -486,8 +505,11 @@ class Overview(GenericGraphMaker):
         axs[3][2].plot(
             self._aggregated_dataset[tag]['timesteps_total'],
             self._aggregated_dataset[tag]['m_ptw_median'], label='Median')
+        axs[3][2].plot(
+            self._aggregated_dataset[tag]['timesteps_total'],
+            self._aggregated_dataset[tag]['m_ptw_ownership'], label='Ownership')
         axs[3][2].set(ylabel='People [#]', title='PTW over time.')
-        axs[3][2].legend(ncol=3, loc='best', shadow=True)
+        axs[3][2].legend(ncol=4, loc='best', shadow=True)
         axs[3][2].grid()
 
         ## Mode: WALK
@@ -516,8 +538,11 @@ class Overview(GenericGraphMaker):
         axs[4][1].plot(
             self._aggregated_dataset[tag]['timesteps_total'],
             self._aggregated_dataset[tag]['m_bicycle_median'], label='Median')
+        axs[4][1].plot(
+            self._aggregated_dataset[tag]['timesteps_total'],
+            self._aggregated_dataset[tag]['m_bicycle_ownership'], label='Ownership')
         axs[4][1].set(xlabel='Learning step', ylabel='People [#]', title='BICYCLE over time.')
-        axs[4][1].legend(ncol=3, loc='best', shadow=True)
+        axs[4][1].legend(ncol=4, loc='best', shadow=True)
         axs[4][1].grid()
 
         ## Mode: PUBLIC TRANSPORTS
