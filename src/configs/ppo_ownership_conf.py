@@ -94,13 +94,13 @@ def persuasive_ppo_conf(rollout_size=10,
     # Initial coefficient for KL divergence.
     custom_configuration['kl_coeff'] = 0.2
     # Size of batches collected from each worker.
-    custom_configuration['rollout_fragment_length'] = 100 #10
+    custom_configuration['rollout_fragment_length'] = 10 #100
     # Number of timesteps collected for each SGD round. This defines the size
     # of each SGD epoch.
-    custom_configuration['train_batch_size'] = 1000 #100
+    custom_configuration['train_batch_size'] = 100 #1000
     # Total SGD batch size across all devices for SGD. This defines the
     # minibatch size within each epoch.
-    custom_configuration['sgd_minibatch_size'] = 128 #64
+    custom_configuration['sgd_minibatch_size'] = 64 #128 #64
     # Whether to shuffle sequences in the batch when training (recommended).
     custom_configuration['shuffle_sequences'] = True
     # Number of SGD iterations in each outer loop (i.e., number of epochs to
