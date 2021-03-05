@@ -125,8 +125,8 @@ class GlobalTT(GenericGraphMaker):
                     for info in episode.values():
                         if not np.isnan(info['rtt']):
                             _gtt += info['rtt']/3600.0
-                        else:
-                            print(info)
+                        # else:
+                        #     print(info)
                     global_tt.append(_gtt)
 
                 self._aggregated_dataset['learning']['global_tt_min'].append(
