@@ -185,6 +185,14 @@ EXPERIMENTS_GRID = {
         'title': 'wSimpleTTCoopReward\nnoBGTraffic\n60_5_wOwnership',
         'coords': (4, 14),
     },
+    'ppo_1000ag_5m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTReward_wPreferences_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128': {
+        'title': 'wSimpleTTReward\nnoBGTraffic\n60_5_wPreferences',
+        'coords': (4, 15),
+    },
+    'ppo_1000ag_5m_wParetoDistr_60_5_wGlobalUsage_wFutureDemand_wSimpleTTCoopReward_wPreferences_StochasticSampling_wMetrics_wEval_noBGTraffic_deep100_1000_128': {
+        'title': 'wSimpleTTCoopReward\nnoBGTraffic\n60_5_wPreferences',
+        'coords': (4, 16),
+    },
 }
 
 MISSING = [
@@ -198,6 +206,8 @@ MISSING = [
     (0, 12), (1, 12), (2, 12), (3, 12),
     (0, 13), (1, 13), (2, 13), (3, 13),
     (0, 14), (1, 14), (2, 14), (3, 14),
+    (0, 15), (1, 15), (2, 15), (3, 15),
+    (0, 16), (1, 16), (2, 16), (3, 16),
 ]
 
 MODES = ['wait', 'walk', 'bicycle', 'public', 'ptw', 'car']
@@ -272,7 +282,7 @@ class ModeUsage():
 
     def generate(self):
         fig, axs = plt.subplots(
-            5, 15, figsize=(50, 30),
+            5, 17, figsize=(50, 30),
             sharey=True, squeeze=True, constrained_layout=True, )
         fig.suptitle('Transporation Modes Usage')
 
