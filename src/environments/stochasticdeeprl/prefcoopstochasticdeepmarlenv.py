@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Stochastic MARL Environment based on ComplexStochasticPersuasiveDeepMARLEnv reward where
+Stochastic MARL Environment based on CoopCSPersuasiveDeepMARLEnv reward where
 the agents have preferences tied to the modes.
 """
 
@@ -22,8 +22,8 @@ import shapely.geometry as geometry
 import gym
 import ray
 
-from environments.stochasticdeeprl.complexstochasticdeepmarlenv import \
-    ComplexStochasticPersuasiveDeepMARLEnv
+from environments.stochasticdeeprl.complexcoopstochasticdeepmarlenv import \
+    CoopCSPersuasiveDeepMARLEnv
 
 from utils.logger import set_logging
 
@@ -45,14 +45,14 @@ logger = set_logging(__name__)
 
 def env_creator(config):
     """ Environment creator used in the environment registration. """
-    logger.debug('[env_creator] Environment creation: PrefCSPersuasiveDeepMARLEnv')
-    return PrefCSPersuasiveDeepMARLEnv(config)
+    logger.debug('[env_creator] Environment creation: PrefCoopCSPersuasiveDeepMARLEnv')
+    return PrefCoopCSPersuasiveDeepMARLEnv(config)
 
 ####################################################################################################
 
 #@ray.remote(num_cpus=10, num_gpus=1)
-class PrefCSPersuasiveDeepMARLEnv(ComplexStochasticPersuasiveDeepMARLEnv):
-    """ Simplified REWARD (with TRAVEL_TIME), aggregated MODE USAGE, FUTURE DEMAND and PARKING. """
+class PrefCoopCSPersuasiveDeepMARLEnv(CoopCSPersuasiveDeepMARLEnv):
+    """ Simplified REWARD (with TRAVEL_TIME), aggregated MODE USAGE, FUTURE DEMAND. """
 
     def get_reward(self, agent):
         """ Return the reward for a given agent. """
@@ -65,7 +65,7 @@ class PrefCSPersuasiveDeepMARLEnv(ComplexStochasticPersuasiveDeepMARLEnv):
             #   while starting when is too late.
             max_travel_time = self.agents[agent].max_travel_time
             max_travel_time /= self._config['agent_init']['travel-slots-min'] # slotted time
-            return 0 - (max_travel_time * 2) * self.agents[agent].late_weight
+            return 0, 0 - (max_travel_time * 2) * self.agents[agent].late_weight
 
         # real travel time
         travel_time = arrival - self.simulation.get_depart(agent) # travel time
@@ -83,7 +83,7 @@ class PrefCSPersuasiveDeepMARLEnv(ComplexStochasticPersuasiveDeepMARLEnv):
             penalty /= self._config['agent_init']['travel-slots-min'] # slotted time
             if penalty <= 0:
                 penalty += 1 # late is always bad
-            return 0 - (travel_time + penalty) * self.agents[agent].late_weight
+            return 0, 0 - (travel_time + penalty) * self.agents[agent].late_weight
 
         arrival_buffer = (
             self.agents[agent].arrival - (self._config['agent_init']['arrival-slots-min'] * 60))
@@ -94,11 +94,11 @@ class PrefCSPersuasiveDeepMARLEnv(ComplexStochasticPersuasiveDeepMARLEnv):
             penalty = self.agents[agent].arrival - arrival
             penalty /= 60 # in minutes
             penalty /= self._config['agent_init']['travel-slots-min'] # slotted time
-            return 0 - (travel_time + penalty) * self.agents[agent].waiting_weight
+            return 1, 0 - (travel_time + penalty) * self.agents[agent].waiting_weight
 
         #### ON TIME
         logger.info('Reward: Agent %s arrived on time.', agent)
-        return 1 - travel_time
+        return 1, 1 - travel_time
 
     ################################################################################################
 
