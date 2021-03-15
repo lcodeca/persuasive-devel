@@ -4,6 +4,7 @@
 
 import os
 # os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
+os.environ["RAY_DEBUG_DISABLE_MEMORY_MONITOR"] = str(1)
 
 import argparse
 import cProfile
