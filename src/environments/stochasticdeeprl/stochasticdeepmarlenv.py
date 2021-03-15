@@ -172,7 +172,7 @@ class StochasticPersuasiveDeepMARLEnv(PersuasiveDeepMARLEnv):
                 # use the probability
                 for mode, prob in self._config['agent_init']['ownership'].items():
                     _chance = self.rndgen.random()
-                    ownership[mode] = _chance >= prob
+                    ownership[mode] = _chance <= prob
                     # print('Ownership:', mode, prob, _chance, ownership[mode])
 
             modes = deepcopy(self._config['agent_init']['modes'])
