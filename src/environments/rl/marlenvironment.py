@@ -100,6 +100,7 @@ class SUMOModeAgent(object):
     #       'modes': {'passenger': 1.0, 'public': 1.0},
     #       'seed': 321787075,
     #       'ext-stats': true,
+    #       ...
     #  }
     Config = collections.namedtuple('Config',
                                     ['ID',               # Agent name
@@ -112,7 +113,8 @@ class SUMOModeAgent(object):
                                      'action_to_mode',   # dict of action --> mode
                                      'modes_w_vehicles', # list of modes with vehicle
                                      'ownership',        # dict of mode --> bool
-                                     'exp_arrival'])     # expected arrival time and weight
+                                     'exp_arrival',      # expected arrival time and weight
+                                     'misc'])            # disctionary with "everything else"
 
     default_action_to_mode = {
         1: 'passenger',
@@ -137,6 +139,7 @@ class SUMOModeAgent(object):
         self.mode_to_action = self._compute_mode_from_action()
         self.modes_w_vehicles = config.modes_w_vehicles
         self.ownership = config.ownership
+        self.misc = config.misc
         self.waited_steps = 0
         self.arrival, self.waiting_weight, self.late_weight = config.exp_arrival
         self.chosen_mode = None
@@ -350,6 +353,8 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
                     'bicycle': True,
                     'ptw': True,
                 }
+            if 'misc' not in conf:
+                conf['misc'] = {}
             modes = conf['modes']
             for mode, pref in modes.items():
                 if isinstance(pref, (list, tuple)):
@@ -359,7 +364,8 @@ class PersuasiveMultiAgentEnv(MultiAgentEnv):
                 agent, conf['seed'], conf['ext-stats'], conf['start'],
                 conf['origin'], conf['destination'], deepcopy(modes),
                 conf['action-to-mode'], conf['modes-w-vehicles'],
-                deepcopy(conf['ownership']), conf['expected-arrival-time'])
+                deepcopy(conf['ownership']), conf['expected-arrival-time'],
+                conf['misc'])
             if DEBUGGER:
                 logger.debug('%s', pformat(self.agents_init_list[agent]))
 
