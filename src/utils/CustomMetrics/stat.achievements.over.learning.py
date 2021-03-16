@@ -83,46 +83,24 @@ def _main():
 class Achievements(GenericGraphMaker):
 
     def __init__(self, input_dir, output_dir):
+        self._default_by_choice = [
+            '_choice', '_choice_reward', '_choice_num_late', '_choice_lateness', '_choice_waiting',
+            '_choice_walk', '_choice_bicycle', '_choice_public', '_choice_passenger', '_choice_ptw']
+        self._choices_tags = ['1st', '2nd', '3rd', 'rest']
+
         _default = {
             'learning': {
                 'timesteps_total': [],
-                '1st_choice': [],
-                '1st_choice_num_late': [],
-                '1st_choice_lateness': [],
-                '1st_choice_waiting': [],
-                '2nd_choice': [],
-                '2nd_choice_num_late': [],
-                '2nd_choice_lateness': [],
-                '2nd_choice_waiting': [],
-                '3rd_choice': [],
-                '3rd_choice_num_late': [],
-                '3rd_choice_lateness': [],
-                '3rd_choice_waiting': [],
-                'rest_choice': [],
-                'rest_choice_num_late': [],
-                'rest_choice_lateness': [],
-                'rest_choice_waiting': [],
             },
             'evaluation': {
                 'timesteps_total': [],
-                '1st_choice': [],
-                '1st_choice_num_late': [],
-                '1st_choice_lateness': [],
-                '1st_choice_waiting': [],
-                '2nd_choice': [],
-                '2nd_choice_num_late': [],
-                '2nd_choice_lateness': [],
-                '2nd_choice_waiting': [],
-                '3rd_choice': [],
-                '3rd_choice_num_late': [],
-                '3rd_choice_lateness': [],
-                '3rd_choice_waiting': [],
-                'rest_choice': [],
-                'rest_choice_num_late': [],
-                'rest_choice_lateness': [],
-                'rest_choice_waiting': [],
             },
         }
+        for _choices in self._choices_tags:
+            for _metric in self._default_by_choice:
+                for _tag in ['learning', 'evaluation']:
+                    _default[_tag]['{}{}'.format(_choices, _metric)] = []
+
         super().__init__(
             input_dir, output_dir,
             filename='achievements.json',
@@ -131,6 +109,94 @@ class Achievements(GenericGraphMaker):
     def _find_last_metric(self):
         return len(self._aggregated_dataset['learning']['timesteps_total'])
 
+    def _learning_step_res_helper(self):
+        _ret = {}
+        for _choices in self._choices_tags:
+            for _metric in self._default_by_choice:
+                _ret['{}{}'.format(_choices, _metric)] = []
+        return _ret
+
+    def _episode_res_helper(self):
+        _ret = {}
+        for _choices in self._choices_tags:
+            for _metric in self._default_by_choice:
+                _tag = _metric.split('_')[-1]
+                if _tag in ['choice', 'late', 'walk', 'bicycle', 'public', 'passenger', 'ptw']:
+                    _ret['{}{}'.format(_choices, _metric)] = 0
+                elif _tag in ['reward', 'lateness', 'waiting']:
+                    _ret['{}{}'.format(_choices, _metric)] = []
+                else:
+                    raise Exception('_episode_res_helper: {} - {}'.format(_choices, _metric))
+        return _ret
+
+    def _aggregate_episodes_helper(self):
+        """ Based on
+        - self._learning_step_metrics
+        - self._curr_metrics
+        """
+        for _metric, _values in self._curr_metrics.items():
+            _tag = _metric.split('_')[-1]
+            if _tag in ['choice', 'late', 'walk', 'bicycle', 'public', 'passenger', 'ptw']:
+                self._learning_step_metrics[_metric].append(_values)
+            elif _tag in ['reward', 'lateness', 'waiting']:
+                self._learning_step_metrics[_metric].append(np.mean(_values))
+            else:
+                raise Exception('_aggregate_episodes_helper: {} - {}'.format(_metric, _values))
+
+    def _choice_res_helper(self, choice, info, reward):
+        self._curr_metrics['{}_choice'.format(choice)] += 1
+        self._curr_metrics['{}_choice_{}'.format(choice, info['mode'])] += 1
+        self._curr_metrics['{}_choice_reward'.format(choice)].append(reward)
+        if np.isnan(info['wait']):
+            # late
+            print('LATE:', choice, reward, info['mode'])
+            self._curr_metrics['{}_choice_num_late'.format(choice)] += 1
+            self._curr_metrics['{}_choice_lateness'.format(choice)].append(
+                (info['arrival']-info['init']['exp-arrival'])/60.0)
+        else:
+            # print('wait', choice, reward, info['mode'], info['wait'])
+            self._curr_metrics['{}_choice_waiting'.format(choice)].append(
+                info['wait']/60.0)
+
+    def _aggregate_learning_steps_helper(self, tag):
+        """ Based on
+        - self._learning_step_metrics
+        - self._aggregated_dataset
+        """
+        for _metric, _values in self._learning_step_metrics.items():
+            self._aggregated_dataset[tag][_metric].append(np.nanmean(_values))
+
+    def _aggregate_metrics_helper(self, tag, metrics):
+
+        rewards_by_agent = metrics['hist_stats']['rewards_by_agent']
+
+        self._aggregated_dataset[tag]['timesteps_total'].append(
+            metrics['timesteps_total'])
+
+        self._learning_step_metrics = self._learning_step_res_helper()
+
+        for pos, episode in enumerate(metrics['hist_stats']['info_by_agent']):
+            self._curr_metrics = self._episode_res_helper()
+
+            for agent, info in episode.items():
+                if 'preferences' not in info['init']:
+                    continue
+                pref = sorted([(p, m) for m, p in info['init']['preferences'].items()])
+                if not np.isnan(info['arrival']):
+                    # A choice was made.
+                    if info['mode'] == pref[0][1]:
+                        self._choice_res_helper('1st', info, np.sum(rewards_by_agent[pos][agent]))
+                    elif info['mode'] == pref[1][1]:
+                        self._choice_res_helper('2nd', info, np.sum(rewards_by_agent[pos][agent]))
+                    elif info['mode'] == pref[2][1]:
+                        self._choice_res_helper('3rd', info, np.sum(rewards_by_agent[pos][agent]))
+                    else:
+                        self._choice_res_helper('rest', info, np.sum(rewards_by_agent[pos][agent]))
+
+            self._aggregate_episodes_helper()
+
+        self._aggregate_learning_steps_helper(tag)
+
     def _aggregate_metrics(self, files):
         for filename in tqdm(files):
             # print(filename)
@@ -138,426 +204,70 @@ class Achievements(GenericGraphMaker):
                 complete = json.load(jsonfile)
 
                 # LEARNING
-                self._aggregated_dataset['learning']['timesteps_total'].append(
-                    complete['timesteps_total'])
-
-                _1st_choice = []
-                _1st_choice_num_late = []
-                _1st_choice_lateness = []
-                _1st_choice_waiting = []
-                _2nd_choice = []
-                _2nd_choice_num_late = []
-                _2nd_choice_lateness = []
-                _2nd_choice_waiting = []
-                _3rd_choice = []
-                _3rd_choice_num_late = []
-                _3rd_choice_lateness = []
-                _3rd_choice_waiting = []
-                _rest_choice = []
-                _rest_choice_num_late = []
-                _rest_choice_lateness = []
-                _rest_choice_waiting = []
-
-                for episode in complete['hist_stats']['info_by_agent']:
-                    _curr_1st_choice = 0
-                    _curr_1st_choice_num_late = 0
-                    _curr_1st_choice_lateness = []
-                    _curr_1st_choice_waiting = []
-                    _curr_2nd_choice = 0
-                    _curr_2nd_choice_num_late = 0
-                    _curr_2nd_choice_lateness = []
-                    _curr_2nd_choice_waiting = []
-                    _curr_3rd_choice = 0
-                    _curr_3rd_choice_num_late = 0
-                    _curr_3rd_choice_lateness = []
-                    _curr_3rd_choice_waiting = []
-                    _curr_rest_choice = 0
-                    _curr_rest_choice_num_late = 0
-                    _curr_rest_choice_lateness = []
-                    _curr_rest_choice_waiting = []
-
-                    for info in episode.values():
-                        if 'preferences' not in info['init']:
-                            continue
-                        pref = sorted([(p, m) for m, p in info['init']['preferences'].items()])
-                        if not np.isnan(info['arrival']):
-                            # A choice was made.
-                            if info['mode'] == pref[0][1]:
-                                _curr_1st_choice += 1
-                                if np.isnan(info['wait']):
-                                    # late
-                                    _curr_1st_choice_num_late += 1
-                                    _curr_1st_choice_lateness.append(
-                                        (info['arrival']-info['init']['exp-arrival'])/60.0)
-                                else:
-                                    _curr_1st_choice_waiting.append(
-                                        info['wait']/60.0)
-                            elif info['mode'] == pref[1][1]:
-                                _curr_2nd_choice += 1
-                                if np.isnan(info['wait']):
-                                    # late
-                                    _curr_2nd_choice_num_late += 1
-                                    _curr_2nd_choice_lateness.append(
-                                        (info['arrival']-info['init']['exp-arrival'])/60.0)
-                                else:
-                                    _curr_2nd_choice_waiting.append(
-                                        info['wait']/60.0)
-                            elif info['mode'] == pref[2][1]:
-                                _curr_3rd_choice += 1
-                                if np.isnan(info['wait']):
-                                    # late
-                                    _curr_3rd_choice_num_late += 1
-                                    _curr_3rd_choice_lateness.append(
-                                        (info['arrival']-info['init']['exp-arrival'])/60.0)
-                                else:
-                                    _curr_3rd_choice_waiting.append(
-                                        info['wait']/60.0)
-                            else:
-                                _curr_rest_choice += 1
-                                if np.isnan(info['wait']):
-                                    # late
-                                    _curr_rest_choice_num_late += 1
-                                    _curr_rest_choice_lateness.append(
-                                        (info['arrival']-info['init']['exp-arrival'])/60.0)
-                                else:
-                                    _curr_rest_choice_waiting.append(
-                                        info['wait']/60.0)
-
-                    _1st_choice.append(_curr_1st_choice)
-                    _1st_choice_num_late.append(_curr_1st_choice_num_late)
-                    _1st_choice_lateness.append(np.mean(_curr_1st_choice_lateness))
-                    _1st_choice_waiting.append(np.mean(_curr_1st_choice_waiting))
-                    _2nd_choice.append(_curr_2nd_choice)
-                    _2nd_choice_num_late.append(_curr_2nd_choice_num_late)
-                    _2nd_choice_lateness.append(np.mean(_curr_2nd_choice_lateness))
-                    _2nd_choice_waiting.append(np.mean(_curr_2nd_choice_waiting))
-                    _3rd_choice.append(_curr_3rd_choice)
-                    _3rd_choice_num_late.append(_curr_3rd_choice_num_late)
-                    _3rd_choice_lateness.append(np.mean(_curr_3rd_choice_lateness))
-                    _3rd_choice_waiting.append(np.mean(_curr_3rd_choice_waiting))
-                    _rest_choice.append(_curr_rest_choice)
-                    _rest_choice_num_late.append(_curr_rest_choice_num_late)
-                    _rest_choice_lateness.append(np.mean(_curr_rest_choice_lateness))
-                    _rest_choice_waiting.append(np.mean(_curr_rest_choice_waiting))
-
-                self._aggregated_dataset['learning']['1st_choice'].append(
-                    np.nanmean(_1st_choice))
-                self._aggregated_dataset['learning']['1st_choice_num_late'].append(
-                    np.nanmean(_1st_choice_num_late))
-                self._aggregated_dataset['learning']['1st_choice_lateness'].append(
-                    np.nanmean(_1st_choice_lateness))
-                self._aggregated_dataset['learning']['1st_choice_waiting'].append(
-                    np.nanmean(_1st_choice_waiting))
-
-                self._aggregated_dataset['learning']['2nd_choice'].append(
-                    np.nanmean(_2nd_choice))
-                self._aggregated_dataset['learning']['2nd_choice_num_late'].append(
-                    np.nanmean(_2nd_choice_num_late))
-                self._aggregated_dataset['learning']['2nd_choice_lateness'].append(
-                    np.nanmean(_2nd_choice_lateness))
-                self._aggregated_dataset['learning']['2nd_choice_waiting'].append(
-                    np.nanmean(_2nd_choice_waiting))
-
-                self._aggregated_dataset['learning']['3rd_choice'].append(
-                    np.nanmean(_3rd_choice))
-                self._aggregated_dataset['learning']['3rd_choice_num_late'].append(
-                    np.nanmean(_3rd_choice_num_late))
-                self._aggregated_dataset['learning']['3rd_choice_lateness'].append(
-                    np.nanmean(_3rd_choice_lateness))
-                self._aggregated_dataset['learning']['3rd_choice_waiting'].append(
-                    np.nanmean(_3rd_choice_waiting))
-
-                self._aggregated_dataset['learning']['rest_choice'].append(
-                    np.nanmean(_rest_choice))
-                self._aggregated_dataset['learning']['rest_choice_num_late'].append(
-                    np.nanmean(_rest_choice_num_late))
-                self._aggregated_dataset['learning']['rest_choice_lateness'].append(
-                    np.nanmean(_rest_choice_lateness))
-                self._aggregated_dataset['learning']['rest_choice_waiting'].append(
-                    np.nanmean(_rest_choice_waiting))
+                self._aggregate_metrics_helper('learning', complete)
 
                 # EVALUATION
                 if 'evaluation' in complete:
                     complete['evaluation']['timesteps_total'] = complete['timesteps_total']
                     complete = complete['evaluation']
+                    self._aggregate_metrics_helper('evaluation', complete)
 
-                    self._aggregated_dataset['evaluation']['timesteps_total'].append(
-                        complete['timesteps_total'])
-
-                    _1st_choice = []
-                    _1st_choice_num_late = []
-                    _1st_choice_lateness = []
-                    _1st_choice_waiting = []
-                    _2nd_choice = []
-                    _2nd_choice_num_late = []
-                    _2nd_choice_lateness = []
-                    _2nd_choice_waiting = []
-                    _3rd_choice = []
-                    _3rd_choice_num_late = []
-                    _3rd_choice_lateness = []
-                    _3rd_choice_waiting = []
-                    _rest_choice = []
-                    _rest_choice_num_late = []
-                    _rest_choice_lateness = []
-                    _rest_choice_waiting = []
-
-                    for episode in complete['hist_stats']['info_by_agent']:
-                        _curr_1st_choice = 0
-                        _curr_1st_choice_num_late = 0
-                        _curr_1st_choice_lateness = []
-                        _curr_1st_choice_waiting = []
-                        _curr_2nd_choice = 0
-                        _curr_2nd_choice_num_late = 0
-                        _curr_2nd_choice_lateness = []
-                        _curr_2nd_choice_waiting = []
-                        _curr_3rd_choice = 0
-                        _curr_3rd_choice_num_late = 0
-                        _curr_3rd_choice_lateness = []
-                        _curr_3rd_choice_waiting = []
-                        _curr_rest_choice = 0
-                        _curr_rest_choice_num_late = 0
-                        _curr_rest_choice_lateness = []
-                        _curr_rest_choice_waiting = []
-
-                        for info in episode.values():
-                            if 'preferences' not in info['init']:
-                                continue
-                            pref = sorted([(p, m) for m, p in info['init']['preferences'].items()])
-                            if not np.isnan(info['arrival']):
-                                # A choice was made.
-                                if info['mode'] == pref[0][1]:
-                                    _curr_1st_choice += 1
-                                    if np.isnan(info['wait']):
-                                        # late
-                                        _curr_1st_choice_num_late += 1
-                                        _curr_1st_choice_lateness.append(
-                                            (info['arrival']-info['init']['exp-arrival'])/60.0)
-                                    else:
-                                        _curr_1st_choice_waiting.append(
-                                            info['wait']/60.0)
-                                elif info['mode'] == pref[1][1]:
-                                    _curr_2nd_choice += 1
-                                    if np.isnan(info['wait']):
-                                        # late
-                                        _curr_2nd_choice_num_late += 1
-                                        _curr_2nd_choice_lateness.append(
-                                            (info['arrival']-info['init']['exp-arrival'])/60.0)
-                                    else:
-                                        _curr_2nd_choice_waiting.append(
-                                            info['wait']/60.0)
-                                elif info['mode'] == pref[2][1]:
-                                    _curr_3rd_choice += 1
-                                    if np.isnan(info['wait']):
-                                        # late
-                                        _curr_3rd_choice_num_late += 1
-                                        _curr_3rd_choice_lateness.append(
-                                            (info['arrival']-info['init']['exp-arrival'])/60.0)
-                                    else:
-                                        _curr_3rd_choice_waiting.append(
-                                            info['wait']/60.0)
-                                else:
-                                    _curr_rest_choice += 1
-                                    if np.isnan(info['wait']):
-                                        # late
-                                        _curr_rest_choice_num_late += 1
-                                        _curr_rest_choice_lateness.append(
-                                            (info['arrival']-info['init']['exp-arrival'])/60.0)
-                                    else:
-                                        _curr_rest_choice_waiting.append(
-                                            info['wait']/60.0)
-
-                        _1st_choice.append(_curr_1st_choice)
-                        _1st_choice_num_late.append(_curr_1st_choice_num_late)
-                        _1st_choice_lateness.append(np.mean(_curr_1st_choice_lateness))
-                        _1st_choice_waiting.append(np.mean(_curr_1st_choice_waiting))
-                        _2nd_choice.append(_curr_2nd_choice)
-                        _2nd_choice_num_late.append(_curr_2nd_choice_num_late)
-                        _2nd_choice_lateness.append(np.mean(_curr_2nd_choice_lateness))
-                        _2nd_choice_waiting.append(np.mean(_curr_2nd_choice_waiting))
-                        _3rd_choice.append(_curr_3rd_choice)
-                        _3rd_choice_num_late.append(_curr_3rd_choice_num_late)
-                        _3rd_choice_lateness.append(np.mean(_curr_3rd_choice_lateness))
-                        _3rd_choice_waiting.append(np.mean(_curr_3rd_choice_waiting))
-                        _rest_choice.append(_curr_rest_choice)
-                        _rest_choice_num_late.append(_curr_rest_choice_num_late)
-                        _rest_choice_lateness.append(np.mean(_curr_rest_choice_lateness))
-                        _rest_choice_waiting.append(np.mean(_curr_rest_choice_waiting))
-
-                    self._aggregated_dataset['evaluation']['1st_choice'].append(
-                        np.nanmean(_1st_choice))
-                    self._aggregated_dataset['evaluation']['1st_choice_num_late'].append(
-                        np.nanmean(_1st_choice_num_late))
-                    self._aggregated_dataset['evaluation']['1st_choice_lateness'].append(
-                        np.nanmean(_1st_choice_lateness))
-                    self._aggregated_dataset['evaluation']['1st_choice_waiting'].append(
-                        np.nanmean(_1st_choice_waiting))
-
-                    self._aggregated_dataset['evaluation']['2nd_choice'].append(
-                        np.nanmean(_2nd_choice))
-                    self._aggregated_dataset['evaluation']['2nd_choice_num_late'].append(
-                        np.nanmean(_2nd_choice_num_late))
-                    self._aggregated_dataset['evaluation']['2nd_choice_lateness'].append(
-                        np.nanmean(_2nd_choice_lateness))
-                    self._aggregated_dataset['evaluation']['2nd_choice_waiting'].append(
-                        np.nanmean(_2nd_choice_waiting))
-
-                    self._aggregated_dataset['evaluation']['3rd_choice'].append(
-                        np.nanmean(_3rd_choice))
-                    self._aggregated_dataset['evaluation']['3rd_choice_num_late'].append(
-                        np.nanmean(_3rd_choice_num_late))
-                    self._aggregated_dataset['evaluation']['3rd_choice_lateness'].append(
-                        np.nanmean(_3rd_choice_lateness))
-                    self._aggregated_dataset['evaluation']['3rd_choice_waiting'].append(
-                        np.nanmean(_3rd_choice_waiting))
-
-                    self._aggregated_dataset['evaluation']['rest_choice'].append(
-                        np.nanmean(_rest_choice))
-                    self._aggregated_dataset['evaluation']['rest_choice_num_late'].append(
-                        np.nanmean(_rest_choice_num_late))
-                    self._aggregated_dataset['evaluation']['rest_choice_lateness'].append(
-                        np.nanmean(_rest_choice_lateness))
-                    self._aggregated_dataset['evaluation']['rest_choice_waiting'].append(
-                        np.nanmean(_rest_choice_waiting))
-
-        # pprint(self._aggregated_dataset)
-        # sys.exit()
+    def _generate_subplot_helper(self, axs, tag,  col, name, string):
+        ## ## ##
+        axs[0][col].axhline(y=0, linestyle=':')
+        axs[0][col].plot(
+            self._aggregated_dataset[tag]['timesteps_total'],
+            self._aggregated_dataset[tag]['{}_choice'.format(name)], label='Mean')
+        for mode in ['walk', 'bicycle', 'public', 'passenger', 'ptw']:
+            axs[0][col].plot(
+                self._aggregated_dataset[tag]['timesteps_total'],
+                self._aggregated_dataset[tag]['{}_choice_{}'.format(name, mode)], label=mode)
+        axs[0][col].set(ylabel='Mean Agents [#]', title='{} Choice'.format(string))
+        axs[0][col].legend(ncol=3, loc='best', shadow=True)
+        axs[0][col].grid()
+        ## ## ##
+        axs[1][col].axhline(y=0, linestyle=':')
+        axs[1][col].plot(
+            self._aggregated_dataset[tag]['timesteps_total'],
+            self._aggregated_dataset[tag]['{}_choice_num_late'.format(name)], label='Mean')
+        axs[1][col].set(ylabel='Mean Late Agents [#]')
+        # axs[1][0].legend(ncol=3, loc='best', shadow=True)
+        axs[1][col].grid()
+        ## ## ##
+        axs[2][col].axhline(y=0, linestyle=':')
+        axs[2][col].plot(
+            self._aggregated_dataset[tag]['timesteps_total'],
+            self._aggregated_dataset[tag]['{}_choice_lateness'.format(name)], label='Mean')
+        axs[2][col].set(ylabel='Mean Lateness [min]')
+        # axs[2][col].legend(ncol=3, loc='best', shadow=True)
+        axs[2][col].grid()
+        ## ## ##
+        axs[3][col].axhline(y=0, linestyle=':')
+        axs[3][col].plot(
+            self._aggregated_dataset[tag]['timesteps_total'],
+            self._aggregated_dataset[tag]['{}_choice_waiting'.format(name)], label='Mean')
+        axs[3][col].set(ylabel='Mean Waiting [min]')
+        # axs[3][col].legend(ncol=3, loc='best', shadow=True)
+        axs[3][col].grid()
+        ## ## ##
+        axs[4][col].axhline(y=0, linestyle=':')
+        axs[4][col].plot(
+            self._aggregated_dataset[tag]['timesteps_total'],
+            self._aggregated_dataset[tag]['{}_choice_reward'.format(name)], label='Mean')
+        axs[4][col].set(xlabel='Learning step', ylabel='Mean Reward [#]')
+        # axs[4][col].legend(ncol=3, loc='best', shadow=True)
+        axs[4][col].grid()
+        ########################################################################
 
     def _generate_graphs_helper(self, tag, lbl):
-        fig, axs = plt.subplots(4, 4, figsize=(45, 25),
+        fig, axs = plt.subplots(5, 4, figsize=(45, 25),
                                 constrained_layout=True, sharey='row') # sharex='col',
         fig.suptitle('{} Aggregated Achievements over Learning'.format(lbl))
 
-        ## 1ST Choice
-        axs[0][0].axhline(y=0, linestyle=':')
-        axs[0][0].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['1st_choice'], label='Mean')
-        axs[0][0].set(ylabel='Agents [#]', title='1ST Choice')
-        # axs[0][0].legend(ncol=3, loc='best', shadow=True)
-        axs[0][0].grid()
-        ## ## ##
-        axs[1][0].axhline(y=0, linestyle=':')
-        axs[1][0].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['1st_choice_num_late'], label='Mean')
-        axs[1][0].set(ylabel='Late Agents [#]')
-        # axs[0][0].legend(ncol=3, loc='best', shadow=True)
-        axs[1][0].grid()
-        ## ## ##
-        axs[2][0].axhline(y=0, linestyle=':')
-        axs[2][0].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['1st_choice_lateness'], label='Mean')
-        axs[2][0].set(ylabel='Lateness [min]')
-        # axs[0][0].legend(ncol=3, loc='best', shadow=True)
-        axs[2][0].grid()
-        ## ## ##
-        axs[3][0].axhline(y=0, linestyle=':')
-        axs[3][0].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['1st_choice_waiting'], label='Mean')
-        axs[3][0].set(xlabel='Learning step', ylabel='Waiting [min]')
-        # axs[0][0].legend(ncol=3, loc='best', shadow=True)
-        axs[3][0].grid()
-
-        ## 2ND Choice
-        axs[0][1].axhline(y=0, linestyle=':')
-        axs[0][1].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['2nd_choice'], label='Mean')
-        axs[0][1].set(ylabel='Agents [#]', title='2ND Choice')
-        # axs[0][0].legend(ncol=3, loc='best', shadow=True)
-        axs[0][1].grid()
-        ## ## ##
-        axs[1][1].axhline(y=0, linestyle=':')
-        axs[1][1].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['2nd_choice_num_late'], label='Mean')
-        axs[1][1].set(ylabel='Late Agents [#]')
-        # axs[0][0].legend(ncol=3, loc='best', shadow=True)
-        axs[1][1].grid()
-        ## ## ##
-        axs[2][1].axhline(y=0, linestyle=':')
-        axs[2][1].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['2nd_choice_lateness'], label='Mean')
-        axs[2][1].set(ylabel='Lateness [min]')
-        # axs[0][0].legend(ncol=3, loc='best', shadow=True)
-        axs[2][1].grid()
-        ## ## ##
-        axs[3][1].axhline(y=0, linestyle=':')
-        axs[3][1].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['2nd_choice_waiting'], label='Mean')
-        axs[3][1].set(xlabel='Learning step', ylabel='Waiting [min]')
-        # axs[0][0].legend(ncol=3, loc='best', shadow=True)
-        axs[3][1].grid()
-
-        ## 3RD Choice
-        axs[0][2].axhline(y=0, linestyle=':')
-        axs[0][2].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['3rd_choice'], label='Mean')
-        axs[0][2].set(ylabel='Agents [#]', title='3RD Choice')
-        # axs[0][2].legend(ncol=3, loc='best', shadow=True)
-        axs[0][2].grid()
-        ## ## ##
-        axs[1][2].axhline(y=0, linestyle=':')
-        axs[1][2].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['3rd_choice_num_late'], label='Mean')
-        axs[1][2].set(ylabel='Late Agents [#]')
-        # axs[0][0].legend(ncol=3, loc='best', shadow=True)
-        axs[1][2].grid()
-        ## ## ##
-        axs[2][2].axhline(y=0, linestyle=':')
-        axs[2][2].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['3rd_choice_lateness'], label='Mean')
-        axs[2][2].set(ylabel='Lateness [min]')
-        # axs[0][0].legend(ncol=3, loc='best', shadow=True)
-        axs[2][2].grid()
-        ## ## ##
-        axs[3][2].axhline(y=0, linestyle=':')
-        axs[3][2].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['3rd_choice_waiting'], label='Mean')
-        axs[3][2].set(xlabel='Learning step', ylabel='Waiting [min]')
-        # axs[0][0].legend(ncol=3, loc='best', shadow=True)
-        axs[3][2].grid()
-
-        ## REST Choice
-        axs[0][3].axhline(y=0, linestyle=':')
-        axs[0][3].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['rest_choice'], label='Mean')
-        axs[0][3].set(ylabel='Agents [#]', title='4+ Choice')
-        # axs[0][3].legend(ncol=3, loc='best', shadow=True)
-        axs[0][3].grid()
-        ## ## ##
-        axs[1][3].axhline(y=0, linestyle=':')
-        axs[1][3].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['rest_choice_num_late'], label='Mean')
-        axs[1][3].set(ylabel='Late Agents [#]')
-        # axs[0][0].legend(ncol=3, loc='best', shadow=True)
-        axs[1][3].grid()
-        ## ## ##
-        axs[2][3].axhline(y=0, linestyle=':')
-        axs[2][3].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['rest_choice_lateness'], label='Mean')
-        axs[2][3].set(ylabel='Lateness [min]')
-        # axs[0][0].legend(ncol=3, loc='best', shadow=True)
-        axs[2][3].grid()
-        ## ## ##
-        axs[3][3].axhline(y=0, linestyle=':')
-        axs[3][3].plot(
-            self._aggregated_dataset[tag]['timesteps_total'],
-            self._aggregated_dataset[tag]['rest_choice_waiting'], label='Mean')
-        axs[3][3].set(xlabel='Learning step', ylabel='Waiting [min]')
-        # axs[0][0].legend(ncol=3, loc='best', shadow=True)
-        axs[3][3].grid()
+        self._generate_subplot_helper(axs, tag, col=0, name='1st', string='First')
+        self._generate_subplot_helper(axs, tag, col=1, name='2nd', string='Second')
+        self._generate_subplot_helper(axs, tag, col=2, name='3rd', string='Third')
+        self._generate_subplot_helper(axs, tag, col=3, name='rest', string='Other')
 
         fig.savefig('{}/{}.achievements_over_learning.svg'.format(self._output_dir, tag),
                     dpi=300, transparent=False, bbox_inches='tight')
